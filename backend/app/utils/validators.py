@@ -1,0 +1,112 @@
+"""
+GeoFace Faculty Authentication System - Input Validators
+"""
+
+import re
+from typing import Any, Dict, List, Optional, Tuple
+
+
+def validate_email(email: str) -> bool:
+    """Validate email format."""
+    pattern = r"^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$"
+    return bool(re.match(pattern, email))
+
+
+def validate_login_payload(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Validate /login request body.
+
+    Returns:
+        (valid: bool, error_message: Optional[str])
+    """
+    if not data:
+        return False, "Request body is required"
+
+    email = data.get("email")
+    reg_no = data.get("reg_no")
+    password = data.get("password")
+
+    if not email:
+        return False, "Email is required"
+    if not isinstance(email, str) or not validate_email(email.strip()):
+        return False, "Invalid email format"
+    if not reg_no:
+        return False, "Registration number is required"
+    if not password:
+        return False, "Password is required"
+    if not isinstance(password, str) or len(password) < 6:
+        return False, "Password must be at least 6 characters"
+
+    return True, None
+
+
+def validate_verify_payload(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Validate /verify request body.
+
+    Returns:
+        (valid: bool, error_message: Optional[str])
+    """
+    if not data:
+        return False, "Request body is required"
+
+    frames = data.get("frames")
+    latitude = data.get("latitude")
+    longitude = data.get("longitude")
+    timestamp = data.get("timestamp")
+
+    # Frames validation
+    if not frames:
+        return False, "No frames provided"
+    if not isinstance(frames, list) or len(frames) == 0:
+        return False, "frames must be a non-empty array"
+    if len(frames) > 50:
+        return False, "Too many frames (max 50)"
+
+    # Coordinates validation
+    if latitude is None or longitude is None:
+        return False, "GPS coordinates are required"
+    try:
+        lat = float(latitude)
+        lon = float(longitude)
+    except (TypeError, ValueError):
+        return False, "Invalid GPS coordinates"
+    if not (-90 <= lat <= 90):
+        return False, "Latitude out of range"
+    if not (-180 <= lon <= 180):
+        return False, "Longitude out of range"
+
+    # Timestamp validation
+    if timestamp is None:
+        return False, "Timestamp is required"
+    try:
+        float(timestamp)
+    except (TypeError, ValueError):
+        return False, "Invalid timestamp format (UNIX epoch expected)"
+
+    return True, None
+
+
+def validate_teacher_register_payload(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+    """
+    Validate admin teacher registration payload.
+    face_encoding is required and must be a list of 128 floats.
+    """
+    if not data:
+        return False, "Request body is required"
+
+    for field in ("full_name", "email", "reg_no", "password"):
+        if not data.get(field):
+            return False, f"{field} is required"
+
+    if not validate_email(data["email"]):
+        return False, "Invalid email format"
+    if len(data["password"]) < 8:
+        return False, "Password must be at least 8 characters"
+
+    encoding = data.get("face_encoding")
+    if encoding is not None:
+        if not isinstance(encoding, list) or len(encoding) != 128:
+            return False, "face_encoding must be an array of exactly 128 floats"
+
+    return True, None

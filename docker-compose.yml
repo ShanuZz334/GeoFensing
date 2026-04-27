@@ -1,0 +1,136 @@
+# ==============================================================================
+# GeoFace Faculty Authentication System — Production Deployment
+# Services: Nginx (Proxy), Flask (API), Redis (Cache), PostgreSQL (DB)
+# ==============================================================================
+
+services:
+
+  # ── Reverse Proxy (Gateway) ────────────────────────────────────────────────
+  # Handles SSL termination, rate limiting, and unified entry point.
+  proxy:
+    image: nginx:alpine
+    container_name: geoface_proxy
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./admin:/usr/share/nginx/html/admin:ro
+      - ./mobile/build/web:/usr/share/nginx/html/teacher:ro
+      # - ./certs:/etc/letsencrypt:ro # Uncomment for SSL
+    networks:
+      - geoface-external
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # ── Flask API Server ────────────────────────────────────────────────────────
+  # High-performance facial recognition API running with Gunicorn + Gevent.
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: geoface_api
+    restart: always
+    env_file: .env
+    environment:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_URL=redis://redis:6379/0
+    volumes:
+      - ./backend:/app
+      - model_cache:/app/models
+    networks:
+      - geoface-internal
+      - geoface-external
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5000/health"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+  # ── Caching Layer (Redis) ───────────────────────────────────────────────────
+  # Used for distributed caching and session management.
+  redis:
+    image: redis:7-alpine
+    container_name: geoface_redis
+    restart: always
+    command: redis-server --save 60 1 --loglevel warning
+    networks:
+      - geoface-internal
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+
+  # ── PostgreSQL Database ─────────────────────────────────────────────────────
+  # Persistent data storage. Port 5432 is NOT exposed to the host for security.
+  db:
+    image: postgres:16-alpine
+    container_name: geoface_db
+    restart: always
+    env_file: .env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/database/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+    networks:
+      - geoface-internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+
+networks:
+  geoface-internal:
+    driver: bridge
+    internal: true
+  geoface-external:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  model_cache:
+

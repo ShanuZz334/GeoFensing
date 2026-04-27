@@ -1,0 +1,70 @@
+# ── Python ──────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyc
+*.pyd
+.Python
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / secrets — NEVER commit
+.env
+*.env.local
+
+# dlib model (large binary)
+backend/models/shape_predictor_68_face_landmarks.dat
+backend/models/*.dat
+backend/models/*.bz2
+
+# Logs
+*.log
+logs/
+
+# pytest
+.pytest_cache/
+.coverage
+htmlcov/
+
+# ── Flutter ──────────────────
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/.pub-cache/
+mobile/pubspec.lock
+mobile/android/.gradle/
+mobile/android/local.properties
+mobile/android/captures/
+mobile/android/app/debug/
+mobile/ios/Pods/
+mobile/ios/.symlinks/
+mobile/ios/Flutter/Flutter.framework/
+mobile/ios/Flutter/Flutter.podspec
+mobile/ios/Runner.xcworkspace/xcuserdata/
+mobile/ios/Runner.xcodeproj/project.xcworkspace/xcuserdata/
+mobile/ios/DerivedData/
+
+# Key stores — NEVER commit
+*.jks
+*.keystore
+
+# ── OS ──────────────────────
+.DS_Store
+Thumbs.db
+*.swp
+*~
+
+# ── IDEs ────────────────────
+.idea/
+.vscode/
+*.iml

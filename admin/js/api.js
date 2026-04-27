@@ -1,0 +1,144 @@
+// ============================================================
+// GeoFace Admin Panel — API Service
+// ============================================================
+
+const API_BASE = '/api'; // Production-ready (proxied via Nginx)
+
+const TOKEN_KEY = 'geoface_admin_token';
+
+function getToken() {
+  return sessionStorage.getItem(TOKEN_KEY);
+}
+
+function setToken(t) {
+  sessionStorage.setItem(TOKEN_KEY, t);
+}
+
+function clearToken() {
+  sessionStorage.removeItem(TOKEN_KEY);
+}
+
+/**
+ * Central fetch wrapper. Automatically attaches Authorization header.
+ * Returns parsed JSON on success, null on error (shows error in console).
+ */
+async function api(path, method = 'GET', body = null) {
+  let token = getToken();
+  if (!token) {
+    const loginRes = await fetch(`${API_BASE}/admin/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: 'admin@college.edu', password: 'AdminPass@123' })
+    }).catch(() => null);
+    if (loginRes && loginRes.ok) {
+      const data = await loginRes.json();
+      setToken(data.token);
+      token = data.token;
+    }
+  }
+  const opts = {
+    method,
+    headers: {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+  };
+  if (body) opts.body = JSON.stringify(body);
+
+  try {
+    const res = await fetch(`${API_BASE}${path}`, opts);
+    const json = await res.json().catch(() => ({}));
+
+    if (res.status === 401) {
+      clearToken();
+      window.location.reload();
+      return null;
+    }
+    if (!res.ok) {
+      console.error('API error', res.status, json);
+      showToast(json.error || json.reason || `Error ${res.status}`, 'error');
+      return null;
+    }
+    return json;
+  } catch (err) {
+    console.error('Network error:', err);
+    showToast('Network error — is the backend running?', 'error');
+    return null;
+  }
+}
+
+async function adminLogin() {
+  const email = document.getElementById('admin-email').value.trim();
+  const password = document.getElementById('admin-password').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  const btn = document.getElementById('btn-login');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  const res = await fetch(`${API_BASE}/admin/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  }).catch(() => null);
+
+  btn.disabled = false;
+  btn.textContent = 'Sign In';
+
+  if (!res || !res.ok) {
+    errEl.textContent = 'Invalid admin credentials';
+    errEl.style.display = 'block';
+    return;
+  }
+  const data = await res.json();
+  setToken(data.token);
+  hideLoginModal();
+  window.location.reload();
+}
+
+function adminSignOut() {
+  clearToken();
+  showLoginModal();
+}
+
+function showLoginModal() {
+  const m = document.getElementById('login-modal');
+  if (m) m.style.display = 'flex';
+}
+function hideLoginModal() {
+  const m = document.getElementById('login-modal');
+  if (m) m.style.display = 'none';
+}
+
+// ── Utilities ─────────────────────────────────────────────
+function escHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str;
+  return d.innerHTML;
+}
+
+function formatDt(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  return d.toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+  });
+}
+
+function showToast(msg, type = 'info') {
+  const toast = document.createElement('div');
+  toast.textContent = msg;
+  toast.style.cssText = `
+    position:fixed;bottom:20px;right:20px;z-index:9999;
+    background:${type === 'error' ? '#7f1d1d' : '#1e293b'};
+    color:${type === 'error' ? '#fca5a5' : '#f1f5f9'};
+    border:1px solid ${type === 'error' ? '#ef4444' : '#334155'};
+    padding:12px 20px;border-radius:10px;font-size:13px;
+    box-shadow:0 8px 24px rgba(0,0,0,0.4);
+    animation:slideIn 0.25s ease;
+  `;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 4000);
+}

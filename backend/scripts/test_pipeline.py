@@ -85,7 +85,7 @@ def run_pipeline(frames_b64, teacher_encoding):
         return
 
     matched, dist = compare_encodings(encodings, teacher_encoding)
-    print(f"    Face distance:  {dist:.4f} (threshold: 0.6) → {'✅ MATCH' if matched else '❌ MISMATCH'}")
+    print(f"    Face distance:  {dist:.4f} (threshold: 1.1) → {'✅ MATCH' if matched else '❌ MISMATCH'}")
 
     if not matched:
         print(f"❌  FAIL: Face recognition — mismatch")

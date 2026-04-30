@@ -1,6 +1,6 @@
 """
 GeoFace Faculty Authentication System - Frame Processing Service
-(Powered by face_recognition)
+(Powered by InsightFace)
 """
 
 from __future__ import annotations
@@ -11,9 +11,17 @@ from typing import List, Optional, Tuple, Dict
 
 import cv2
 import numpy as np
-import face_recognition
+from insightface.app import FaceAnalysis
 
 logger = logging.getLogger(__name__)
+
+# Initialize the face analysis model globally
+try:
+    face_app = FaceAnalysis(name='buffalo_l', root='/app/models', providers=['CPUExecutionProvider'])
+    face_app.prepare(ctx_id=0, det_size=(640, 640))
+except Exception as e:
+    logger.error(f"Failed to initialize InsightFace model: {e}")
+    face_app = None
 
 def decode_frame(b64_string: str) -> Optional[np.ndarray]:
     """Decode base64 JPEG string into OpenCV BGR image."""
@@ -37,7 +45,7 @@ def process_frames(
     int,
 ]:
     """
-    Process frames using face_recognition for recognition and landmarks.
+    Process frames using InsightFace for recognition and landmarks.
     """
     frames = b64_frames[:max_frames]
     
@@ -45,6 +53,10 @@ def process_frames(
     encodings_seq: List[Optional[List[float]]] = []
     landmarks_seq: List[Optional[Dict[str, List[Tuple[int, int]]]]] = []
     face_count = 0
+
+    if face_app is None:
+        logger.error("FaceAnalysis app is not initialized.")
+        return [], [], [], 0
 
     for b64 in frames:
         image = decode_frame(b64)
@@ -57,38 +69,40 @@ def process_frames(
         images.append(image)
 
         try:
-            # face_recognition expects RGB images for full resolution
-            rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            # InsightFace expects BGR images (which is cv2 default)
+            faces = face_app.get(image)
             
-            # Find face locations on full-size image
-            face_locations = face_recognition.face_locations(rgb_image)
-            
-            if not face_locations:
+            if not faces:
                 encodings_seq.append(None)
                 landmarks_seq.append(None)
                 continue
 
-            actual_locations = face_locations
-            
             # We only care about the first face for authentication
             face_count += 1
+            face = faces[0]
             
-            # Get encodings (using the scaled-up locations)
-            encodings = face_recognition.face_encodings(rgb_image, known_face_locations=actual_locations)
-            if encodings:
-                encodings_seq.append(encodings[0].tolist())
+            # Get 512-d encodings
+            if face.embedding is not None:
+                encodings_seq.append(face.embedding.tolist())
             else:
                 encodings_seq.append(None)
 
-            # Get landmarks (using the scaled-up locations)
-            landmarks = face_recognition.face_landmarks(rgb_image, actual_locations)
-            if landmarks:
-                landmarks_seq.append(landmarks[0])
+            # Get 5 landmarks (kps is 5x2 array)
+            if face.kps is not None:
+                kps = face.kps.astype(int)
+                landmarks = {
+                    'left_eye': [(kps[0][0], kps[0][1])],
+                    'right_eye': [(kps[1][0], kps[1][1])],
+                    'nose_bridge': [(kps[2][0], kps[2][1])],  # Named nose_bridge for backward compat with liveness script
+                    'left_mouth': [(kps[3][0], kps[3][1])],
+                    'right_mouth': [(kps[4][0], kps[4][1])]
+                }
+                landmarks_seq.append(landmarks)
             else:
                 landmarks_seq.append(None)
 
         except Exception as exc:
-            logger.error("face_recognition processing failed: %s", exc)
+            logger.error("InsightFace processing failed: %s", exc)
             encodings_seq.append(None)
             landmarks_seq.append(None)
 
@@ -97,25 +111,32 @@ def process_frames(
 def compare_encodings(
     encodings: List[Optional[List[float]]],
     expected_teacher_encoding: List[float],
-    threshold: float = 0.6,
+    threshold: float = 1.1,
 ) -> Tuple[bool, float]:
     """
     Check if the expected teacher encoding matches any of the frame encodings.
-    Uses Euclidean distance (lower is better, typically <= 0.6 means match).
+    Uses Euclidean distance on normalized embeddings.
     """
     best_distance = float('inf')
     matched = False
 
-    if not expected_teacher_encoding or len(expected_teacher_encoding) != 128:
-        return False, 1.0
+    if not expected_teacher_encoding or len(expected_teacher_encoding) != 512:
+        return False, 2.0
 
     expected_np = np.array(expected_teacher_encoding)
+    norm = np.linalg.norm(expected_np)
+    if norm > 0:
+        expected_np = expected_np / norm
 
     for enc in encodings:
         if enc is None:
             continue
         
         enc_np = np.array(enc)
+        norm_enc = np.linalg.norm(enc_np)
+        if norm_enc > 0:
+            enc_np = enc_np / norm_enc
+        
         # Calculate Euclidean distance
         distance = float(np.linalg.norm(expected_np - enc_np))
         
@@ -125,28 +146,28 @@ def compare_encodings(
         if distance <= threshold:
             matched = True
 
-    return matched, round(best_distance, 4) if best_distance != float('inf') else 1.0
+    return matched, round(best_distance, 4) if best_distance != float('inf') else 2.0
 
 def add_face_to_collection(
     b64_image: str,
 ) -> Optional[List[float]]:
     """
-    Enroll a new face. Returns the 128d encoding.
+    Enroll a new face. Returns the 512d encoding.
     """
     image = decode_frame(b64_image)
     if image is None:
         return None
     
+    if face_app is None:
+        logger.error("FaceAnalysis app is not initialized.")
+        return None
+        
     try:
-        rgb_image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        face_locations = face_recognition.face_locations(rgb_image)
-        if not face_locations:
+        faces = face_app.get(image)
+        if not faces:
             return None
             
-        encodings = face_recognition.face_encodings(rgb_image, known_face_locations=face_locations)
-        if encodings:
-            return encodings[0].tolist()
-        return None
+        return faces[0].embedding.tolist()
     except Exception as exc:
         logger.error("Face enrollment failed: %s", exc)
         return None

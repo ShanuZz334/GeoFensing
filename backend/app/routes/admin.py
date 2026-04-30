@@ -84,6 +84,10 @@ def register_teacher():
     if Teacher.query.filter_by(email=email).first():
         return jsonify({"error": "A teacher with this email already exists"}), 409
 
+    reg_no = data["reg_no"].strip()
+    if Teacher.query.filter_by(reg_no=reg_no).first():
+        return jsonify({"error": "A teacher with this Registration Number already exists"}), 409
+
     password_hash = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
 
     # Use provided encoding if available, otherwise use dummy

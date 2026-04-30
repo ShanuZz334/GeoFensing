@@ -120,80 +120,44 @@ def test_timestamp_freshness_future(app):
 # ── Liveness Service Tests ────────────────────────────────────────────────────
 
 
-def _make_open_landmarks(x_nose=100, y_nose=200):
-    """Create fake landmarks with 'open' eyes."""
+def _make_left_landmarks(x_nose=100, y_nose=200):
     return {
-        'left_eye': [(60, 100), (65, 94), (70, 94), (75, 100), (70, 106), (65, 106)],
-        'right_eye': [(80, 100), (85, 94), (90, 94), (95, 100), (90, 106), (85, 106)],
-        'nose_tip': [(0, 0), (0, 0), (x_nose, y_nose)]
+        'left_eye': [(60, 100)],
+        'right_eye': [(80, 100)],
+        'nose_bridge': [(65, y_nose)] # Closer to left eye
     }
 
-
-def _make_closed_landmarks(x_nose=100, y_nose=200):
-    """Create fake landmarks with 'closed' eyes."""
+def _make_middle_landmarks(x_nose=100, y_nose=200):
     return {
-        'left_eye': [(60, 100), (65, 99), (70, 99), (75, 100), (70, 101), (65, 101)],
-        'right_eye': [(80, 100), (85, 99), (90, 99), (95, 100), (90, 101), (85, 101)],
-        'nose_tip': [(0, 0), (0, 0), (x_nose, y_nose)]
+        'left_eye': [(60, 100)],
+        'right_eye': [(80, 100)],
+        'nose_bridge': [(70, y_nose)] # Centered
     }
 
+def _make_right_landmarks(x_nose=100, y_nose=200):
+    return {
+        'left_eye': [(60, 100)],
+        'right_eye': [(80, 100)],
+        'nose_bridge': [(75, y_nose)] # Closer to right eye
+    }
 
-def test_ear_formula_open_eye():
-    from app.services.liveness_service import eye_aspect_ratio
-    landmarks = _make_open_landmarks()
-    ear = eye_aspect_ratio(landmarks['left_eye'])
-    assert ear > 0.25, f"Expected open eye EAR > 0.25, got {ear:.3f}"
-
-
-def test_ear_formula_closed_eye():
-    from app.services.liveness_service import eye_aspect_ratio
-    landmarks = _make_closed_landmarks()
-    ear = eye_aspect_ratio(landmarks['left_eye'])
-    assert ear < 0.25, f"Expected closed eye EAR < 0.25, got {ear:.3f}"
-
-
-def test_blink_detection_with_blink():
-    from app.services.liveness_service import detect_blinks
-    seq = [
-        _make_open_landmarks(),    # open
-        _make_open_landmarks(),    # open
-        _make_closed_landmarks(),  # closed → blink starts
-        _make_closed_landmarks(),  # still closed
-        _make_open_landmarks(),    # open → blink completed
-        _make_open_landmarks(),
-    ]
-    count = detect_blinks(seq, ear_threshold=0.25)
-    assert count >= 1
-
-
-def test_blink_detection_no_blink():
-    from app.services.liveness_service import detect_blinks
-    seq = [_make_open_landmarks() for _ in range(10)]
-    count = detect_blinks(seq, ear_threshold=0.25)
-    assert count == 0
-
-
-
-
-
-def test_liveness_passes_with_blink_and_movement():
-    from app.services.liveness_service import run_liveness_checks
-    blink_seq = (
-        [_make_open_landmarks(x_nose=100)] * 3
-        + [_make_closed_landmarks(x_nose=103)] * 2
-        + [_make_open_landmarks(x_nose=108)] * 3
+def test_liveness_passes_with_head_movement():
+    from app.services.liveness_service import check_head_movement_sequence
+    seq = (
+        [_make_left_landmarks()] * 3
+        + [_make_middle_landmarks()] * 3
+        + [_make_right_landmarks()] * 3
     )
-    passed, reason = run_liveness_checks(blink_seq)
+    passed, reason = check_head_movement_sequence(seq)
     assert passed is True
 
+def test_liveness_fails_no_head_movement():
+    from app.services.liveness_service import check_head_movement_sequence
+    seq = [_make_middle_landmarks() for _ in range(9)]
+    passed, reason = check_head_movement_sequence(seq)
+    assert passed is False
+    assert "LEFT" in reason
 
-def test_liveness_fails_no_blink_and_no_movement():
-    from app.services.liveness_service import run_liveness_checks
-    # Eyes always open, no head movement
-    seq = [_make_open_landmarks(x_nose=100) for _ in range(8)]
-    passed, reason = run_liveness_checks(seq)
-    # Since liveness checks are currently bypassed for reliability, this should pass
-    assert passed is True
 
 
 # ── Validator Tests ───────────────────────────────────────────────────────────

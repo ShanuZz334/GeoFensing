@@ -329,7 +329,7 @@ def verify():
     move_threshold = cfg.get("HEAD_MOVE_THRESHOLD", 5)
 
     liveness_passed, liveness_reason = run_liveness_checks(
-        landmarks_seq, ear_threshold, min_blinks, move_threshold
+        landmarks_seq, move_threshold
     )
 
     if not liveness_passed:

@@ -28,7 +28,7 @@ async function api(path, method = 'GET', body = null) {
     const loginRes = await fetch(`${API_BASE}/admin/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@college.edu', password: 'AdminPass@123' })
+      body: JSON.stringify({ email: 'admin@college.edu', password: 'Admin@1234' })
     }).catch(() => null);
     if (loginRes && loginRes.ok) {
       const data = await loginRes.json();
@@ -51,7 +51,9 @@ async function api(path, method = 'GET', body = null) {
 
     if (res.status === 401) {
       clearToken();
-      window.location.reload();
+      if (typeof showLoginModal === 'function') {
+        showLoginModal();
+      }
       return null;
     }
     if (!res.ok) {

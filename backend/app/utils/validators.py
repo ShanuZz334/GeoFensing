@@ -90,7 +90,7 @@ def validate_verify_payload(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
 def validate_teacher_register_payload(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     """
     Validate admin teacher registration payload.
-    face_encoding is required and must be a list of 128 floats.
+    face_encoding is required and must be a list of 512 floats.
     """
     if not data:
         return False, "Request body is required"
@@ -106,7 +106,7 @@ def validate_teacher_register_payload(data: Dict[str, Any]) -> Tuple[bool, Optio
 
     encoding = data.get("face_encoding")
     if encoding is not None:
-        if not isinstance(encoding, list) or len(encoding) != 128:
-            return False, "face_encoding must be an array of exactly 128 floats"
+        if not isinstance(encoding, list) or len(encoding) != 512:
+            return False, "face_encoding must be an array of exactly 512 floats"
 
     return True, None

@@ -9,7 +9,7 @@ with app.app_context():
         print(f"Registering demo teacher: {email}")
         password_hash = bcrypt.generate_password_hash("DemoPass@123").decode("utf-8")
         # Dummy encoding
-        encoding = [0.0] * 128
+        encoding = [0.0] * 512
         
         demo = Teacher(
             full_name="Demo Teacher",

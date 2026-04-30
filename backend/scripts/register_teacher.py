@@ -11,12 +11,12 @@ Usage:
 
 This script:
   1. Loads the image
-  2. Detects the face and extracts a 128-d encoding
+  2. Detects the face and extracts a 512-d encoding
   3. Hashes the password with bcrypt
   4. Inserts the teacher record into PostgreSQL
 
 Requirements:
-    pip install face-recognition dlib opencv-python-headless flask-bcrypt psycopg2-binary python-dotenv
+    pip install insightface onnxruntime opencv-python-headless flask-bcrypt psycopg2-binary python-dotenv
 """
 
 import argparse
@@ -28,7 +28,7 @@ import json
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '.env'))
 
-import face_recognition
+
 import cv2
 import numpy as np
 from flask_bcrypt import generate_password_hash
@@ -39,22 +39,33 @@ from datetime import datetime
 
 def extract_encoding(image_path: str):
     """Extract face encoding from an image file."""
-    image = face_recognition.load_image_file(image_path)
-    locations = face_recognition.face_locations(image, model="hog")
+    image = cv2.imread(image_path)
+    if image is None:
+        print(f"❌  Could not read image: {image_path}")
+        sys.exit(1)
 
-    if not locations:
+    try:
+        from insightface.app import FaceAnalysis
+        app = FaceAnalysis(name='buffalo_l', providers=['CPUExecutionProvider'])
+        app.prepare(ctx_id=0, det_size=(640, 640))
+        faces = app.get(image)
+    except Exception as e:
+        print(f"❌  Failed to initialize InsightFace or process image: {e}")
+        sys.exit(1)
+
+    if not faces:
         print(f"❌  No face detected in: {image_path}")
         sys.exit(1)
 
-    if len(locations) > 1:
-        print(f"⚠️   Multiple faces detected ({len(locations)}). Using the first/largest.")
+    if len(faces) > 1:
+        print(f"⚠️   Multiple faces detected ({len(faces)}). Using the first/largest.")
 
-    encodings = face_recognition.face_encodings(image, known_face_locations=[locations[0]])
-    if not encodings:
+    encoding = faces[0].embedding
+    if encoding is None:
         print("❌  Could not extract face encoding.")
         sys.exit(1)
 
-    return encodings[0].tolist()
+    return encoding.tolist()
 
 
 def register_teacher(name: str, email: str, password: str, image_path: str):
@@ -64,7 +75,7 @@ def register_teacher(name: str, email: str, password: str, image_path: str):
 
     # Extract encoding
     encoding = extract_encoding(image_path)
-    print(f"✅  Face encoding extracted (128 floats). First values: {encoding[:3]}")
+    print(f"✅  Face encoding extracted (512 floats). First values: {encoding[:3]}")
 
     # Hash password
     password_hash = generate_password_hash(password).decode('utf-8')

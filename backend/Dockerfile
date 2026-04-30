@@ -1,13 +1,10 @@
 FROM python:3.11-slim
 
-# System deps for dlib + face_recognition native build
+# System deps for OpenCV and ONNXRuntime
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    cmake \
     build-essential \
-    libopenblas-dev \
-    liblapack-dev \
-    libx11-dev \
-    libgtk-3-dev \
+    libgl1 \
+    libglib2.0-0 \
     wget \
     bzip2 \
     && rm -rf /var/lib/apt/lists/*
@@ -15,7 +12,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Install Python deps
-RUN pip install --no-cache-dir dlib==19.24.4
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

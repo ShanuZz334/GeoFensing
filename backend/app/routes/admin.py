@@ -21,9 +21,10 @@ from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
 
 from ..extensions import db, bcrypt
-from ..models import Teacher, AttendanceLog
+from ..models import Teacher, AttendanceLog, Setting
 from ..services.face_service import add_face_to_collection
 from ..utils.validators import validate_teacher_register_payload
+from ..utils.geofence_store import get_polygon, save_polygon
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -54,6 +55,32 @@ def admin_login():
     )
     return jsonify({"token": token, "expires_in": 28800}), 200
 
+# ── Global Settings ──────────────────────────────────────────────────────────
+
+@admin_bp.route("/settings", methods=["GET"])
+@jwt_required()
+def get_settings():
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+    return jsonify(Setting.get_all()), 200
+
+@admin_bp.route("/settings", methods=["PATCH"])
+@jwt_required()
+def update_settings():
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+    
+    data = request.get_json() or {}
+    for key, value in data.items():
+        setting = Setting.query.get(key)
+        if setting:
+            setting.value = value
+        else:
+            setting = Setting(key=key, value=value)
+            db.session.add(setting)
+    
+    db.session.commit()
+    return jsonify({"message": "Settings updated successfully"}), 200
 
 # ── Teachers CRUD ────────────────────────────────────────────────────────────
 
@@ -98,6 +125,7 @@ def register_teacher():
         full_name=data["full_name"].strip(),
         email=email,
         reg_no=data["reg_no"].strip(),
+        department=data["department"].strip(),
         password_hash=password_hash,
         face_encoding=encoding,
         profile_pic=profile_pic,
@@ -124,6 +152,15 @@ def update_teacher(teacher_id: str):
         teacher.full_name = data["full_name"].strip()
     if "reg_no" in data:
         teacher.reg_no = data["reg_no"].strip()
+    if "department" in data:
+        teacher.department = data["department"].strip()
+    if "email" in data:
+        email = data["email"].strip().lower()
+        if email != teacher.email and Teacher.query.filter_by(email=email).first():
+            return jsonify({"error": "A teacher with this email already exists"}), 409
+        teacher.email = email
+    if "password" in data and data["password"].strip():
+        teacher.password_hash = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
     if "is_active" in data:
         teacher.is_active = bool(data["is_active"])
     if "face_encoding" in data:
@@ -170,16 +207,65 @@ def get_attendance():
     date_from = request.args.get("date_from")
     date_to = request.args.get("date_to")
 
-    query = AttendanceLog.query.order_by(AttendanceLog.timestamp.desc())
+    sort_by = request.args.get("sort_by", "timestamp")
+    sort_order = request.args.get("sort_order", "desc")
+    reg_no_filter = request.args.get("reg_no")
+    action_type_filter = request.args.get("action_type")
+
+    query = AttendanceLog.query
 
     if status_filter in ("success", "failure"):
-        query = query.filter_by(status=status_filter)
+        query = query.filter(AttendanceLog.status == status_filter)
     if teacher_filter:
-        query = query.filter_by(teacher_id=teacher_filter)
+        query = query.filter(AttendanceLog.teacher_id == teacher_filter)
     if date_from:
         query = query.filter(AttendanceLog.timestamp >= datetime.fromisoformat(date_from))
     if date_to:
         query = query.filter(AttendanceLog.timestamp <= datetime.fromisoformat(date_to))
+
+    if action_type_filter in ("check_in", "check_out"):
+        query = query.filter(AttendanceLog.action_type == action_type_filter)
+    elif action_type_filter == "who_is_in":
+        # Show teachers whose last successful log TODAY is a check_in
+        from sqlalchemy import func
+        today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        last_log_sub = db.session.query(
+            AttendanceLog.teacher_id,
+            func.max(AttendanceLog.timestamp).label("max_ts")
+        ).filter(
+            AttendanceLog.status == "success",
+            AttendanceLog.timestamp >= today_start
+        ).group_by(AttendanceLog.teacher_id).subquery()
+
+        query = query.join(
+            last_log_sub,
+            (AttendanceLog.teacher_id == last_log_sub.c.teacher_id) &
+            (AttendanceLog.timestamp == last_log_sub.c.max_ts)
+        ).filter(AttendanceLog.action_type == "check_in")
+
+    teacher_joined = False
+
+    if reg_no_filter:
+        from ..models import Teacher
+        query = query.join(Teacher, AttendanceLog.teacher_id == Teacher.teacher_id)
+        teacher_joined = True
+        query = query.filter(Teacher.reg_no.ilike(f"%{reg_no_filter}%"))
+
+    if sort_by == "teacher_name":
+        if not teacher_joined:
+            from ..models import Teacher
+            query = query.join(Teacher, AttendanceLog.teacher_id == Teacher.teacher_id)
+            teacher_joined = True
+        if sort_order == "asc":
+            query = query.order_by(Teacher.full_name.asc())
+        else:
+            query = query.order_by(Teacher.full_name.desc())
+    else:
+        if sort_order == "asc":
+            query = query.order_by(AttendanceLog.timestamp.asc())
+        else:
+            query = query.order_by(AttendanceLog.timestamp.desc())
 
     paginated = query.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -192,6 +278,26 @@ def get_attendance():
     }), 200
 
 
+
+@admin_bp.route("/attendance/<log_id>", methods=["PATCH"])
+@jwt_required()
+def update_attendance_log(log_id: str):
+    """PATCH /admin/attendance/<id> — update attendance mark (e.g. resolve flagged)."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+
+    log = AttendanceLog.query.get_or_404(log_id)
+    data = request.get_json(silent=True) or {}
+    
+    if "attendance_mark" in data:
+        valid_marks = ["present", "half_day", "absent", "flagged"]
+        if data["attendance_mark"] not in valid_marks:
+            return jsonify({"error": f"attendance_mark must be one of {valid_marks}"}), 400
+        log.attendance_mark = data["attendance_mark"]
+
+    db.session.commit()
+    return jsonify({"message": "Attendance log updated", "log": log.to_dict()}), 200
+
 # ── Dashboard Statistics ─────────────────────────────────────────────────────
 
 @admin_bp.route("/stats", methods=["GET"])
@@ -201,7 +307,7 @@ def get_stats():
     if not _is_admin(get_jwt_identity()):
         return jsonify({"error": "Admin access required"}), 403
 
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     total_teachers = Teacher.query.filter_by(is_active=True).count()
     total_logs = AttendanceLog.query.count()
@@ -239,6 +345,36 @@ def get_stats():
         "failure_by_stage": {row.failure_stage or "unknown": row.count for row in stage_breakdown},
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }), 200
+
+
+# ── Geofence Editor ────────────────────────────────────────────────────────────
+
+@admin_bp.route("/geofence", methods=["GET"])
+@jwt_required()
+def get_geofence():
+    """GET /admin/geofence — return the current geofence polygon."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+
+    polygon = get_polygon()
+    return jsonify({"polygon": polygon}), 200
+
+
+@admin_bp.route("/geofence", methods=["PUT"])
+@jwt_required()
+def update_geofence():
+    """PUT /admin/geofence — update the geofence polygon."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+
+    data = request.get_json(silent=True) or {}
+    polygon = data.get("polygon")
+    if not polygon or not isinstance(polygon, list):
+        return jsonify({"error": "Invalid polygon data"}), 400
+
+    if save_polygon(polygon):
+        return jsonify({"message": "Geofence updated successfully", "polygon": polygon}), 200
+    return jsonify({"error": "Failed to save geofence"}), 500
 
 
 # ── Face Encoding Helper ──────────────────────────────────────────────────────

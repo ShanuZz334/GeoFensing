@@ -51,12 +51,12 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// POST /login
-  Future<bool> login(String email, String regNo, String password) async {
+  Future<bool> login(String regNo, String password) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
-    final response = await ApiService.instance.login(email.trim(), regNo.trim(), password);
+    final response = await ApiService.instance.login(regNo.trim(), password);
 
     if (response.success && response.data != null) {
       final data = response.data!;

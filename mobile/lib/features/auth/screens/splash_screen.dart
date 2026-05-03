@@ -62,9 +62,10 @@ class _SplashScreenState extends State<SplashScreen>
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [Color(0xFFE8603C), Color(0xFFFF8C5A)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Color(0xFF1E1145), Colors.black, Colors.black],
+            stops: [0.0, 0.4, 1.0],
           ),
         ),
         child: Center(
@@ -97,12 +98,12 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 28),
                   const Text(
-                    'GeoFace',
+                    'LPU',
                     style: TextStyle(
-                      fontSize: 36,
-                      fontWeight: FontWeight.w700,
+                      fontSize: 32,
+                      fontWeight: FontWeight.w900,
                       color: Colors.white,
-                      letterSpacing: -0.5,
+                      letterSpacing: 1.5,
                     ),
                   ),
                   const SizedBox(height: 8),

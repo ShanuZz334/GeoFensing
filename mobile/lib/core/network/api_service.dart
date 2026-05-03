@@ -26,13 +26,13 @@ class ApiService {
   }
 
   /// POST /login
-  Future<ApiResponse> login(String email, String regNo, String password) async {
+  Future<ApiResponse> login(String regNo, String password) async {
     try {
       final response = await http
           .post(
             Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}'),
             headers: _baseHeaders(),
-            body: jsonEncode({'email': email, 'reg_no': regNo, 'password': password}),
+            body: jsonEncode({'reg_no': regNo, 'password': password}),
           )
           .timeout(ApiConstants.connectTimeout);
 
@@ -99,6 +99,26 @@ class ApiService {
           .get(
             Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendance}'),
             headers: _baseHeaders(auth: true, token: token),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
+  /// GET /settings
+  Future<ApiResponse> getSettings() async {
+    try {
+      final response = await http
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/settings'),
+            headers: _baseHeaders(),
           )
           .timeout(ApiConstants.connectTimeout);
 

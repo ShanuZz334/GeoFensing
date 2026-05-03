@@ -31,6 +31,10 @@ class VerificationProvider extends ChangeNotifier {
 
   List<AttendanceLogModel> _history = [];
   bool _isLoadingHistory = false;
+  String _nextAction = 'check_in';
+
+  // Settings
+  Map<String, dynamic> _settings = {};
 
   VerificationStatus get status => _status;
   String get statusMessage => _statusMessage;
@@ -39,6 +43,8 @@ class VerificationProvider extends ChangeNotifier {
   double get progress => _progress;
   List<AttendanceLogModel> get history => _history;
   bool get isLoadingHistory => _isLoadingHistory;
+  String get nextAction => _nextAction;
+  Map<String, dynamic> get settings => _settings;
   bool get isBusy =>
       _status == VerificationStatus.recording ||
       _status == VerificationStatus.processing ||
@@ -98,6 +104,32 @@ class VerificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  // ── Settings ──────────────────────────────────────────────────────────────
+
+  Future<void> fetchSettings() async {
+    try {
+      final response = await ApiService.instance.getSettings();
+      if (response.success && response.data != null) {
+        _settings = response.data!;
+        notifyListeners();
+      }
+    } catch (e) {
+      debugPrint("Failed to fetch settings: \$e");
+    }
+  }
+
+  bool isTooLate() {
+    if (_nextAction != 'check_in') return false;
+    final rules = _settings['attendance_rules'] as Map<String, dynamic>?;
+    if (rules == null) return false;
+    final absentLimit = rules['absent_limit'] as String?;
+    if (absentLimit == null) return false;
+    
+    final now = DateTime.now();
+    final timeStr = "${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}";
+    return timeStr.compareTo(absentLimit) > 0;
+  }
+
   Future<void> fetchHistory() async {
     _isLoadingHistory = true;
     notifyListeners();
@@ -106,6 +138,7 @@ class VerificationProvider extends ChangeNotifier {
     if (response.success && response.data != null) {
       final list = response.data!['logs'] as List? ?? [];
       _history = list.map((e) => AttendanceLogModel.fromJson(e as Map<String, dynamic>)).toList();
+      _nextAction = response.data!['next_action'] ?? 'check_in';
     }
     
     _isLoadingHistory = false;
@@ -132,6 +165,13 @@ class VerificationProvider extends ChangeNotifier {
       return;
     }
 
+    // ── 1.5 Init Camera ───────────────────────────────────────────────────
+    await initCamera();
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      _setStatus(VerificationStatus.error, 'Failed to initialize camera');
+      return;
+    }
+
     _setStatus(VerificationStatus.recording, 'Get ready...');
 
     // ── 2. Start capturing frames & GPS simultaneously ─────────────────────
@@ -140,6 +180,10 @@ class VerificationProvider extends ChangeNotifier {
 
     final frames = await frameCaptureFuture;
     final position = await gpsFuture;
+    
+    // Turn camera off immediately after capturing frames
+    disposeCamera();
+    notifyListeners();
 
     if (frames.isEmpty) {
       _setStatus(VerificationStatus.error, 'Failed to capture frames from camera');
@@ -190,44 +234,21 @@ class VerificationProvider extends ChangeNotifier {
 
     final List<String> base64Frames = [];
 
-    // 1. Turn Left
-    _statusMessage = 'Turn Left ◄';
+    _statusMessage = 'Look into the camera...';
     notifyListeners();
-    await Future.delayed(const Duration(seconds: 3));
-    _progress = 0.10;
-    notifyListeners();
+    await Future.delayed(const Duration(seconds: 1));
 
-    // 2. Look Straight
-    _statusMessage = 'Look Straight ▲';
-    notifyListeners();
-    await Future.delayed(const Duration(seconds: 3));
-    _progress = 0.20;
-    notifyListeners();
-
-    // 3. Turn Right
-    _statusMessage = 'Turn Right ►';
-    notifyListeners();
-    await Future.delayed(const Duration(seconds: 3));
-    _progress = 0.30;
-    notifyListeners();
-
-    // 4. Cool-off time
-    _statusMessage = 'Hold still for verification...';
-    notifyListeners();
-    await Future.delayed(const Duration(seconds: 4));
-    _progress = 0.40;
-    notifyListeners();
-
-    // 5. Image Capture
-    for (int i = 0; i < 3; i++) {
+    // Image Capture
+    for (int i = 0; i < 6; i++) {
       if (_cameraController == null) break;
       try {
         final xFile = await _cameraController!.takePicture();
         final bytes = await xFile.readAsBytes();
         final compressed = _compressFrame(bytes);
         if (compressed != null) base64Frames.add(base64Encode(compressed));
-        _progress = 0.40 + (i + 1) * 0.03;
+        _progress = (i + 1) * 0.08;
         notifyListeners();
+        await Future.delayed(const Duration(milliseconds: 500));
       } catch (_) {}
     }
 

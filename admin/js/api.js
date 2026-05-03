@@ -144,3 +144,49 @@ function showToast(msg, type = 'info') {
   document.body.appendChild(toast);
   setTimeout(() => toast.remove(), 4000);
 }
+
+// ── Custom UI Modals ──────────────────────────────────────
+window.uiAlert = function(title, message = '') {
+  return new Promise(resolve => {
+    const modalHtml = `
+      <div id="custom-alert-modal" class="modal-overlay" style="display:flex; z-index: 99999;">
+        <div class="modal-card" style="max-width: 400px; text-align: center;">
+          <h3 style="margin-bottom: 10px; color: var(--text);">${escHtml(title)}</h3>
+          <p style="margin-bottom: 24px; color: var(--text-muted);">${escHtml(message)}</p>
+          <button id="alert-ok-btn" class="btn btn-primary" style="width: 100%; justify-content: center;">OK</button>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('alert-ok-btn').onclick = () => {
+      document.getElementById('custom-alert-modal').remove();
+      resolve();
+    };
+  });
+};
+
+window.uiConfirm = function(title, message = '') {
+  return new Promise(resolve => {
+    const modalHtml = `
+      <div id="custom-confirm-modal" class="modal-overlay" style="display:flex; z-index: 99999;">
+        <div class="modal-card" style="max-width: 400px;">
+          <h3 style="margin-bottom: 10px; color: var(--text);">${escHtml(title)}</h3>
+          <p style="margin-bottom: 24px; color: var(--text-muted); line-height: 1.5;">${escHtml(message)}</p>
+          <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button id="confirm-cancel-btn" class="btn-secondary">Cancel</button>
+            <button id="confirm-ok-btn" class="btn-primary">Confirm</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    document.getElementById('confirm-cancel-btn').onclick = () => {
+      document.getElementById('custom-confirm-modal').remove();
+      resolve(false);
+    };
+    document.getElementById('confirm-ok-btn').onclick = () => {
+      document.getElementById('custom-confirm-modal').remove();
+      resolve(true);
+    };
+  });
+};

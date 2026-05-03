@@ -28,6 +28,12 @@ def health_check():
         }
     ), 200
 
+@auth_bp.route("/settings", methods=["GET"])
+def get_public_settings():
+    """Public endpoint to fetch settings for the mobile app."""
+    from ..models import Setting
+    return jsonify(Setting.get_all()), 200
+
 
 @auth_bp.route("/login", methods=["POST"])
 def login():
@@ -35,8 +41,6 @@ def login():
     POST /login
 
     Body:
-        { "email": "...", "password": "..." }
-
     Response 200:
         { "token": "<JWT>", "teacher": { ... }, "expires_in": 86400 }
 
@@ -50,12 +54,11 @@ def login():
     if not valid:
         return jsonify({"error": error}), 400
 
-    email = data["email"].strip().lower()
     reg_no = data["reg_no"].strip()
     password = data["password"]
 
     # Look up teacher
-    teacher = Teacher.query.filter_by(email=email, reg_no=reg_no, is_active=True).first()
+    teacher = Teacher.query.filter_by(reg_no=reg_no, is_active=True).first()
 
     if teacher is None:
         return jsonify({"error": "Invalid credentials"}), 401

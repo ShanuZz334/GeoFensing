@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoFace Admin — Settings</title>
+  <meta name="description" content="GeoFace Settings - Configure time-based attendance and limits." />
+  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">
+        <img src="images/logo.png" alt="GeoFace Logo">
+      </div>
+      <span>GeoFace</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="index.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+        </svg>
+        Dashboard
+      </a>
+      <a href="teachers.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+        </svg>
+        Teachers
+      </a>
+      <a href="logs.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+        </svg>
+        Attendance Logs
+      </a>
+      <a href="map.html" class="nav-item">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/>
+        </svg>
+        Geofence Map
+      </a>
+      <a href="settings.html" class="nav-item active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        Settings
+      </a>
+    </nav>
+    <div class="sidebar-footer">
+      <button class="btn-signout" id="btn-signout" onclick="adminSignOut()">Sign Out</button>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ───────────────────────────────────────────────── -->
+  <main class="main-content">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Settings</h1>
+        <p class="page-subtitle">Configure time-based attendance and limits</p>
+      </div>
+      <div class="header-actions">
+        <button class="btn-primary" id="btn-save-settings" onclick="saveSettings()">
+          Save Changes
+        </button>
+      </div>
+    </header>
+
+    <div class="settings-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin-top: 24px;">
+      
+      <!-- Time-based Rules -->
+      <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Attendance Time Rules</h2>
+        
+        <div class="form-group">
+          <label>Class Start Time</label>
+          <input type="time" id="set-class-start" class="form-control" />
+          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Official start time of the class.</div>
+        </div>
+
+        <div class="form-group">
+          <label>Half-Day Limit Time</label>
+          <input type="time" id="set-halfday-limit" class="form-control" />
+          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Scanning after this time marks as Half Day.</div>
+        </div>
+
+        <div class="form-group">
+          <label>Absent Limit Time</label>
+          <input type="time" id="set-absent-limit" class="form-control" />
+          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Scanning after this time is blocked and marked Absent.</div>
+        </div>
+
+        <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
+
+        <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text);">Check Out Rules</h3>
+        <div class="form-group" style="display:flex; align-items:center; gap:12px;">
+          <input type="checkbox" id="set-anytime-checkout" style="width:16px; height:16px;" />
+          <label for="set-anytime-checkout" style="margin:0; padding:0; display:inline;">Anytime Checkout as Full Day</label>
+        </div>
+        <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">If checked, teachers get full day regardless of when they check out.</div>
+
+        <div class="form-group">
+          <label>Half-Day Checkout Limit</label>
+          <input type="time" id="set-halfday-checkout-limit" class="form-control" />
+          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Checking out before this time marks the day as Half Day. (Ignored if Anytime Checkout is enabled).</div>
+        </div>
+      </div>
+
+      <!-- Verification Limits -->
+      <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Verification Limits</h2>
+        
+        <div class="form-group">
+          <label>Max Check-In Attempts</label>
+          <input type="number" id="set-max-checkin" class="form-control" min="1" max="100" />
+          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Number of failed face scans allowed before marking absent.</div>
+        </div>
+
+        <div class="form-group">
+          <label>Max Check-Out Attempts</label>
+          <input type="number" id="set-max-checkout" class="form-control" min="1" max="100" />
+          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Number of failed scans allowed before prompting support.</div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+
+  <script src="js/api.js?v=2"></script>
+  <script src="js/app.js?v=2"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', async () => {
+      await loadSettings();
+    });
+
+    async function loadSettings() {
+      const data = await api('/admin/settings');
+      if (data) {
+        if (data.attendance_rules) {
+          document.getElementById('set-class-start').value = data.attendance_rules.class_start || '';
+          document.getElementById('set-halfday-limit').value = data.attendance_rules.half_day_limit || '';
+          document.getElementById('set-absent-limit').value = data.attendance_rules.absent_limit || '';
+          document.getElementById('set-halfday-checkout-limit').value = data.attendance_rules.half_day_checkout_limit || '';
+          document.getElementById('set-anytime-checkout').checked = data.attendance_rules.anytime_checkout_full_day === true;
+        }
+        if (data.verification_limits) {
+          document.getElementById('set-max-checkin').value = data.verification_limits.max_checkin_attempts || 4;
+          document.getElementById('set-max-checkout').value = data.verification_limits.max_checkout_attempts || 10;
+        }
+      }
+    }
+
+    async function saveSettings() {
+      const btn = document.getElementById('btn-save-settings');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      const payload = {
+        attendance_rules: {
+          class_start: document.getElementById('set-class-start').value,
+          half_day_limit: document.getElementById('set-halfday-limit').value,
+          absent_limit: document.getElementById('set-absent-limit').value,
+          half_day_checkout_limit: document.getElementById('set-halfday-checkout-limit').value,
+          anytime_checkout_full_day: document.getElementById('set-anytime-checkout').checked
+        },
+        verification_limits: {
+          max_checkin_attempts: parseInt(document.getElementById('set-max-checkin').value) || 4,
+          max_checkout_attempts: parseInt(document.getElementById('set-max-checkout').value) || 10
+        }
+      };
+
+      const res = await api('/admin/settings', 'PATCH', payload);
+
+      if (res && res.message) {
+        await uiAlert('Success', 'Settings saved successfully!');
+      } else {
+        await uiAlert('Error', 'Error saving settings');
+      }
+      
+      btn.textContent = 'Save Changes';
+      btn.disabled = false;
+    }
+  </script>
+</body>
+</html>

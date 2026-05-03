@@ -12,9 +12,7 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
-        </svg>
+        <img src="images/logo.png" alt="GeoFace Logo">
       </div>
       <span>GeoFace</span>
     </div>
@@ -47,6 +45,13 @@
         </svg>
         Geofence Map
       </a>
+      <a href="settings.html?v=3" class="nav-item" id="nav-settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
+        Settings
+      </a>
     </nav>
     <div class="sidebar-footer">
       <button class="btn-signout" onclick="adminSignOut()">Sign Out</button>
@@ -69,6 +74,7 @@
             <th>Reg ID</th>
             <th>Name</th>
             <th>Email</th>
+            <th>Department</th>
             <th>Face Encoded</th>
             <th>Status</th>
             <th>Registered</th>
@@ -92,6 +98,26 @@
       <div id="register-error" class="error-banner" style="display:none;"></div>
       <div id="register-success" class="success-banner" style="display:none;"></div>
 
+      <!-- Webcam face capture (Moved to Top) -->
+      <div class="form-group" style="text-align:center;">
+        <div class="webcam-box" style="display:inline-flex; flex-direction:column; align-items:center;">
+          <video id="reg-webcam" autoplay muted playsinline style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 12px;"></video>
+          <canvas id="reg-canvas" style="display:none;"></canvas>
+          <div id="webcam-placeholder" class="webcam-placeholder" onclick="startWebcam()" style="width:120px; height:120px; border-radius:50%; margin-bottom: 12px; cursor:pointer; background: var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 2px dashed var(--border);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--text-muted)">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+            </svg>
+          </div>
+          <div id="encoding-badge" class="badge badge--success" style="display:none;margin-top:8px;">✓ Face Captured</div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn-secondary btn-sm" id="btn-start-cam" onclick="startWebcam()">Open Camera</button>
+            <button class="btn-primary btn-sm" id="btn-capture" onclick="captureFace()" style="display:none;">Capture Face</button>
+            <button class="btn-secondary btn-sm" id="btn-stop-cam" onclick="stopWebcam()" style="display:none;">Stop</button>
+          </div>
+        </div>
+      </div>
+
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="reg-name" placeholder="Dr. John Smith" />
@@ -108,32 +134,12 @@
         <label>Password (min 8 chars)</label>
         <input type="password" id="reg-password" placeholder="••••••••" />
       </div>
-
-      <!-- Webcam face capture -->
       <div class="form-group">
-        <label>Face Encoding <span style="color:var(--text-muted);font-weight:400">(from live webcam)</span></label>
-        <div class="webcam-box" style="display:flex; flex-direction:column; align-items:center;">
-          <video id="reg-webcam" autoplay muted playsinline style="display:none; width:220px; height:220px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 12px;"></video>
-          <canvas id="reg-canvas" style="display:none;"></canvas>
-          <div id="webcam-placeholder" class="webcam-placeholder" style="width:220px; height:220px; border-radius:50%; margin-bottom: 12px;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:40px;height:40px;color:var(--text-muted)">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
-            </svg>
-            <p style="margin:8px 0 0;font-size:13px;color:var(--text-muted)">Click below to open camera</p>
-          </div>
-          <div id="encoding-badge" class="badge badge--success" style="display:none;margin-top:8px;">
-            ✓ Face encoding captured
-          </div>
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="btn-secondary" id="btn-start-cam" onclick="startWebcam()">Open Camera</button>
-          <button class="btn-primary" id="btn-capture" onclick="captureFace()" style="display:none;">Capture Face</button>
-          <button class="btn-secondary" id="btn-stop-cam" onclick="stopWebcam()" style="display:none;">Stop Camera</button>
-        </div>
+        <label>Department</label>
+        <input type="text" id="reg-department" placeholder="Computer Science" />
       </div>
 
-      <div style="display:flex;gap:12px;margin-top:8px;">
+      <div style="display:flex;gap:12px;margin-top:16px;">
         <button class="btn-secondary btn-full" onclick="hideRegisterModal()">Cancel</button>
         <button class="btn-primary btn-full" id="btn-register-submit" onclick="submitRegister()">Register</button>
       </div>
@@ -159,6 +165,18 @@
         <label>Registration Number (Reg ID)</label>
         <input type="text" id="edit-no" />
       </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="edit-email" />
+      </div>
+      <div class="form-group">
+        <label>Department</label>
+        <input type="text" id="edit-department" />
+      </div>
+      <div class="form-group">
+        <label>New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
+        <input type="password" id="edit-password" placeholder="••••••••" />
+      </div>
 
       <div style="display:flex;gap:12px;margin-top:16px;">
         <button class="btn-secondary btn-full" onclick="hideEditModal()">Cancel</button>
@@ -172,9 +190,7 @@
     <div class="modal-card">
       <div class="modal-logo">
         <div class="logo-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
-          </svg>
+          <img src="images/logo.png" alt="GeoFace Logo">
         </div>
         <span>GeoFace Admin</span>
       </div>
@@ -208,19 +224,22 @@
           <td><code style="font-size:12px">${escHtml(t.reg_no || '—')}</code></td>
           <td><strong>${escHtml(t.full_name)}</strong></td>
           <td>${escHtml(t.email)}</td>
+          <td>${escHtml(t.department || '—')}</td>
           <td><span class="badge badge--${t.has_face_encoding ? 'success' : 'warning'}">${t.has_face_encoding ? '✓ Yes' : '✗ No'}</span></td>
           <td><span class="badge badge--${t.is_active ? 'success' : 'neutral'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
           <td style="font-size:12px;color:var(--text-muted)">${formatDt(t.created_at)}</td>
           <td>
             <div style="display:flex; gap:6px;">
-              <button class="btn-icon" title="Alter Details" onclick="showEditModal('${t.teacher_id}', '${escHtml(t.full_name)}', '${escHtml(t.email)}', '${escHtml(t.reg_no || '')}')">
-                ✏️
+              <button class="btn-icon" title="Alter Details" onclick="showEditModal('${t.teacher_id}', '${escHtml(t.full_name)}', '${escHtml(t.email)}', '${escHtml(t.reg_no || '')}', '${escHtml(t.department || '')}')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
               </button>
               <button class="btn-icon" title="${t.is_active ? 'Deactivate' : 'Activate'}" onclick="toggleActive('${t.teacher_id}', ${t.is_active})">
-                ${t.is_active ? '🚫' : '✅'}
+                ${t.is_active ? 
+                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>' : 
+                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg>'}
               </button>
               <button class="btn-icon" title="Delete Teacher" onclick="deleteTeacher('${t.teacher_id}')" style="color:#ef4444">
-                🗑️
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
               </button>
             </div>
           </td>
@@ -229,6 +248,13 @@
     }
 
     function showRegisterModal() {
+      document.getElementById('reg-name').value = '';
+      document.getElementById('reg-no').value = '';
+      document.getElementById('reg-email').value = '';
+      document.getElementById('reg-department').value = '';
+      document.getElementById('reg-password').value = '';
+      document.getElementById('register-error').style.display = 'none';
+      document.getElementById('register-success').style.display = 'none';
       document.getElementById('register-modal').style.display = 'flex';
     }
     function hideRegisterModal() {
@@ -291,16 +317,17 @@
       const name = document.getElementById('reg-name').value.trim();
       const regNo = document.getElementById('reg-no').value.trim();
       const email = document.getElementById('reg-email').value.trim();
+      const department = document.getElementById('reg-department').value.trim();
       const password = document.getElementById('reg-password').value;
       const errEl = document.getElementById('register-error');
       const okEl = document.getElementById('register-success');
       errEl.style.display = 'none'; okEl.style.display = 'none';
 
-      if (!name || !regNo || !email || !password) {
+      if (!name || !regNo || !email || !password || !department) {
         errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return;
       }
 
-      const payload = { full_name: name, reg_no: regNo, email, password };
+      const payload = { full_name: name, reg_no: regNo, email, department, password };
       if (capturedEncoding) payload.face_encoding = capturedEncoding;
       if (capturedProfilePic) payload.profile_pic = capturedProfilePic;
 
@@ -312,10 +339,13 @@
       }
     }
 
-    function showEditModal(id, name, email, regNo) {
+    function showEditModal(id, name, email, regNo, department) {
       document.getElementById('edit-id').value = id;
       document.getElementById('edit-name').value = name;
       document.getElementById('edit-no').value = regNo;
+      document.getElementById('edit-email').value = email;
+      document.getElementById('edit-department').value = department;
+      document.getElementById('edit-password').value = '';
       document.getElementById('edit-modal').style.display = 'flex';
       document.getElementById('edit-error').style.display = 'none';
       document.getElementById('edit-success').style.display = 'none';
@@ -329,22 +359,30 @@
       const id = document.getElementById('edit-id').value;
       const name = document.getElementById('edit-name').value.trim();
       const regNo = document.getElementById('edit-no').value.trim();
+      const email = document.getElementById('edit-email').value.trim();
+      const department = document.getElementById('edit-department').value.trim();
+      const password = document.getElementById('edit-password').value;
       const errEl = document.getElementById('edit-error');
       const okEl = document.getElementById('edit-success');
       
       errEl.style.display = 'none';
       okEl.style.display = 'none';
 
-      if (!name || !regNo) {
-        errEl.textContent = 'Name and Reg ID are required';
+      if (!name || !regNo || !email || !department) {
+        errEl.textContent = 'Name, Reg ID, Email, and Department are required';
         errEl.style.display = 'block';
         return;
       }
 
-      const data = await api(`/admin/teachers/${id}`, 'PATCH', {
+      const payload = {
         full_name: name,
-        reg_no: regNo
-      });
+        reg_no: regNo,
+        email: email,
+        department: department
+      };
+      if (password) payload.password = password;
+
+      const data = await api(`/admin/teachers/${id}`, 'PATCH', payload);
 
       if (data) {
         okEl.textContent = 'Teacher details updated!';
@@ -356,7 +394,8 @@
     async function toggleActive(id, currentStatus) {
       const newStatus = !currentStatus;
       const confirmMsg = newStatus ? 'Activate this teacher?' : 'Deactivate this teacher?';
-      if (!confirm(confirmMsg)) return;
+      const isConfirmed = await uiConfirm('Confirm Action', confirmMsg);
+      if (!isConfirmed) return;
 
       const data = await api(`/admin/teachers/${id}`, 'PATCH', {
         is_active: newStatus
@@ -367,7 +406,8 @@
     }
 
     async function deleteTeacher(id) {
-      if (!confirm('Are you ABSOLUTELY sure you want to PERMANENTLY delete this teacher? This will delete all their attendance records.')) return;
+      const isConfirmed = await uiConfirm('Delete Teacher', 'Are you ABSOLUTELY sure you want to PERMANENTLY delete this teacher? This will delete all their attendance records.');
+      if (!isConfirmed) return;
 
       const data = await api(`/admin/teachers/${id}`, 'DELETE');
       if (data) {

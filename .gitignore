@@ -69,5 +69,11 @@ Thumbs.db
 .vscode/
 *.iml
 
+# ── Node.js ─────────────────
+node_modules/
+teacher_web/node_modules/
+teacher_web/dist/
+teacher_web/.next/
+
 # ── Custom ──────────────────
 insightface-master/

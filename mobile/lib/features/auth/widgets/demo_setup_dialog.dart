@@ -98,11 +98,12 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
+      backgroundColor: AppTheme.surface,
       title: const Row(
         children: [
           Icon(Icons.bug_report_outlined, color: AppTheme.primary),
           SizedBox(width: 10),
-          Text('Demo Mode Setup'),
+          Text('Demo Mode Setup', style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
         ],
       ),
       content: SingleChildScrollView(
@@ -115,7 +116,7 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
             ),
             const SizedBox(height: 16),
             SwitchListTile(
-              title: const Text('Enable Demo Mode', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
+              title: const Text('Enable Demo Mode', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
               value: _demoEnabled,
               activeThumbColor: AppTheme.primary,
               contentPadding: EdgeInsets.zero,
@@ -138,10 +139,15 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
             const SizedBox(height: 8),
             TextField(
               controller: _latController,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Target Latitude',
+                labelStyle: TextStyle(color: AppTheme.textMedium),
                 hintText: 'e.g. 31.2488',
-                prefixIcon: Icon(Icons.location_on_outlined),
+                hintStyle: TextStyle(color: Colors.grey),
+                prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.textMedium),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primary)),
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               enabled: _demoEnabled,
@@ -149,10 +155,15 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _lngController,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Target Longitude',
+                labelStyle: TextStyle(color: AppTheme.textMedium),
                 hintText: 'e.g. 75.6994',
-                prefixIcon: Icon(Icons.location_on_outlined),
+                hintStyle: TextStyle(color: Colors.grey),
+                prefixIcon: Icon(Icons.location_on_outlined, color: AppTheme.textMedium),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primary)),
               ),
               keyboardType: const TextInputType.numberWithOptions(decimal: true),
               enabled: _demoEnabled,
@@ -160,10 +171,15 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
             const SizedBox(height: 12),
             TextField(
               controller: _radiusController,
+              style: const TextStyle(color: Colors.white),
               decoration: const InputDecoration(
                 labelText: 'Radius (Meters)',
+                labelStyle: TextStyle(color: AppTheme.textMedium),
                 hintText: 'e.g. 200',
-                prefixIcon: Icon(Icons.circle_outlined),
+                hintStyle: TextStyle(color: Colors.grey),
+                prefixIcon: Icon(Icons.circle_outlined, color: AppTheme.textMedium),
+                enabledBorder: OutlineInputBorder(borderSide: BorderSide(color: Colors.grey)),
+                focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: AppTheme.primary)),
               ),
               keyboardType: TextInputType.number,
               enabled: _demoEnabled,

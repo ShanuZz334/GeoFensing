@@ -25,6 +25,7 @@ from ..services.face_service import process_frames, compare_encodings
 from ..services.liveness_service import run_liveness_checks
 from ..services.jwt_service import verify_timestamp_freshness
 from ..utils.validators import validate_verify_payload
+from ..utils.geofence_store import get_polygon
 
 logger = logging.getLogger(__name__)
 verify_bp = Blueprint("verify", __name__)
@@ -38,6 +39,8 @@ def _write_log(
     reason: str,
     frames_count: int,
     failure_stage: str = None,
+    action_type: str = None,
+    attendance_mark: str = 'present',
 ) -> None:
     """Persist an attendance log record."""
     log = AttendanceLog(
@@ -49,31 +52,44 @@ def _write_log(
         reason=reason,
         frames_count=frames_count,
         failure_stage=failure_stage,
+        action_type=action_type,
+        attendance_mark=attendance_mark,
     )
     db.session.add(log)
     db.session.commit()
 
 
-def _build_failure_response(teacher_id, reason, distance, face_frames, total_frames, face_distance, server_time):
+def _build_failure_response(teacher_id, reason, distance, face_frames, total_frames, face_distance, server_time, action_type='check_in'):
     """Build a standard failure response with remaining attempts count."""
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     failure_count = AttendanceLog.query.filter(
         AttendanceLog.teacher_id == teacher_id,
         AttendanceLog.timestamp >= today_start,
-        AttendanceLog.status == "failure"
+        AttendanceLog.status == "failure",
+        AttendanceLog.action_type == action_type
     ).count()
     
-    attempts_left = max(0, 4 - failure_count)
+    limit = 10 if action_type == 'check_out' else 4
+    attempts_left = max(0, limit - failure_count)
+    
     if attempts_left == 0:
-        reason += ". You have exhausted all 4 attempts. Marked as Absent."
+        if action_type == 'check_out':
+            reason += f". You have exhausted all {limit} check-out attempts. Please contact support."
+        else:
+            reason += f". You have exhausted all {limit} attempts. Marked as Absent."
     else:
-        reason += f". {attempts_left} attempts left before being marked Absent."
+        reason += f". {attempts_left} attempts left."
         
     from flask import jsonify
     return jsonify({
         "status": "failure",
         "reason": reason,
+        "attempts_left": attempts_left,
         "timestamp": server_time,
+        "contact_support": {
+            "phone": "8089602280",
+            "email": "shanifshaz546@gmail.com"
+        } if attempts_left == 0 else None,
         "details": {
             "gps_distance_m": distance,
             "face_frames": face_frames,
@@ -81,6 +97,24 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
             "face_distance": face_distance,
         }
     }), 200
+
+
+def _get_next_action(teacher_id: str) -> str:
+    """Determine the next attendance action (check_in or check_out) for today."""
+    # Start of current day (UTC)
+    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    
+    # Get last successful log for today
+    last_log = AttendanceLog.query.filter(
+        AttendanceLog.teacher_id == teacher_id,
+        AttendanceLog.status == "success",
+        AttendanceLog.timestamp >= today_start
+    ).order_by(AttendanceLog.timestamp.desc()).first()
+    
+    # Simple alternating logic: if none today or last was check_out -> next is check_in
+    if not last_log or last_log.action_type == "check_out":
+        return "check_in"
+    return "check_out"
 
 
 @verify_bp.route("/attendance", methods=["GET"])
@@ -115,7 +149,11 @@ def get_teacher_attendance():
         else:
             reason = f"Failed ({len(day_logs)}/4 attempts)"
         
-        latest_log = day_logs[0]
+        success_logs = [l for l in day_logs if l.status == "success"]
+        if success_logs:
+            latest_log = success_logs[0]
+        else:
+            latest_log = day_logs[0]
         
         aggregated_logs.append({
             "id": latest_log.id,
@@ -128,6 +166,7 @@ def get_teacher_attendance():
             "reason": reason,
             "frames_count": latest_log.frames_count,
             "failure_stage": latest_log.failure_stage,
+            "action_type": latest_log.action_type,
         })
         
     return jsonify({
@@ -136,6 +175,7 @@ def get_teacher_attendance():
         "page": 1,
         "per_page": 20,
         "pages": 1,
+        "next_action": _get_next_action(teacher_id),
     }), 200
 
 
@@ -226,6 +266,65 @@ def verify():
                         "reason": "No face encoding registered for this teacher",
                         "timestamp": server_time}), 422
 
+    action_type = _get_next_action(teacher_id)
+
+    # ── Fetch Dynamic Settings ───────────────────────────────────────────────
+    from ..models import Setting
+    settings_dict = Setting.get_all()
+    
+    rules = settings_dict.get("attendance_rules", {})
+    class_start = rules.get("class_start", "09:00")
+    half_day_limit = rules.get("half_day_limit", "10:05")
+    absent_limit = rules.get("absent_limit", "11:00")
+    half_day_checkout_limit = rules.get("half_day_checkout_limit", "")
+    anytime_checkout_full_day = rules.get("anytime_checkout_full_day", False)
+    
+    limits_cfg = settings_dict.get("verification_limits", {})
+    max_checkin = limits_cfg.get("max_checkin_attempts", 4)
+    max_checkout = limits_cfg.get("max_checkout_attempts", 10)
+
+    # ── Time-Based Rules Check ───────────────────────────────────────────────
+    attendance_mark = 'present'
+    current_time_str = datetime.now().strftime("%H:%M")
+    
+    if action_type == 'check_in':
+        if current_time_str > absent_limit:
+            attendance_mark = 'half_day'
+        elif current_time_str > half_day_limit:
+            attendance_mark = 'flagged'
+    elif action_type == 'check_out':
+        if not anytime_checkout_full_day and half_day_checkout_limit:
+            if current_time_str < half_day_checkout_limit:
+                attendance_mark = 'half_day'
+
+    # ── Attempt Limit Check ──────────────────────────────────────────────────
+    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    failure_count = AttendanceLog.query.filter(
+        AttendanceLog.teacher_id == teacher_id,
+        AttendanceLog.timestamp >= today_start,
+        AttendanceLog.status == "failure",
+        AttendanceLog.action_type == action_type
+    ).count()
+
+    limit = max_checkout if action_type == 'check_out' else max_checkin
+
+    if failure_count >= limit:
+        reason = f"You have exhausted all {limit} verification attempts for {action_type.replace('_', ' ')}. Marked as Absent." if action_type == 'check_in' else f"You have exhausted all {limit} check-out attempts. Please contact support."
+        
+        # If check-in max failed, mark as absent
+        if action_type == 'check_in':
+            attendance_mark = 'absent'
+        
+        return jsonify({
+            "status": "failure",
+            "reason": reason,
+            "timestamp": server_time,
+            "contact_support": {
+                "phone": "8089602280",
+                "email": "shanifshaz546@gmail.com"
+            } if action_type == 'check_out' else None,
+        }), 200
+
     # ── Step 1: GPS Geofencing ───────────────────────────────────────────────
     # Support for Demo Mode: override geofence if demo params are provided
     demo_lat = data.get("demo_lat")
@@ -244,7 +343,7 @@ def verify():
         college_lat = teacher.college_latitude or cfg["COLLEGE_LATITUDE"]
         college_lon = teacher.college_longitude or cfg["COLLEGE_LONGITUDE"]
         radius = cfg["GEOFENCE_RADIUS_METERS"]
-        polygon = cfg.get("GEOFENCE_POLYGON")
+        polygon = get_polygon()
         buffer_m = cfg.get("GEOFENCE_BUFFER_METERS", 15)
 
     authorized, distance, status_code = is_within_geofence(
@@ -271,25 +370,10 @@ def verify():
         if demo_lat is not None:
             reason = f"Demo Mode: Outside range ({distance}m > {radius}m)"
             
-        _write_log(teacher_id, latitude, longitude, "failure", reason, len(frames), "geofence")
-        return _build_failure_response(teacher_id, reason, distance, 0, len(frames), 1.0, server_time)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, len(frames), "geofence", action_type=action_type, attendance_mark=attendance_mark)
+        return _build_failure_response(teacher_id, reason, distance, 0, len(frames), 1.0, server_time, action_type=action_type)
 
     success_reason = "Verification successful"
-
-    # ── Attempt Limit Check ──────────────────────────────────────────────────
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    failure_count = AttendanceLog.query.filter(
-        AttendanceLog.teacher_id == teacher_id,
-        AttendanceLog.timestamp >= today_start,
-        AttendanceLog.status == "failure"
-    ).count()
-
-    if failure_count >= 4:
-        return jsonify({
-            "status": "failure",
-            "reason": "You have exhausted all 4 verification attempts for today. Marked as Absent.",
-            "timestamp": server_time,
-        }), 200
 
     # ── Step 2: Frame Processing ─────────────────────────────────────────────
     max_frames = cfg.get("MAX_FRAMES", 25)
@@ -298,8 +382,8 @@ def verify():
 
     if total_frames == 0:
         reason = "No valid frames received"
-        _write_log(teacher_id, latitude, longitude, "failure", reason, 0, "frame_decode")
-        return _build_failure_response(teacher_id, reason, distance, 0, 0, 1.0, server_time)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, 0, "frame_decode", action_type=action_type, attendance_mark=attendance_mark)
+        return _build_failure_response(teacher_id, reason, distance, 0, 0, 1.0, server_time, action_type=action_type)
 
     # ── Step 3: Face Detection Check ─────────────────────────────────────────
     face_ratio = face_frame_count / total_frames
@@ -310,8 +394,8 @@ def verify():
             f"Face not detected in enough frames "
             f"({face_frame_count}/{total_frames}, need {min_ratio*100:.0f}%)"
         )
-        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_detection")
-        return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, 1.0, server_time)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_detection", action_type=action_type, attendance_mark=attendance_mark)
+        return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, 1.0, server_time, action_type=action_type)
 
     # ── Step 4: Face Recognition ─────────────────────────────────────────────
     threshold = cfg.get("FACE_RECOGNITION_THRESHOLD", 0.6)
@@ -320,8 +404,8 @@ def verify():
 
     if not matched:
         reason = "Face verification failed. The scanned face does not match your registered profile."
-        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_recognition")
-        return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, best_distance, server_time)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_recognition", action_type=action_type, attendance_mark=attendance_mark)
+        return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
     # ── Step 5: Liveness Detection ────────────────────────────────────────────
     ear_threshold = cfg.get("EAR_BLINK_THRESHOLD", 0.25)
@@ -334,20 +418,21 @@ def verify():
 
     if not liveness_passed:
         _write_log(teacher_id, latitude, longitude, "failure", liveness_reason,
-                   total_frames, "liveness")
-        return _build_failure_response(teacher_id, liveness_reason, distance, face_frame_count, total_frames, best_distance, server_time)
+                   total_frames, "liveness", action_type=action_type, attendance_mark=attendance_mark)
+        return _build_failure_response(teacher_id, liveness_reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
     # ── All checks passed → Mark attendance ─────────────────────────────────
-    _write_log(teacher_id, latitude, longitude, "success", success_reason, len(frames))
+    _write_log(teacher_id, latitude, longitude, "success", success_reason, len(frames), action_type=action_type, attendance_mark=attendance_mark)
 
     logger.info(
-        "Verification SUCCESS: teacher=%s distance_m=%.2f frames=%d/%d face_dist=%.4f",
-        teacher_id, distance, face_frame_count, total_frames, best_distance
+        "Verification SUCCESS: teacher=%s type=%s distance_m=%.2f frames=%d/%d face_dist=%.4f",
+        teacher_id, action_type, distance, face_frame_count, total_frames, best_distance
     )
 
     return jsonify({
         "status": "success",
-        "reason": success_reason,
+        "reason": f"Verification successful - {action_type.replace('_', ' ').title()}",
+        "action_type": action_type,
         "timestamp": server_time,
         "details": {
             "gps_distance_m": distance,

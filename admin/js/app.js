@@ -51,14 +51,16 @@ function renderTodayChart(success, failure) {
   if (!ctx) return;
   if (todayChart) todayChart.destroy();
 
+  const hasData = success > 0 || failure > 0;
+
   todayChart = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: ['Successful', 'Failed'],
+      labels: hasData ? ['Successful', 'Failed'] : ['No Data'],
       datasets: [{
-        data: [success, failure],
-        backgroundColor: ['rgba(16,185,129,0.8)', 'rgba(239,68,68,0.8)'],
-        borderColor: ['#10b981', '#ef4444'],
+        data: hasData ? [success, failure] : [1],
+        backgroundColor: hasData ? ['rgba(124,58,237,0.8)', 'rgba(239,68,68,0.8)'] : ['rgba(255,255,255,0.05)'],
+        borderColor: hasData ? ['#7C3AED', '#ef4444'] : ['rgba(255,255,255,0.1)'],
         borderWidth: 2,
       }],
     },
@@ -68,7 +70,11 @@ function renderTodayChart(success, failure) {
       cutout: '65%',
       plugins: {
         legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 12 } } },
-        tooltip: { callbacks: { label: (c) => ` ${c.label}: ${c.parsed}` } },
+        tooltip: { 
+          callbacks: { 
+            label: (c) => c.label === 'No Data' ? ' No Data for today' : ` ${c.label}: ${c.parsed}` 
+          } 
+        },
       },
     },
   });

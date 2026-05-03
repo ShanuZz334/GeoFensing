@@ -44,6 +44,10 @@ class AttendanceLog(db.Model):
     frames_count = db.Column(db.Integer, nullable=True)
     # Pipeline stage that failed (for analytics)
     failure_stage = db.Column(db.String(100), nullable=True)
+    # "check_in" or "check_out"
+    action_type = db.Column(db.String(20), nullable=True)
+    # "present", "half_day", or "absent"
+    attendance_mark = db.Column(db.String(20), nullable=False, default="present")
 
     def to_dict(self) -> dict:
         """Serialize attendance log to dictionary."""
@@ -51,11 +55,14 @@ class AttendanceLog(db.Model):
             "id": self.id,
             "teacher_id": self.teacher_id,
             "teacher_name": self.teacher.full_name if self.teacher else None,
+            "reg_no": self.teacher.reg_no if self.teacher else None,
             "timestamp": self.timestamp.isoformat(),
             "latitude": self.latitude,
             "longitude": self.longitude,
             "status": self.status,
             "reason": self.reason,
+            "action_type": self.action_type,
+            "attendance_mark": self.attendance_mark,
             "frames_count": self.frames_count,
             "failure_stage": self.failure_stage,
         }

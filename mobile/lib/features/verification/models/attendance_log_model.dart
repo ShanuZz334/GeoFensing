@@ -10,6 +10,8 @@ class AttendanceLogModel {
   final String reason;
   final int? framesCount;
   final String? failureStage;
+  final String? actionType;
+  final String attendanceMark;
 
   const AttendanceLogModel({
     required this.id,
@@ -22,6 +24,8 @@ class AttendanceLogModel {
     required this.reason,
     this.framesCount,
     this.failureStage,
+    this.actionType,
+    this.attendanceMark = 'present',
   });
 
   bool get isSuccess => status == 'success';
@@ -38,6 +42,8 @@ class AttendanceLogModel {
       reason: json['reason'] as String? ?? 'Unknown error',
       framesCount: json['frames_count'] as int?,
       failureStage: json['failure_stage'] as String?,
+      actionType: json['action_type'] as String?,
+      attendanceMark: json['attendance_mark'] as String? ?? 'present',
     );
   }
 }

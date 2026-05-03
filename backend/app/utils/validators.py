@@ -22,16 +22,13 @@ def validate_login_payload(data: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
     if not data:
         return False, "Request body is required"
 
-    email = data.get("email")
     reg_no = data.get("reg_no")
     password = data.get("password")
 
-    if not email:
-        return False, "Email is required"
-    if not isinstance(email, str) or not validate_email(email.strip()):
-        return False, "Invalid email format"
     if not reg_no:
         return False, "Registration number is required"
+    if not isinstance(reg_no, str):
+        return False, "Registration number must be a string"
     if not password:
         return False, "Password is required"
     if not isinstance(password, str) or len(password) < 6:
@@ -95,7 +92,7 @@ def validate_teacher_register_payload(data: Dict[str, Any]) -> Tuple[bool, Optio
     if not data:
         return False, "Request body is required"
 
-    for field in ("full_name", "email", "reg_no", "password"):
+    for field in ("full_name", "email", "reg_no", "password", "department"):
         if not data.get(field):
             return False, f"{field} is required"
 

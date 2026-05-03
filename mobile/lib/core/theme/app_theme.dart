@@ -5,14 +5,14 @@ class AppTheme {
   AppTheme._();
 
   // ── Professional Color Palette ──────────────────────────────────────────────
-  static const primary      = Color(0xFF2563EB); // Modern Blue
-  static const primaryDark  = Color(0xFF1E40AF);
-  static const slate        = Color(0xFF0F172A); // Deep Slate
-  static const slateLight   = Color(0xFFF8FAFC);
-  static const textDark     = Color(0xFF1E293B);
-  static const textMedium   = Color(0xFF64748B);
-  static const borderColor  = Color(0xFFE2E8F0);
-  static const surface      = Colors.white;
+  static const primary      = Color(0xFF7C3AED); // Vibrant Blue from design
+  static const primaryDark  = Color(0xFF1A26D9);
+  static const slate        = Color(0xFF050505); // Deep Dark background
+  static const slateLight   = Color(0xFF121212); // Card surface
+  static const textDark     = Colors.white;
+  static const textMedium   = Color(0xFF94A3B8);
+  static const borderColor  = Color(0xFF7C3AED);
+  static const surface      = Color(0xFF121212);
 
   // Semantic aliases
   static const Color success        = Color(0xFF10B981);
@@ -37,13 +37,15 @@ class AppTheme {
     );
   }
 
-  // ── Light Theme (Professional) ────────────────────────────────────────────
-  static ThemeData get lightTheme {
-    const colorScheme = ColorScheme.light(
+  // ── Dark Theme (Professional) ─────────────────────────────────────────────
+  static ThemeData get lightTheme => darkTheme; // Force dark mode
+
+  static ThemeData get darkTheme {
+    const colorScheme = ColorScheme.dark(
       primary:     primary,
       secondary:   primaryDark,
       error:       Color(0xFFEF4444),
-      surface:     Colors.white,
+      surface:     surface,
       onPrimary:   Colors.white,
       onSecondary: Colors.white,
       onSurface:   textDark,
@@ -52,21 +54,22 @@ class AppTheme {
     return ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: slateLight,
+      scaffoldBackgroundColor: slate,
       textTheme: _buildTextTheme(textDark, textMedium),
       appBarTheme: AppBarTheme(
-        backgroundColor: Colors.white,
+        backgroundColor: slate,
         elevation: 0,
         scrolledUnderElevation: 1,
         iconTheme: const IconThemeData(color: textDark),
         titleTextStyle: GoogleFonts.inter(fontSize: 18, fontWeight: FontWeight.w600, color: textDark),
       ),
       cardTheme: CardThemeData(
-        color: Colors.white,
-        elevation: 0,
+        color: surface,
+        elevation: 15,
+        shadowColor: Colors.white.withValues(alpha: 0.1),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
-          side: const BorderSide(color: borderColor),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
@@ -75,20 +78,21 @@ class AppTheme {
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 24),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          elevation: 0,
+          elevation: 5,
+          shadowColor: primary.withValues(alpha: 0.5),
           textStyle: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w600),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white,
+        fillColor: slateLight,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderColor),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: borderColor),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -103,7 +107,4 @@ class AppTheme {
       ),
     );
   }
-
-  // ── Dark Theme (kept for compatibility but same structure) ─────────────────
-  static ThemeData get darkTheme => lightTheme;
 }

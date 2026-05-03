@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS teachers (
     full_name        VARCHAR(200)  NOT NULL,
     email            VARCHAR(255)  NOT NULL UNIQUE,
     reg_no           VARCHAR(100)  UNIQUE,
+    department       VARCHAR(100),
     profile_pic      TEXT,
     password_hash    VARCHAR(255)  NOT NULL,
     -- 128-element float array stored as JSONB for efficient indexing
@@ -61,6 +62,10 @@ CREATE TABLE IF NOT EXISTS attendance_logs (
     frames_count     INTEGER,
     -- Which pipeline stage caused failure (NULL on success)
     failure_stage    VARCHAR(100),
+    -- "check_in" or "check_out"
+    action_type      VARCHAR(20),
+    -- "present", "half_day", or "absent"
+    attendance_mark  VARCHAR(20)   NOT NULL DEFAULT 'present',
     created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 
@@ -68,6 +73,21 @@ CREATE INDEX IF NOT EXISTS idx_attendance_teacher   ON attendance_logs(teacher_i
 CREATE INDEX IF NOT EXISTS idx_attendance_timestamp ON attendance_logs(timestamp DESC);
 CREATE INDEX IF NOT EXISTS idx_attendance_status    ON attendance_logs(status);
 CREATE INDEX IF NOT EXISTS idx_attendance_date      ON attendance_logs(DATE(timestamp));
+
+-- ==============================================================================
+-- SETTINGS
+-- ==============================================================================
+
+CREATE TABLE IF NOT EXISTS settings (
+    key VARCHAR(50) PRIMARY KEY,
+    value JSONB NOT NULL
+);
+
+INSERT INTO settings (key, value) VALUES 
+('attendance_rules', '{"class_start": "09:00", "half_day_limit": "10:05", "absent_limit": "11:00"}'),
+('verification_limits', '{"max_checkin_attempts": 4, "max_checkout_attempts": 10}')
+ON CONFLICT (key) DO NOTHING;
+
 
 
 -- ==============================================================================

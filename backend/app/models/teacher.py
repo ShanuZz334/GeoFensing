@@ -21,6 +21,7 @@ class Teacher(db.Model):
     full_name = db.Column(db.String(200), nullable=False)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
     reg_no = db.Column(db.String(100), unique=True, nullable=True, index=True)
+    department = db.Column(db.String(100), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     profile_pic = db.Column(db.Text, nullable=True)
     # Stored as JSON array of 128 floats (face_recognition encoding)
@@ -52,6 +53,7 @@ class Teacher(db.Model):
             "full_name": self.full_name,
             "email": self.email,
             "reg_no": self.reg_no,
+            "department": self.department,
             "is_active": self.is_active,
             "profile_pic": self.profile_pic,
             "has_face_encoding": self.face_encoding is not None,

@@ -46,11 +46,30 @@ class AttendanceLog(db.Model):
     failure_stage = db.Column(db.String(100), nullable=True)
     # "check_in" or "check_out"
     action_type = db.Column(db.String(20), nullable=True)
-    # "present", "half_day", or "absent"
+    # "present", "half_day", "absent", or "flagged" (late check-in pending admin review)
     attendance_mark = db.Column(db.String(20), nullable=False, default="present")
 
     def to_dict(self) -> dict:
         """Serialize attendance log to dictionary."""
+        if self.attendance_mark == "absent":
+            status_display = "ABSENT"
+        else:
+            status_display = self.status.upper()
+            if self.status == "success":
+                if self.attendance_mark == "leave":
+                    status_display = "LEAVE"
+                elif self.action_type == "check_in":
+                    status_display = "CHECK-IN SUCCESS"
+                elif self.action_type == "check_out":
+                    if self.attendance_mark == "present":
+                        status_display = "FULL DAY"
+                    elif self.attendance_mark == "half_day":
+                        status_display = "HALF DAY"
+                    else:
+                        status_display = self.attendance_mark.upper().replace("_", " ")
+                else:
+                    status_display = self.attendance_mark.upper().replace("_", " ")
+
         return {
             "id": self.id,
             "teacher_id": self.teacher_id,
@@ -60,6 +79,7 @@ class AttendanceLog(db.Model):
             "latitude": self.latitude,
             "longitude": self.longitude,
             "status": self.status,
+            "status_display": status_display,
             "reason": self.reason,
             "action_type": self.action_type,
             "attendance_mark": self.attendance_mark,

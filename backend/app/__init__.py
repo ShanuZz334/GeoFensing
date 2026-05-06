@@ -41,5 +41,20 @@ def create_app(config_name: str = "production") -> Flask:
     # Create DB tables on first run
     with app.app_context():
         db.create_all()
+        
+        from .models.admin import Admin
+        if Admin.query.count() == 0:
+            head_admin_pass = app.config.get("ADMIN_PASSWORD", "admin123")
+            head_admin_reg_no = app.config.get("HEAD_ADMIN_REG_NO", "ADMIN_001")
+            head_admin_name = app.config.get("HEAD_ADMIN_NAME", "Head Admin")
+            head_admin = Admin(
+                name=head_admin_name,
+                reg_no=head_admin_reg_no,
+                password_hash=bcrypt.generate_password_hash(head_admin_pass).decode("utf-8"),
+                is_head_admin=True
+            )
+            db.session.add(head_admin)
+            db.session.commit()
+            print(f"Seeded initial Head Admin with Reg No: {head_admin_reg_no}")
 
     return app

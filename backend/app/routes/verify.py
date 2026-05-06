@@ -11,7 +11,7 @@ POST /verify  →  Full AI verification pipeline:
   7. Write attendance log
 """
 
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import logging
 
 import json
@@ -19,7 +19,7 @@ from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from ..extensions import db, redis_client
-from ..models import Teacher, AttendanceLog
+from ..models import Teacher, AttendanceLog, Setting
 from ..services.geo_service import is_within_geofence
 from ..services.face_service import process_frames, compare_encodings
 from ..services.liveness_service import run_liveness_checks
@@ -41,8 +41,13 @@ def _write_log(
     failure_stage: str = None,
     action_type: str = None,
     attendance_mark: str = 'present',
+    bypass_limits: bool = False,
 ) -> None:
     """Persist an attendance log record."""
+    if bypass_limits:
+        logger.info(f"Demo mode bypass active: skipping DB save for {teacher_id}")
+        return
+
     log = AttendanceLog(
         teacher_id=teacher_id,
         timestamp=datetime.now(timezone.utc),
@@ -69,18 +74,26 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
         AttendanceLog.action_type == action_type
     ).count()
     
-    limit = 10 if action_type == 'check_out' else 4
+    from ..models import Setting
+    settings_dict = Setting.get_all()
+    limits_cfg = settings_dict.get("verification_limits", {})
+    max_checkin = limits_cfg.get("max_checkin_attempts", 4)
+    max_checkout = limits_cfg.get("max_checkout_attempts", 10)
+    
+    limit = max_checkout if action_type == 'check_out' else max_checkin
     attempts_left = max(0, limit - failure_count)
     
     if attempts_left == 0:
         if action_type == 'check_out':
-            reason += f". You have exhausted all {limit} check-out attempts. Please contact support."
+            if "exhausted" not in reason:
+                reason += f". You have exhausted all {limit} check-out attempts. Please contact support."
         else:
-            reason += f". You have exhausted all {limit} attempts. Marked as Absent."
+            if "exhausted" not in reason:
+                reason += f". You have exhausted all {limit} attempts. Marked as Absent."
     else:
-        reason += f". {attempts_left} attempts left."
+        if "attempts left" not in reason:
+            reason += f". {attempts_left} attempts left."
         
-    from flask import jsonify
     return jsonify({
         "status": "failure",
         "reason": reason,
@@ -89,7 +102,7 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
         "contact_support": {
             "phone": "8089602280",
             "email": "shanifshaz546@gmail.com"
-        } if attempts_left == 0 else None,
+        } if (attempts_left == 0 and action_type == 'check_out') else None,
         "details": {
             "gps_distance_m": distance,
             "face_frames": face_frames,
@@ -99,22 +112,40 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
     }), 200
 
 
-def _get_next_action(teacher_id: str) -> str:
-    """Determine the next attendance action (check_in or check_out) for today."""
-    # Start of current day (UTC)
+def _get_next_action_info(teacher_id: str):
+    """Determine the next attendance action and current attempt count."""
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     
-    # Get last successful log for today
-    last_log = AttendanceLog.query.filter(
+    today_logs = AttendanceLog.query.filter(
         AttendanceLog.teacher_id == teacher_id,
-        AttendanceLog.status == "success",
         AttendanceLog.timestamp >= today_start
-    ).order_by(AttendanceLog.timestamp.desc()).first()
+    ).order_by(AttendanceLog.timestamp.asc()).all()
     
-    # Simple alternating logic: if none today or last was check_out -> next is check_in
-    if not last_log or last_log.action_type == "check_out":
-        return "check_in"
-    return "check_out"
+    # Check for completed states
+    if any(log.attendance_mark == "absent" for log in today_logs):
+        return "completed", 0, 4
+        
+    if any(log.status == "success" and log.action_type == "check_out" for log in today_logs):
+        return "completed", 0, 10
+        
+    # Determine action
+    check_ins = [log for log in today_logs if log.status == "success" and log.action_type == "check_in"]
+    action = "check_out" if check_ins else "check_in"
+    
+    # Count failures for this action
+    failures = [log for log in today_logs if log.status == "failure" and log.action_type == action]
+    
+    # Get limits
+    settings_dict = Setting.get_all()
+    limits = settings_dict.get("verification_limits", {"max_checkin_attempts": 4, "max_checkout_attempts": 10})
+    limit = limits.get("max_checkout_attempts", 10) if action == "check_out" else limits.get("max_checkin_attempts", 4)
+    
+    return action, len(failures), limit
+
+
+def _get_next_action(teacher_id: str) -> str:
+    action, _, _ = _get_next_action_info(teacher_id)
+    return action
 
 
 @verify_bp.route("/attendance", methods=["GET"])
@@ -155,27 +186,201 @@ def get_teacher_attendance():
         else:
             latest_log = day_logs[0]
         
-        aggregated_logs.append({
-            "id": latest_log.id,
-            "teacher_id": latest_log.teacher_id,
-            "teacher_name": latest_log.teacher.full_name if latest_log.teacher else None,
-            "timestamp": latest_log.timestamp.isoformat(),
-            "latitude": latest_log.latitude,
-            "longitude": latest_log.longitude,
-            "status": status,
-            "reason": reason,
-            "frames_count": latest_log.frames_count,
-            "failure_stage": latest_log.failure_stage,
-            "action_type": latest_log.action_type,
-        })
+        log_data = latest_log.to_dict()
+        log_data["status"] = status
+        log_data["reason"] = reason
+        aggregated_logs.append(log_data)
         
+    action, attempts, limit = _get_next_action_info(teacher_id)
     return jsonify({
         "logs": aggregated_logs,
         "total": len(aggregated_logs),
         "page": 1,
         "per_page": 20,
         "pages": 1,
-        "next_action": _get_next_action(teacher_id),
+        "next_action": action,
+        "current_attempts": attempts,
+        "max_attempts": limit
+    }), 200
+
+
+@verify_bp.route("/attendance/stats", methods=["GET"])
+@jwt_required()
+def get_attendance_stats():
+    """GET /attendance/stats — returns attendance statistics for month and semester."""
+    teacher_id = get_jwt_identity()
+    now = datetime.now(timezone.utc)
+    
+    def get_stats_for_range(start_date, end_date=None, is_sem=False):
+        teacher_id = get_jwt_identity()
+        
+        # Effective range
+        effective_start = start_date
+        effective_end = end_date or now
+        
+        # Generate all dates in range
+        dates = []
+        curr = effective_start.date()
+        end_d = effective_end.date()
+        while curr <= end_d:
+            dates.append(curr.strftime("%Y-%m-%d"))
+            curr += timedelta(days=1)
+
+        # Get logs for teacher in range
+        logs = AttendanceLog.query.filter(
+            AttendanceLog.teacher_id == teacher_id,
+            AttendanceLog.timestamp >= effective_start,
+            AttendanceLog.timestamp <= effective_end
+        ).order_by(AttendanceLog.timestamp.asc()).all()
+        
+        days_data = {d: [] for d in dates}
+        for log in logs:
+            date_str = log.timestamp.strftime("%Y-%m-%d")
+            if date_str in days_data:
+                days_data[date_str].append(log)
+            
+        attended = 0
+        absent = 0
+        taken_full_leaves = 0
+        taken_half_leaves = 0
+        final_logs = []
+        approved_full_leaves = 0
+        days_processed = 0
+        for date_str in sorted(days_data.keys(), reverse=True):
+            days_processed += 1
+            day_logs = days_data[date_str]
+            
+            success_logs = [l for l in day_logs if l.status == "success"]
+            success_log = success_logs[-1] if success_logs else None
+            
+            leave_logs = [l for l in day_logs if l.attendance_mark == "leave"]
+            leave_log = leave_logs[-1] if leave_logs else None
+            
+            absent_logs = [l for l in day_logs if l.attendance_mark == "absent"]
+            absent_log = absent_logs[-1] if absent_logs else None
+            
+            if success_log:
+                if success_log.attendance_mark == "half_day":
+                    attended += 0.5
+                    absent += 0.5
+                    taken_half_leaves += 1
+                else:
+                    attended += 1
+                final_logs.append(success_log.to_dict())
+            elif leave_log:
+                taken_full_leaves += 1
+                approved_full_leaves += 1
+                log_data = leave_log.to_dict()
+                log_data.update({
+                    "status": "success",
+                    "status_display": "LEAVE",
+                    "attendance_mark": "leave",
+                    "reason": "Approved Leave"
+                })
+                final_logs.append(log_data)
+            elif absent_log:
+                absent += 1
+                taken_full_leaves += 1 # Absences count as full leaves taken
+                final_logs.append(absent_log.to_dict())
+            else:
+                # Synthetic Absent (only if date <= today)
+                synthetic_ts = datetime.fromisoformat(date_str).replace(hour=12, tzinfo=timezone.utc)
+                if synthetic_ts.weekday() in [5, 6]:
+                    continue  # Skip Saturday (5) and Sunday (6)
+
+                # DO NOT mark absent for today if we haven't passed the absent_limit yet
+                if date_str == now.strftime("%Y-%m-%d"):
+                    settings_dict = Setting.get_all()
+                    rules = settings_dict.get("attendance_rules", {})
+                    absent_limit = rules.get("absent_limit", "11:00")
+                    current_time_str = datetime.now().strftime("%H:%M")
+                    if current_time_str <= absent_limit:
+                        continue # Skip marking absent, they still have time
+
+                absent += 1
+                taken_full_leaves += 1 # Absences count as full leaves taken
+                final_logs.append({
+                    "id": f"syn_{date_str}",
+                    "teacher_id": teacher_id,
+                    "timestamp": synthetic_ts.isoformat(),
+                    "status": "failure",
+                    "status_display": "ABSENT",
+                    "action_type": "check_in",
+                    "attendance_mark": "absent",
+                    "reason": "No record found for this day."
+                })
+            
+        # Get leave settings
+        try:
+            val = Setting.get("monthly_allotted_leaves", "2")
+            allotted_monthly = int(val) if val and str(val).strip() else 2
+        except:
+            allotted_monthly = 2
+            
+        try:
+            val_half = Setting.get("monthly_allotted_half_leaves", "2")
+            allotted_half_monthly = int(val_half) if val_half and str(val_half).strip() else 2
+        except:
+            allotted_half_monthly = 2
+            
+        teacher = Teacher.query.get(teacher_id)
+        extra_leaves = teacher.extra_leaves if teacher and teacher.extra_leaves else 0
+        extra_half_leaves = teacher.extra_half_leaves if teacher and hasattr(teacher, 'extra_half_leaves') and teacher.extra_half_leaves else 0
+        extra_monthly_leaves = teacher.extra_monthly_leaves if teacher and hasattr(teacher, 'extra_monthly_leaves') and teacher.extra_monthly_leaves else 0
+        extra_half_monthly_leaves = teacher.extra_half_monthly_leaves if teacher and hasattr(teacher, 'extra_half_monthly_leaves') and teacher.extra_half_monthly_leaves else 0
+        
+        if is_sem:
+            # Full semester quota
+            allotted = (allotted_monthly * 6) + extra_leaves
+            allotted_half = (allotted_half_monthly * 6) + extra_half_leaves
+        else:
+            # Current month quota
+            allotted = allotted_monthly + extra_monthly_leaves
+            allotted_half = allotted_half_monthly + extra_half_monthly_leaves
+            
+        return {
+            "attended": attended,
+            "absent": absent,
+            "approved_full_leaves": approved_full_leaves,
+            "taken_full_leaves": taken_full_leaves,
+            "allotted_full_leaves": allotted,
+            "taken_half_leaves": taken_half_leaves,
+            "allotted_half_leaves": allotted_half,
+            "total": days_processed,
+            "logs": final_logs
+        }
+
+    # Monthly: From start of current month
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    # Semester: From configured start date
+    sem_start_str = Setting.get("semester_start_date")
+    try:
+        sem_start = datetime.fromisoformat(sem_start_str).replace(tzinfo=timezone.utc)
+    except:
+        sem_start = now - timedelta(days=180)
+    
+    # Prove ranges in logs
+    print(f"[STATS] Request for {teacher_id}")
+    print(f"[STATS] Monthly range: {month_start.date()} to {now.date()}")
+    print(f"[STATS] Semester range: {sem_start.date()} to {now.date()}")
+    
+    res_monthly = get_stats_for_range(month_start, is_sem=False)
+    res_semester = get_stats_for_range(sem_start, is_sem=True)
+    
+    print(f"[STATS] Monthly results - Total days: {res_monthly['total']}, Attended: {res_monthly['attended']}")
+    
+    return jsonify({
+        "monthly": res_monthly,
+        "semester": res_semester,
+        "verification_limits": Setting.get_all().get("verification_limits", {
+            "max_checkin_attempts": 4,
+            "max_checkout_attempts": 10
+        }),
+        "support_contact": Setting.get("support_contact", {
+            "phone": "8089602280",
+            "email": "shanifshaz546@gmail.com"
+        })
     }), 200
 
 
@@ -217,6 +422,7 @@ def verify():
     latitude: float = float(data["latitude"])
     longitude: float = float(data["longitude"])
     timestamp: float = float(data["timestamp"])
+    bypass_limits: bool = data.get("bypass_limits", False)
     server_time = datetime.now(timezone.utc).isoformat()
 
     # ── Replay attack guard ──────────────────────────────────────────────────
@@ -266,7 +472,7 @@ def verify():
                         "reason": "No face encoding registered for this teacher",
                         "timestamp": server_time}), 422
 
-    action_type = _get_next_action(teacher_id)
+    action_type, failure_count, _ = _get_next_action_info(teacher_id)
 
     # ── Fetch Dynamic Settings ───────────────────────────────────────────────
     from ..models import Setting
@@ -289,31 +495,50 @@ def verify():
     
     if action_type == 'check_in':
         if current_time_str > absent_limit:
-            attendance_mark = 'half_day'
+            # Arrived after absent_limit — mark absent immediately
+            attendance_mark = 'absent'
         elif current_time_str > half_day_limit:
+            # Arrived between half_day_limit and absent_limit — half day
+            attendance_mark = 'half_day'
+        elif current_time_str > class_start:
+            # Arrived after class_start but before half_day_limit — flag for admin review
             attendance_mark = 'flagged'
     elif action_type == 'check_out':
         if not anytime_checkout_full_day and half_day_checkout_limit:
             if current_time_str < half_day_checkout_limit:
                 attendance_mark = 'half_day'
 
-    # ── Attempt Limit Check ──────────────────────────────────────────────────
-    today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-    failure_count = AttendanceLog.query.filter(
-        AttendanceLog.teacher_id == teacher_id,
-        AttendanceLog.timestamp >= today_start,
-        AttendanceLog.status == "failure",
-        AttendanceLog.action_type == action_type
-    ).count()
-
     limit = max_checkout if action_type == 'check_out' else max_checkin
+    
+    # ── Mark Logic ──────────────────────────────────────────────────────────
+    # 'attendance_mark' will now be used as 'mark_on_success'
+    # We define a separate 'mark_on_failure' to avoid flagging failed attempts.
+    
+    mark_on_success = attendance_mark
+    mark_on_failure = 'present'
+    
+    if mark_on_success == 'absent':
+        mark_on_failure = 'absent'
+    
+    if action_type == 'check_in' and failure_count + 1 >= limit:
+        mark_on_failure = 'absent'
 
-    if failure_count >= limit:
+    if not bypass_limits and failure_count >= limit:
         reason = f"You have exhausted all {limit} verification attempts for {action_type.replace('_', ' ')}. Marked as Absent." if action_type == 'check_in' else f"You have exhausted all {limit} check-out attempts. Please contact support."
         
-        # If check-in max failed, mark as absent
+        # If check-in max failed, mark as absent and persist the record
         if action_type == 'check_in':
             attendance_mark = 'absent'
+        
+        # Persist the exhausted-attempt event so it shows in admin logs
+        _write_log(
+            teacher_id, latitude, longitude, "failure", reason,
+            len(frames),
+            failure_stage="attempt_limit",
+            action_type=action_type,
+            attendance_mark=mark_on_failure,
+            bypass_limits=bypass_limits,
+        )
         
         return jsonify({
             "status": "failure",
@@ -370,7 +595,7 @@ def verify():
         if demo_lat is not None:
             reason = f"Demo Mode: Outside range ({distance}m > {radius}m)"
             
-        _write_log(teacher_id, latitude, longitude, "failure", reason, len(frames), "geofence", action_type=action_type, attendance_mark=attendance_mark)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, len(frames), "geofence", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, 0, len(frames), 1.0, server_time, action_type=action_type)
 
     success_reason = "Verification successful"
@@ -382,7 +607,7 @@ def verify():
 
     if total_frames == 0:
         reason = "No valid frames received"
-        _write_log(teacher_id, latitude, longitude, "failure", reason, 0, "frame_decode", action_type=action_type, attendance_mark=attendance_mark)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, 0, "frame_decode", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, 0, 0, 1.0, server_time, action_type=action_type)
 
     # ── Step 3: Face Detection Check ─────────────────────────────────────────
@@ -394,7 +619,7 @@ def verify():
             f"Face not detected in enough frames "
             f"({face_frame_count}/{total_frames}, need {min_ratio*100:.0f}%)"
         )
-        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_detection", action_type=action_type, attendance_mark=attendance_mark)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_detection", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, 1.0, server_time, action_type=action_type)
 
     # ── Step 4: Face Recognition ─────────────────────────────────────────────
@@ -404,7 +629,7 @@ def verify():
 
     if not matched:
         reason = "Face verification failed. The scanned face does not match your registered profile."
-        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_recognition", action_type=action_type, attendance_mark=attendance_mark)
+        _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_recognition", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
     # ── Step 5: Liveness Detection ────────────────────────────────────────────
@@ -418,11 +643,11 @@ def verify():
 
     if not liveness_passed:
         _write_log(teacher_id, latitude, longitude, "failure", liveness_reason,
-                   total_frames, "liveness", action_type=action_type, attendance_mark=attendance_mark)
+                   total_frames, "liveness", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, liveness_reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
     # ── All checks passed → Mark attendance ─────────────────────────────────
-    _write_log(teacher_id, latitude, longitude, "success", success_reason, len(frames), action_type=action_type, attendance_mark=attendance_mark)
+    _write_log(teacher_id, latitude, longitude, "success", success_reason, len(frames), action_type=action_type, attendance_mark=mark_on_success, bypass_limits=bypass_limits)
 
     logger.info(
         "Verification SUCCESS: teacher=%s type=%s distance_m=%.2f frames=%d/%d face_dist=%.4f",

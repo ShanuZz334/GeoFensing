@@ -16,11 +16,35 @@ let draftLayer = null;
 let draftMarkers = [];
 
 async function initMap() {
-  map = L.map('map').setView(COLLEGE_CENTER, 15);
+  const darkMap = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+    attribution: '&copy; OpenStreetMap contributors &copy; CARTO',
+    subdomains: 'abcd',
+    maxZoom: 20
+  });
 
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '&copy; OpenStreetMap contributors'
-  }).addTo(map);
+  const normalMap = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '&copy; OpenStreetMap contributors',
+    maxZoom: 19
+  });
+
+  const satelliteMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+    attribution: 'Tiles &copy; Esri',
+    maxZoom: 19
+  });
+
+  map = L.map('map', {
+    center: COLLEGE_CENTER,
+    zoom: 15,
+    layers: [satelliteMap]
+  });
+
+  const baseMaps = {
+    "Satellite Mode": satelliteMap,
+    "Normal Mode": normalMap,
+    "Dark Mode": darkMap
+  };
+
+  L.control.layers(baseMaps).addTo(map);
 
   map.on('click', onMapClick);
 
@@ -57,8 +81,8 @@ function drawGeofence(coords) {
     const turfCoords = coords.map(p => [p[1], p[0]]);
     turfCoords.push(turfCoords[0]); // Close polygon
     const turfPolygon = turf.polygon([turfCoords]);
-    const buffered = turf.buffer(turfPolygon, 15, {units: 'meters'});
-    
+    const buffered = turf.buffer(turfPolygon, 15, { units: 'meters' });
+
     const bufferCoords = buffered.geometry.coordinates[0].map(p => [p[1], p[0]]);
     bufferPolygonLayer = L.polygon(bufferCoords, {
       color: '#f59e0b',
@@ -75,29 +99,31 @@ function drawGeofence(coords) {
 function toggleEditMode() {
   editMode = true;
   draftPoints = [...currentPolygon];
-  
+
   document.getElementById('btn-edit-geofence').style.display = 'none';
   document.getElementById('btn-save-geofence').style.display = 'inline-block';
   document.getElementById('btn-cancel-edit').style.display = 'inline-block';
   document.getElementById('btn-clear-geofence').style.display = 'inline-block';
   document.getElementById('edit-instructions').style.display = 'block';
-  
+  document.getElementById('manual-coord-panel').style.display = 'block';
+
   if (mainPolygonLayer) map.removeLayer(mainPolygonLayer);
   if (bufferPolygonLayer) map.removeLayer(bufferPolygonLayer);
-  
+
   redrawDraft();
 }
 
 function cancelEditMode() {
   editMode = false;
   clearDraft();
-  
+
   document.getElementById('btn-edit-geofence').style.display = 'inline-block';
   document.getElementById('btn-save-geofence').style.display = 'none';
   document.getElementById('btn-cancel-edit').style.display = 'none';
   document.getElementById('btn-clear-geofence').style.display = 'none';
   document.getElementById('edit-instructions').style.display = 'none';
-  
+  document.getElementById('manual-coord-panel').style.display = 'none';
+
   drawGeofence(currentPolygon);
 }
 
@@ -118,16 +144,40 @@ function onMapClick(e) {
   redrawDraft();
 }
 
+function addManualPoint() {
+  if (!editMode) return;
+  
+  const latInput = document.getElementById('manual-lat');
+  const lngInput = document.getElementById('manual-lng');
+  const lat = parseFloat(latInput.value);
+  const lng = parseFloat(lngInput.value);
+
+  if (isNaN(lat) || isNaN(lng)) {
+    uiAlert("Error", "Please enter valid numeric latitude and longitude values.");
+    return;
+  }
+
+  draftPoints.push([lat, lng]);
+  redrawDraft();
+  
+  // Center map on the newly added manual point
+  map.setView([lat, lng], map.getZoom());
+
+  // Clear inputs
+  latInput.value = '';
+  lngInput.value = '';
+}
+
 function redrawDraft() {
   clearDraft();
-  
+
   if (draftPoints.length > 0) {
     if (draftPoints.length >= 3) {
       draftLayer = L.polygon(draftPoints, { color: 'red', weight: 2, fillOpacity: 0.2 }).addTo(map);
     } else {
       draftLayer = L.polyline(draftPoints, { color: 'red', weight: 2 }).addTo(map);
     }
-    
+
     draftPoints.forEach((p, idx) => {
       const marker = L.circleMarker(p, { radius: 5, color: 'red', fillColor: '#fff', fillOpacity: 1 }).addTo(map);
       marker.on('click', (e) => {
@@ -145,10 +195,10 @@ async function saveGeofence() {
     await uiAlert("Error", "Please draw a polygon with at least 3 points.");
     return;
   }
-  
+
   try {
     const res = await api('/admin/geofence', 'PUT', { polygon: draftPoints });
-    
+
     if (res && res.polygon) {
       currentPolygon = res.polygon;
       await uiAlert("Success", "Geofence saved successfully!");
@@ -172,7 +222,7 @@ async function loadMapData() {
   let focusedMarker = null;
 
   const users = {};
-  
+
   data.logs.forEach(log => {
     if (!log.latitude || !log.longitude) return;
     if (log.reason && log.reason.includes('Demo Mode')) return;
@@ -181,7 +231,7 @@ async function loadMapData() {
       focusedLog = log;
       return; // Handled separately
     }
-    
+
     if (!users[log.teacher_id]) {
       users[log.teacher_id] = {
         name: log.teacher_name,
@@ -189,8 +239,8 @@ async function loadMapData() {
         failures: []
       };
     }
-    
-    if (log.status === 'success') {
+
+    if (log.status === 'success' || log.status === 'CHECK-IN SUCCESS' || log.status === 'CHECK-OUT SUCCESS') {
       if (!users[log.teacher_id].success) {
         users[log.teacher_id].success = log;
       }
@@ -207,7 +257,7 @@ async function loadMapData() {
       const isCheckOut = log.action_type === 'check_out';
       const actionText = isCheckOut ? 'Check Out' : 'Check In';
       const bgColor = isCheckOut ? '#8b5cf6' : '#7C3AED';
-      
+
       const markerClass = isCheckOut ? 'premium-marker-checkout' : 'premium-marker-checkin';
       const successIcon = L.divIcon({
         className: 'custom-div-icon',
@@ -243,7 +293,7 @@ async function loadMapData() {
     });
     focusedMarker = L.marker([focusedLog.latitude, focusedLog.longitude], { icon: focusIcon, zIndexOffset: 1000 }).addTo(map)
       .bindPopup(`<strong>${focusedLog.teacher_name}</strong><br><span class="badge badge--${focusedLog.status}" style="padding:2px 6px;border-radius:4px">${focusedLog.status.toUpperCase()}</span><br>Reason: ${focusedLog.reason}<br>Time: ${formatDt(focusedLog.timestamp)}`);
-    
+
     map.setView([focusedLog.latitude, focusedLog.longitude], 18);
     focusedMarker.openPopup();
   }

@@ -55,6 +55,7 @@ class ApiService {
     double? demoLat,
     double? demoLng,
     double? demoRadius,
+    bool bypassLimits = false,
   }) async {
     try {
       final token = await _getToken();
@@ -70,6 +71,7 @@ class ApiService {
       if (demoLat != null) body['demo_lat'] = demoLat;
       if (demoLng != null) body['demo_lng'] = demoLng;
       if (demoRadius != null) body['demo_radius'] = demoRadius;
+      if (bypassLimits) body['bypass_limits'] = true;
 
       final response = await http
           .post(
@@ -89,6 +91,44 @@ class ApiService {
     }
   }
 
+  /// PATCH /complete_setup
+  Future<ApiResponse> completeSetup({
+    required String fullName,
+    required String email,
+    required String department,
+    required String newPassword,
+    required String profilePicBase64,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
+
+      final body = {
+        'full_name': fullName,
+        'email': email,
+        'department': department,
+        'new_password': newPassword,
+        'profile_pic': profilePicBase64,
+      };
+
+      final response = await http
+          .patch(
+            Uri.parse('${ApiConstants.baseUrl}/complete_setup'),
+            headers: _baseHeaders(auth: true, token: token),
+            body: jsonEncode(body),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
   /// GET /attendance
   Future<ApiResponse> getAttendance() async {
     try {
@@ -98,6 +138,29 @@ class ApiService {
       final response = await http
           .get(
             Uri.parse('${ApiConstants.baseUrl}${ApiConstants.attendance}'),
+            headers: _baseHeaders(auth: true, token: token),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
+  /// GET /attendance/stats
+  Future<ApiResponse> getAttendanceStats() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
+
+      final response = await http
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/attendance/stats'),
             headers: _baseHeaders(auth: true, token: token),
           )
           .timeout(ApiConstants.connectTimeout);

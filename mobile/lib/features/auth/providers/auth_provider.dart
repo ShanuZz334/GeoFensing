@@ -83,6 +83,49 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// PATCH /complete_setup
+  Future<bool> completeSetup({
+    required String fullName,
+    required String email,
+    required String department,
+    required String newPassword,
+    required String profilePicBase64,
+  }) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    final response = await ApiService.instance.completeSetup(
+      fullName: fullName,
+      email: email,
+      department: department,
+      newPassword: newPassword,
+      profilePicBase64: profilePicBase64,
+    );
+
+    if (response.success && response.data != null) {
+      final data = response.data!;
+      _currentUser = UserModel.fromJson(
+        data['teacher'] as Map<String, dynamic>,
+      );
+
+      // Update persisted teacher info
+      await _storage.write(
+        key: ApiConstants.teacherKey,
+        value: jsonEncode(_currentUser!.toJson()),
+      );
+
+      _status = AuthStatus.authenticated;
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = response.errorMessage ?? 'Setup failed';
+      _status = AuthStatus.authenticated; // Keep authenticated, just show error
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Sign out and clear secure storage
   Future<void> logout() async {
     await _storage.deleteAll();

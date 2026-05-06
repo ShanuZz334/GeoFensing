@@ -12,40 +12,51 @@
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
       <div class="logo-icon">
-        <img src="images/logo.png" alt="GeoFace Logo">
+        <img src="images/logo.png?v=6" alt="GeoFace Logo">
       </div>
       <span>GeoFace</span>
     </div>
     <nav class="sidebar-nav">
       <a href="index.html" class="nav-item" id="nav-dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
         </svg>
         Dashboard
       </a>
+      <a href="alerts.html" class="nav-item" id="nav-alerts">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+        <span style="flex-grow: 1;">Alert Center</span>
+        <span id="sidebar-alert-badge" style="display:none; background:var(--error, #ef4444); color:white; font-size:11px; font-weight:bold; height:20px; min-width:20px; border-radius:10px; align-items:center; justify-content:center; padding:0 6px;">0</span>
+      </a>
       <a href="teachers.html" class="nav-item active" id="nav-teachers">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
         </svg>
         Teachers
       </a>
       <a href="logs.html" class="nav-item" id="nav-logs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
         </svg>
         Attendance Logs
       </a>
       <a href="map.html" class="nav-item" id="nav-map">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round"
-            d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/>
         </svg>
         Geofence Map
       </a>
-      <a href="settings.html?v=3" class="nav-item" id="nav-settings">
+      <a href="admins.html" class="nav-item" id="nav-admins">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>
+        Manage Admins
+      </a>
+      <a href="audit.html" class="nav-item" id="nav-audit">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        Audit Logs
+      </a>
+      <a href="settings.html" class="nav-item" id="nav-settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
@@ -98,8 +109,20 @@
       <div id="register-error" class="error-banner" style="display:none;"></div>
       <div id="register-success" class="success-banner" style="display:none;"></div>
 
+      <!-- Temporary Registration Toggle -->
+      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-weight:600; font-size:14px;">Temporary Registration</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Teacher completes face scan via app</div>
+        </div>
+        <label class="switch" style="flex-shrink:0; margin-left:16px;">
+          <input type="checkbox" id="reg-is-temp" onchange="toggleTempMode()" />
+          <span class="slider"></span>
+        </label>
+      </div>
+
       <!-- Webcam face capture (Moved to Top) -->
-      <div class="form-group" style="text-align:center;">
+      <div class="form-group" id="reg-face-section" style="text-align:center;">
         <div class="webcam-box" style="display:inline-flex; flex-direction:column; align-items:center;">
           <video id="reg-webcam" autoplay muted playsinline style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 12px;"></video>
           <canvas id="reg-canvas" style="display:none;"></canvas>
@@ -118,7 +141,7 @@
         </div>
       </div>
 
-      <div class="form-group">
+      <div class="form-group" id="reg-name-section">
         <label>Full Name</label>
         <input type="text" id="reg-name" placeholder="Dr. John Smith" />
       </div>
@@ -126,7 +149,7 @@
         <label>Registration Number (Reg ID)</label>
         <input type="text" id="reg-no" placeholder="REG12345" />
       </div>
-      <div class="form-group">
+      <div class="form-group" id="reg-email-section">
         <label>Email</label>
         <input type="email" id="reg-email" placeholder="teacher@college.edu" />
       </div>
@@ -134,7 +157,7 @@
         <label>Password (min 8 chars)</label>
         <input type="password" id="reg-password" placeholder="••••••••" />
       </div>
-      <div class="form-group">
+      <div class="form-group" id="reg-dept-section">
         <label>Department</label>
         <input type="text" id="reg-department" placeholder="Computer Science" />
       </div>
@@ -146,7 +169,43 @@
     </div>
   </div>
 
-  <!-- Edit Teacher Modal -->
+  <!-- Credential Share Modal (appears after temp registration) -->
+  <div class="modal-overlay" id="share-modal" style="display:none;">
+    <div class="modal-card" style="max-width:440px; text-align:center;">
+      <!-- Success icon -->
+      <div style="width:56px;height:56px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      </div>
+      <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">Teacher Registered!</h2>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Share these temporary credentials with the teacher. They will complete face registration via the app.</p>
+
+      <!-- Credential card -->
+      <div id="cred-card" style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;font-family:monospace;line-height:1.9;font-size:13px;white-space:pre-wrap;"></div>
+
+      <!-- Share buttons -->
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+        <!-- WhatsApp -->
+        <button onclick="shareViaWhatsApp()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:600;background:#25D366;color:#fff;transition:opacity .2s;" onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+          Share via WhatsApp
+        </button>
+        <!-- Copy -->
+        <button id="btn-copy-cred" onclick="copyCredentials()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;" onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+          Copy to Clipboard
+        </button>
+        <!-- Email -->
+        <button onclick="shareViaEmail()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;" onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+          Share via Email
+        </button>
+      </div>
+
+      <button class="btn-secondary btn-full" onclick="closeShareModal()">Done</button>
+    </div>
+  </div>
+
+
   <div class="modal-overlay" id="edit-modal" style="display:none;">
     <div class="modal-card" style="max-width:520px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
@@ -185,28 +244,59 @@
     </div>
   </div>
 
-  <!-- Admin Login Modal -->
   <div class="modal-overlay" id="login-modal">
-    <div class="modal-card">
-      <div class="modal-logo">
-        <div class="logo-icon">
-          <img src="images/logo.png" alt="GeoFace Logo">
-        </div>
-        <span>GeoFace Admin</span>
+    <div style="
+      width: 360px;
+      padding: 40px 28px;
+      border-radius: 20px;
+      background: #1c1c1c;
+      border: 1px solid rgba(255,255,255,0.07);
+      box-shadow: 0 32px 64px rgba(0,0,0,0.7);
+      text-align: center;
+    ">
+      <h2 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 28px;">Login</h2>
+      <div id="login-error" class="error-banner" style="display:none; margin-bottom:16px;"></div>
+
+      <div style="margin-bottom: 16px;">
+        <input type="text" id="admin-reg-no" placeholder="Registration Number" style="
+          width: 100%; padding: 13px 16px; border: none; border-radius: 10px;
+          background: #2a2a2a;
+          color: #e0e0e0; font-size: 14px; outline: none;
+          box-sizing: border-box; font-family: inherit;
+        " />
       </div>
-      <h2 class="modal-title">Sign in to continue</h2>
-      <div id="login-error" class="error-banner" style="display:none;"></div>
-      <div class="form-group">
-        <label for="admin-email">Email</label>
-        <input type="email" id="admin-email" placeholder="admin@college.edu"/>
+
+      <div style="margin-bottom: 24px; position: relative;">
+        <input type="password" id="admin-password" placeholder="Password" style="
+          width: 100%; padding: 13px 46px 13px 16px; border: none; border-radius: 10px;
+          background: #2a2a2a;
+          color: #e0e0e0; font-size: 14px; outline: none;
+          box-sizing: border-box; font-family: inherit;
+        " />
+        <button type="button" onclick="togglePasswordVisibility()" style="
+          position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
+          background: none; border: none; cursor: pointer; color: #777; padding: 4px;
+        ">
+          <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
       </div>
-      <div class="form-group">
-        <label for="admin-password">Password</label>
-        <input type="password" id="admin-password" placeholder="••••••••"/>
-      </div>
-      <button class="btn-primary btn-full" onclick="adminLogin()">Sign In</button>
+
+      <button id="btn-login" onclick="adminLogin()" style="
+        width: 100%; padding: 13px; border: none; border-radius: 10px; cursor: pointer;
+        background: #2a2a2a;
+        border: 1px solid rgba(255,255,255,0.06);
+        color: #fff; font-size: 15px; font-weight: 700;
+        transition: background 0.2s;
+      " onmouseover="this.style.background='#333'" onmouseout="this.style.background='#2a2a2a'">
+        Login
+      </button>
     </div>
   </div>
+
+
 
   <script src="js/api.js?v=1001"></script>
   <script src="js/app.js"></script>
@@ -253,8 +343,13 @@
       document.getElementById('reg-email').value = '';
       document.getElementById('reg-department').value = '';
       document.getElementById('reg-password').value = '';
+      document.getElementById('reg-is-temp').checked = false;
       document.getElementById('register-error').style.display = 'none';
       document.getElementById('register-success').style.display = 'none';
+      // reset temp mode
+      ['reg-face-section','reg-name-section','reg-email-section','reg-dept-section'].forEach(id => {
+        document.getElementById(id).style.display = '';
+      });
       document.getElementById('register-modal').style.display = 'flex';
     }
     function hideRegisterModal() {
@@ -263,6 +358,16 @@
       capturedEncoding = null;
       capturedProfilePic = null;
       document.getElementById('encoding-badge').style.display = 'none';
+    }
+
+    function toggleTempMode() {
+      const isTemp = document.getElementById('reg-is-temp').checked;
+      const hide = isTemp ? 'none' : '';
+      document.getElementById('reg-face-section').style.display = hide;
+      document.getElementById('reg-name-section').style.display = hide;
+      document.getElementById('reg-email-section').style.display = hide;
+      document.getElementById('reg-dept-section').style.display = hide;
+      if (isTemp) stopWebcam();
     }
 
     async function startWebcam() {
@@ -314,14 +419,31 @@
     }
 
     async function submitRegister() {
-      const name = document.getElementById('reg-name').value.trim();
+      const isTemp = document.getElementById('reg-is-temp').checked;
       const regNo = document.getElementById('reg-no').value.trim();
-      const email = document.getElementById('reg-email').value.trim();
-      const department = document.getElementById('reg-department').value.trim();
       const password = document.getElementById('reg-password').value;
       const errEl = document.getElementById('register-error');
       const okEl = document.getElementById('register-success');
       errEl.style.display = 'none'; okEl.style.display = 'none';
+
+      if (isTemp) {
+        // Quick registration — only reg_no + password needed
+        if (!regNo || !password) {
+          errEl.textContent = 'Registration Number and Password are required'; errEl.style.display = 'block'; return;
+        }
+        const payload = { is_temporary: true, reg_no: regNo, password };
+        const data = await api('/admin/teachers', 'POST', payload);
+        if (data) {
+          hideRegisterModal();
+          loadTeachers();
+          showCredentialShare(regNo, password);
+        }
+        return;
+      }
+
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const department = document.getElementById('reg-department').value.trim();
 
       if (!name || !regNo || !email || !password || !department) {
         errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return;
@@ -382,36 +504,80 @@
       };
       if (password) payload.password = password;
 
-      const data = await api(`/admin/teachers/${id}`, 'PATCH', payload);
-
+      const data = await api('/admin/teachers/' + id, 'PATCH', payload);
       if (data) {
-        okEl.textContent = 'Teacher details updated!';
+        okEl.textContent = 'Teacher updated successfully!';
         okEl.style.display = 'block';
-        setTimeout(() => { hideEditModal(); loadTeachers(); }, 1000);
+        setTimeout(() => { hideEditModal(); loadTeachers(); }, 1500);
       }
     }
 
     async function toggleActive(id, currentStatus) {
-      const newStatus = !currentStatus;
-      const confirmMsg = newStatus ? 'Activate this teacher?' : 'Deactivate this teacher?';
-      const isConfirmed = await uiConfirm('Confirm Action', confirmMsg);
-      if (!isConfirmed) return;
-
-      const data = await api(`/admin/teachers/${id}`, 'PATCH', {
-        is_active: newStatus
-      });
+      if (!await uiConfirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this teacher?`, { danger: currentStatus })) return;
+      const data = await api('/admin/teachers/' + id, 'PATCH', { is_active: !currentStatus });
       if (data) {
+        showToast('Teacher status updated');
         loadTeachers();
       }
     }
 
     async function deleteTeacher(id) {
-      const isConfirmed = await uiConfirm('Delete Teacher', 'Are you ABSOLUTELY sure you want to PERMANENTLY delete this teacher? This will delete all their attendance records.');
-      if (!isConfirmed) return;
-
-      const data = await api(`/admin/teachers/${id}`, 'DELETE');
+      if (!await uiConfirm('Are you sure you want to permanently delete this teacher? This cannot be undone.', { danger: true })) return;
+      const data = await api('/admin/teachers/' + id, 'DELETE');
       if (data) {
+        showToast('Teacher deleted');
         loadTeachers();
+      }
+    }
+
+    // Share Modal Functions
+    let currentShareCreds = null;
+
+    function showCredentialShare(regNo, password) {
+      currentShareCreds = { regNo, password };
+      
+      const message = `Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${regNo}\nPassword: ${password}\n\nPlease keep these credentials secure.`;
+      
+      document.getElementById('cred-card').textContent = message;
+      document.getElementById('share-modal').style.display = 'flex';
+    }
+
+    function closeShareModal() {
+      document.getElementById('share-modal').style.display = 'none';
+      currentShareCreds = null;
+    }
+
+    function shareViaWhatsApp() {
+      if (!currentShareCreds) return;
+      const msg = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\n*Registration ID:* ${currentShareCreds.regNo}\n*Password:* ${currentShareCreds.password}\n\nPlease keep these credentials secure.`);
+      window.open(`https://wa.me/?text=${msg}`, '_blank');
+    }
+
+    function shareViaEmail() {
+      if (!currentShareCreds) return;
+      const subject = encodeURIComponent('Your GeoFace Teacher App Credentials');
+      const body = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${currentShareCreds.regNo}\nPassword: ${currentShareCreds.password}\n\nPlease keep these credentials secure.`);
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+
+    async function copyCredentials() {
+      if (!currentShareCreds) return;
+      const msg = `Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${currentShareCreds.regNo}\nPassword: ${currentShareCreds.password}\n\nPlease keep these credentials secure.`;
+      try {
+        await navigator.clipboard.writeText(msg);
+        const btn = document.getElementById('btn-copy-cred');
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+        btn.style.color = '#10b981'; // success color
+        btn.style.borderColor = '#10b981';
+        setTimeout(() => {
+          btn.innerHTML = origHtml;
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+        showToast('Failed to copy to clipboard');
       }
     }
 

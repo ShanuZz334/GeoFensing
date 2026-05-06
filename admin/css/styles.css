@@ -64,7 +64,8 @@ body {
 .logo-icon {
   width: 38px;
   height: 38px;
-  border-radius: 12px;
+  border-radius: 50%;
+  background: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,7 +73,7 @@ body {
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(42, 56, 255, 0.3);
 }
-.logo-icon img { width: 100%; height: 100%; object-fit: cover; }
+.logo-icon img { width: 75%; height: 75%; object-fit: contain; }
 .logo-icon svg { width: 22px; height: 22px; color: white; }
 
 .sidebar-nav {
@@ -285,6 +286,8 @@ body {
 .badge--error   { color: var(--error); }
 .badge--warning { color: var(--warning); }
 .badge--neutral { color: var(--text-muted); }
+.badge--primary { color: var(--primary); }
+.badge--purple  { color: var(--purple); }
 .badge--check_in { color: var(--primary); }
 .badge--check_out { color: var(--purple); }
 .badge--flagged { color: #facc15; } /* Tailwind Yellow-400 */
@@ -359,10 +362,9 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  box-shadow: 0 4px 10px rgba(42, 56, 255, 0.4);
 }
-.btn-primary:hover { background: var(--primary-dark); box-shadow: 0 6px 15px rgba(42, 56, 255, 0.6); }
-.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; box-shadow: none; }
+.btn-primary:hover { background: var(--primary-dark); }
+.btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-secondary {
   background: var(--surface);
@@ -591,4 +593,299 @@ body {
   font-size: 12px;
   font-weight: bold;
 }
+
+/* Toggle Switch */
+.switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  flex-shrink: 0;
+}
+.switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background-color: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.15);
+  border-radius: 24px;
+  transition: background-color .25s, border-color .25s;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  width: 18px;
+  height: 18px;
+  left: 3px;
+  top: 3px;
+  background-color: #fff;
+  border-radius: 50%;
+  transition: transform .25s;
+}
+.switch input:checked + .slider {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+.switch input:checked + .slider:before {
+  transform: translateX(20px);
+}
+
+ / *    % %  G l o b a l   S p i n n e r   L o a d e r    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  * / 
+ . s p i n n e r   { 
+   - - s i z e :   3 0 p x ; 
+   - - f i r s t - b l o c k - c l r :   v a r ( - - p r i m a r y ) ; 
+   - - s e c o n d - b l o c k - c l r :   # 1 1 1 ; 
+   - - c l r :   # 1 1 1 ; 
+   w i d t h :   1 0 0 p x ; 
+   h e i g h t :   1 0 0 p x ; 
+   p o s i t i o n :   r e l a t i v e ; 
+   m a r g i n :   2 0 p x   a u t o ; 
+ } 
+ 
+ . s p i n n e r : : a f t e r , . s p i n n e r : : b e f o r e   { 
+   b o x - s i z i n g :   b o r d e r - b o x ; 
+   p o s i t i o n :   a b s o l u t e ; 
+   c o n t e n t :   " " ; 
+   w i d t h :   v a r ( - - s i z e ) ; 
+   h e i g h t :   v a r ( - - s i z e ) ; 
+   t o p :   5 0 % ; 
+   a n i m a t i o n :   u p   2 . 4 s   c u b i c - b e z i e r ( 0 ,   0 ,   0 . 2 4 ,   1 . 2 1 )   i n f i n i t e ; 
+   l e f t :   5 0 % ; 
+   b a c k g r o u n d :   v a r ( - - f i r s t - b l o c k - c l r ) ; 
+   b o r d e r - r a d i u s :   6 p x ; 
+ } 
+ 
+ . s p i n n e r : : a f t e r   { 
+   b a c k g r o u n d :   v a r ( - - s e c o n d - b l o c k - c l r ) ; 
+   t o p :   c a l c ( 5 0 %   -   v a r ( - - s i z e ) ) ; 
+   l e f t :   c a l c ( 5 0 %   -   v a r ( - - s i z e ) ) ; 
+   a n i m a t i o n :   d o w n   2 . 4 s   c u b i c - b e z i e r ( 0 ,   0 ,   0 . 2 4 ,   1 . 2 1 )   i n f i n i t e ; 
+ } 
+ 
+ @ k e y f r a m e s   d o w n   { 
+   0 % ,   1 0 0 %   { 
+     t r a n s f o r m :   n o n e ; 
+   } 
+   2 5 %   { 
+     t r a n s f o r m :   t r a n s l a t e X ( 1 0 0 % ) ; 
+   } 
+   5 0 %   { 
+     t r a n s f o r m :   t r a n s l a t e X ( 1 0 0 % )   t r a n s l a t e Y ( 1 0 0 % ) ; 
+   } 
+   7 5 %   { 
+     t r a n s f o r m :   t r a n s l a t e Y ( 1 0 0 % ) ; 
+   } 
+ } 
+ 
+ @ k e y f r a m e s   u p   { 
+   0 % ,   1 0 0 %   { 
+     t r a n s f o r m :   n o n e ; 
+   } 
+   2 5 %   { 
+     t r a n s f o r m :   t r a n s l a t e X ( - 1 0 0 % ) ; 
+   } 
+   5 0 %   { 
+     t r a n s f o r m :   t r a n s l a t e X ( - 1 0 0 % )   t r a n s l a t e Y ( - 1 0 0 % ) ; 
+   } 
+   7 5 %   { 
+     t r a n s f o r m :   t r a n s l a t e Y ( - 1 0 0 % ) ; 
+   } 
+ } 
+  
+ 
+
+/* Focus glow for toggle */
+.switch input:focus + .slider { box-shadow: 0 0 0 3px rgba(139,92,246,0.25); }
+
+/* ── Custom iOS Checkbox ─────────────────────────────────────────── */
+.checkbox-container {
+  display: flex;
+  gap: 20px;
+  padding: 10px;
+  background: var(--surface);
+  border-radius: 12px;
+}
+
+.ios-checkbox {
+  --checkbox-size: 24px;
+  --checkbox-color: var(--primary);
+  --checkbox-bg: rgba(124, 58, 237, 0.1);
+  --checkbox-border: var(--border);
+
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.ios-checkbox input {
+  display: none;
+}
+
+.checkbox-wrapper {
+  position: relative;
+  width: var(--checkbox-size);
+  height: var(--checkbox-size);
+  border-radius: 6px;
+  transition: transform 0.2s ease;
+}
+
+.checkbox-bg {
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  border: 2px solid var(--checkbox-border);
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.checkbox-icon {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 80%;
+  height: 80%;
+  color: white;
+  transform: scale(0);
+  transition: all 0.2s ease;
+}
+
+.check-path {
+  stroke-dasharray: 40;
+  stroke-dashoffset: 40;
+  transition: stroke-dashoffset 0.3s ease 0.1s;
+}
+
+/* Checked State */
+.ios-checkbox input:checked + .checkbox-wrapper .checkbox-bg {
+  background: var(--checkbox-color);
+  border-color: var(--checkbox-color);
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper .checkbox-icon {
+  transform: scale(1);
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper .check-path {
+  stroke-dashoffset: 0;
+}
+
+/* Hover Effects */
+.ios-checkbox:hover .checkbox-wrapper {
+  transform: scale(1.05);
+}
+
+/* Active Animation */
+.ios-checkbox:active .checkbox-wrapper {
+  transform: scale(0.95);
+}
+
+/* Focus Styles */
+.ios-checkbox input:focus + .checkbox-wrapper .checkbox-bg {
+  box-shadow: 0 0 0 4px var(--checkbox-bg);
+}
+
+/* Animation */
+@keyframes bounce-checkbox {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.ios-checkbox input:checked + .checkbox-wrapper {
+  animation: bounce-checkbox 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ── Neumorphic Login Modal ───────────────────────────────────────────────── */
+.neu-login-card {
+  background: #1e1e1e !important;
+  border: none !important;
+  border-radius: 15px !important;
+  padding: 48px 32px !important;
+  box-shadow: 2px 2px 10px rgba(0,0,0,1), -1px -1px 5px rgba(255, 255, 255, 0.1) !important;
+  max-width: 400px;
+  width: 100%;
+}
+
+.neu-input-wrapper {
+  margin-bottom: 24px;
+}
+
+.neu-input-wrapper label {
+  display: block;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 8px;
+}
+
+.neu-input {
+  width: 100%;
+  background: #212121 !important;
+  border: 2px solid #212121 !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  padding: 16px !important;
+  font-size: 14px;
+  box-shadow: 6px 6px 10px rgba(0,0,0,1), 1px 1px 10px rgba(255, 255, 255, 0.15) !important;
+  outline: none;
+  transition: border-color 0.2s ease;
+}
+
+.neu-input::placeholder {
+  color: #999 !important;
+}
+
+.neu-input:focus {
+  border-color: var(--primary) !important;
+}
+
+.neu-button {
+  width: 100%;
+  background: var(--primary) !important;
+  border: none !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  padding: 16px !important;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 6px 6px 10px rgba(0,0,0,0.5), 1px 1px 10px rgba(124, 58, 237, 0.3) !important;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.neu-button:active {
+  transform: scale(0.98);
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.5), 0px 0px 5px rgba(124, 58, 237, 0.3) !important;
+}
+
+.neu-button-dark {
+  width: 100%;
+  background: #212121 !important;
+  border: 2px solid #212121 !important;
+  border-radius: 6px !important;
+  color: #fff !important;
+  padding: 16px !important;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 6px 6px 10px rgba(0,0,0,1), 1px 1px 10px rgba(255, 255, 255, 0.15) !important;
+  transition: transform 0.1s ease, box-shadow 0.1s ease;
+}
+
+.neu-button-dark:active {
+  transform: scale(0.98);
+  box-shadow: 2px 2px 5px rgba(0,0,0,1), 0px 0px 5px rgba(255, 255, 255, 0.15) !important;
+}
+
 

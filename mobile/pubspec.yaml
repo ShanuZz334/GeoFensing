@@ -48,6 +48,8 @@ dependencies:
   intl: ^0.20.2
   shared_preferences: ^2.2.3
   package_info_plus: ^9.0.1
+  qr_flutter: ^4.1.0
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:
@@ -61,4 +63,8 @@ flutter:
   assets:
     - assets/images/
     - assets/animations/
-  fonts: []
+  fonts:
+    - family: Bitcount
+      fonts:
+        - asset: assets/fonts/Bitcount-ExtraLight.ttf
+          weight: 200

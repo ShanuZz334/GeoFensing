@@ -5,6 +5,7 @@
 const API_BASE = '/api'; // Production-ready (proxied via Nginx)
 
 const TOKEN_KEY = 'geoface_admin_token';
+const ADMIN_DATA_KEY = 'geoface_admin_data';
 
 function getToken() {
   return sessionStorage.getItem(TOKEN_KEY);
@@ -16,6 +17,16 @@ function setToken(t) {
 
 function clearToken() {
   sessionStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(ADMIN_DATA_KEY);
+}
+
+function getAdminData() {
+  try { return JSON.parse(sessionStorage.getItem(ADMIN_DATA_KEY) || 'null'); } catch { return null; }
+}
+
+function isCurrentAdminHeadAdmin() {
+  const admin = getAdminData();
+  return admin && admin.is_head_admin === true;
 }
 
 /**
@@ -25,16 +36,12 @@ function clearToken() {
 async function api(path, method = 'GET', body = null) {
   let token = getToken();
   if (!token) {
-    const loginRes = await fetch(`${API_BASE}/admin/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'admin@college.edu', password: 'Admin@1234' })
-    }).catch(() => null);
-    if (loginRes && loginRes.ok) {
-      const data = await loginRes.json();
-      setToken(data.token);
-      token = data.token;
+    if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/admin/')) {
+      if (typeof showLoginModal === 'function') showLoginModal();
+    } else {
+      window.location.href = 'index.html';
     }
+    return null;
   }
   const opts = {
     method,
@@ -53,6 +60,8 @@ async function api(path, method = 'GET', body = null) {
       clearToken();
       if (typeof showLoginModal === 'function') {
         showLoginModal();
+      } else {
+        window.location.href = 'index.html';
       }
       return null;
     }
@@ -70,7 +79,7 @@ async function api(path, method = 'GET', body = null) {
 }
 
 async function adminLogin() {
-  const email = document.getElementById('admin-email').value.trim();
+  const reg_no = document.getElementById('admin-reg-no').value.trim();
   const password = document.getElementById('admin-password').value;
   const errEl = document.getElementById('login-error');
   errEl.style.display = 'none';
@@ -82,7 +91,7 @@ async function adminLogin() {
   const res = await fetch(`${API_BASE}/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ reg_no, password }),
   }).catch(() => null);
 
   btn.disabled = false;
@@ -95,13 +104,20 @@ async function adminLogin() {
   }
   const data = await res.json();
   setToken(data.token);
+  if (data.admin) {
+    sessionStorage.setItem(ADMIN_DATA_KEY, JSON.stringify(data.admin));
+  }
   hideLoginModal();
   window.location.reload();
 }
 
 function adminSignOut() {
   clearToken();
-  showLoginModal();
+  if (window.location.pathname.endsWith('index.html') || window.location.pathname.endsWith('/admin/')) {
+    window.location.reload();
+  } else {
+    window.location.href = 'index.html';
+  }
 }
 
 function showLoginModal() {

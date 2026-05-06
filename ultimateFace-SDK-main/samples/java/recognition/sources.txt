@@ -1,0 +1,13 @@
+Recognition.java
+../../../java/org/doubango/UltFace/Sdk/ULTFACE_SDK_IMAGE_TYPE.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceImageInfo.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceImageInfoCompressed.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceImageInfoRgbFamily.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceImageInfoUncompressed.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceImageInfoYuvFamily.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceSdkEngine.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceSdkParallelDeliveryCallback.java
+../../../java/org/doubango/UltFace/Sdk/UltFaceSdkResult.java
+../../../java/org/doubango/UltFace/Sdk/ultimateFaceSDK.java
+../../../java/org/doubango/UltFace/Sdk/ultimateFaceSDKConstants.java
+../../../java/org/doubango/UltFace/Sdk/ultimateFaceSDKJNI.java

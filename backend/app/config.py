@@ -59,7 +59,8 @@ class BaseConfig:
     ).split(",")
 
     # Admin
-    ADMIN_EMAIL: str = os.environ.get("ADMIN_EMAIL", "admin@college.edu")
+    HEAD_ADMIN_REG_NO: str = os.environ.get("HEAD_ADMIN_REG_NO", "ADMIN_001")
+    HEAD_ADMIN_NAME: str = os.environ.get("HEAD_ADMIN_NAME", "Head Admin")
     ADMIN_PASSWORD: str = os.environ.get("ADMIN_PASSWORD", "AdminPass@123")
 
 

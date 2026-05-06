@@ -78,31 +78,27 @@ class _SplashScreenState extends State<SplashScreen>
                 children: [
                   // Logo
                   Container(
-                    width: 100,
-                    height: 100,
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.15),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.3),
-                        width: 1.5,
-                      ),
+                    width: 140,
+                    height: 140,
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      shape: BoxShape.circle,
                     ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(26),
+                    padding: const EdgeInsets.all(12),
+                    child: ClipOval(
                       child: Image.asset(
-                        'assets/images/logo.png',
-                        fit: BoxFit.cover,
+                        'assets/images/logo_v4.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ),
                   const SizedBox(height: 28),
                   const Text(
-                    'LPU',
+                    'GeoFace',
                     style: TextStyle(
                       fontSize: 32,
                       fontWeight: FontWeight.w900,
-                      color: Colors.white,
+                      color: Color(0xFF7C3AED),
                       letterSpacing: 1.5,
                     ),
                   ),

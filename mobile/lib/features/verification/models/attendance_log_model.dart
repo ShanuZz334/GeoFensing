@@ -7,6 +7,7 @@ class AttendanceLogModel {
   final double? latitude;
   final double? longitude;
   final String status;
+  final String statusDisplay; // Added
   final String reason;
   final int? framesCount;
   final String? failureStage;
@@ -21,6 +22,7 @@ class AttendanceLogModel {
     this.latitude,
     this.longitude,
     required this.status,
+    required this.statusDisplay, // Added
     required this.reason,
     this.framesCount,
     this.failureStage,
@@ -39,6 +41,7 @@ class AttendanceLogModel {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       status: json['status'] as String? ?? 'failure',
+      statusDisplay: json['status_display'] as String? ?? (json['status']?.toString().toUpperCase() ?? 'FAILURE'),
       reason: json['reason'] as String? ?? 'Unknown error',
       framesCount: json['frames_count'] as int?,
       failureStage: json['failure_stage'] as String?,

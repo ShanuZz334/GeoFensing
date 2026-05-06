@@ -55,7 +55,7 @@ class ResultScreen extends StatelessWidget {
                     height: 140,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: (isSuccess ? AppTheme.success : AppTheme.error).withValues(alpha: 0.05),
+                      color: (isSuccess ? AppTheme.primary : AppTheme.error).withValues(alpha: 0.05),
                     ),
                   ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
                   Container(
@@ -63,12 +63,12 @@ class ResultScreen extends StatelessWidget {
                     height: 100,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: (isSuccess ? AppTheme.success : AppTheme.error).withValues(alpha: 0.1),
+                      color: (isSuccess ? AppTheme.primary : AppTheme.error).withValues(alpha: 0.12),
                     ),
                     child: Icon(
                       isSuccess ? Icons.check_rounded : Icons.priority_high_rounded,
                       size: 48,
-                      color: isSuccess ? AppTheme.success : AppTheme.error,
+                      color: isSuccess ? AppTheme.primary : AppTheme.error,
                     ),
                   ).animate().scale(delay: 100.ms, duration: 600.ms, curve: Curves.easeOutBack),
                 ],
@@ -76,32 +76,15 @@ class ResultScreen extends StatelessWidget {
 
               const SizedBox(height: 40),
 
-              // ── Status Text ───────────────────────────────────────────
-              Text(
-                isSuccess
-                    ? 'Authentication Successful'
-                    : isError
-                        ? 'System Encountered an Error'
-                        : 'Authentication Failed',
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: Color(0xFF0F172A),
-                  letterSpacing: -0.5,
-                ),
-                textAlign: TextAlign.center,
-              ).animate().fadeIn(delay: 200.ms).slideY(begin: 0.1),
-
-              const SizedBox(height: 12),
-
+              // ── Reason Box ────────────────────────────────────────────
               Container(
-                margin: const EdgeInsets.only(top: 12),
+                margin: const EdgeInsets.only(top: 0),
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
-                  color: (isSuccess ? AppTheme.success : AppTheme.error).withValues(alpha: 0.08),
+                  color: (isSuccess ? AppTheme.primary : AppTheme.error).withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: (isSuccess ? AppTheme.success : AppTheme.error).withValues(alpha: 0.2),
+                    color: (isSuccess ? AppTheme.primary : AppTheme.error).withValues(alpha: 0.2),
                   ),
                 ),
                 child: Text(
@@ -109,7 +92,7 @@ class ResultScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isSuccess ? const Color(0xFF1E293B) : const Color(0xFF991B1B),
+                    color: isSuccess ? AppTheme.primary : const Color(0xFF991B1B),
                     height: 1.4,
                   ),
                   textAlign: TextAlign.center,

@@ -30,6 +30,10 @@ class Teacher(db.Model):
     college_latitude = db.Column(db.Float, nullable=True)
     college_longitude = db.Column(db.Float, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
+    extra_leaves = db.Column(db.Integer, default=0, nullable=False)
+    extra_half_leaves = db.Column(db.Integer, default=0, nullable=False)
+    extra_monthly_leaves = db.Column(db.Integer, default=0, nullable=False)
+    extra_half_monthly_leaves = db.Column(db.Integer, default=0, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -55,8 +59,12 @@ class Teacher(db.Model):
             "reg_no": self.reg_no,
             "department": self.department,
             "is_active": self.is_active,
+            "extra_leaves": self.extra_leaves,
+            "extra_half_leaves": self.extra_half_leaves,
+            "extra_monthly_leaves": self.extra_monthly_leaves,
+            "extra_half_monthly_leaves": self.extra_half_monthly_leaves,
             "profile_pic": self.profile_pic,
-            "has_face_encoding": self.face_encoding is not None,
+            "has_face_encoding": bool(self.face_encoding and any(v != 0 for v in self.face_encoding)),
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

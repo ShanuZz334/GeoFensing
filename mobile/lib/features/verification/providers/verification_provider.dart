@@ -30,8 +30,12 @@ class VerificationProvider extends ChangeNotifier {
   double _progress = 0.0;
 
   List<AttendanceLogModel> _history = [];
+  Map<String, dynamic>? _stats;
   bool _isLoadingHistory = false;
+  bool _isLoadingStats = false;
   String _nextAction = 'check_in';
+  int _currentAttempts = 0;
+  int _maxAttempts = 4;
 
   // Settings
   Map<String, dynamic> _settings = {};
@@ -42,8 +46,13 @@ class VerificationProvider extends ChangeNotifier {
   CameraController? get cameraController => _cameraController;
   double get progress => _progress;
   List<AttendanceLogModel> get history => _history;
+  Map<String, dynamic>? get stats => _stats;
+  Map<String, dynamic>? get supportContact => _stats?['support_contact'];
   bool get isLoadingHistory => _isLoadingHistory;
+  bool get isLoadingStats => _isLoadingStats;
   String get nextAction => _nextAction;
+  int get currentAttempts => _currentAttempts;
+  int get maxAttempts => _maxAttempts;
   Map<String, dynamic> get settings => _settings;
   bool get isBusy =>
       _status == VerificationStatus.recording ||
@@ -75,29 +84,35 @@ class VerificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void disposeCamera() {
-    _cameraController?.dispose();
-    _cameraController = null;
+  Future<void> disposeCamera() async {
+    if (_cameraController != null) {
+      await _cameraController!.dispose();
+      _cameraController = null;
+    }
   }
 
   // ── Demo Mode ─────────────────────────────────────────────────────────────
   bool _demoMode = false;
+  bool _bypassLimits = false;
   double? _demoLat;
   double? _demoLng;
   double? _demoRadius;
 
   bool get demoMode => _demoMode;
+  bool get bypassLimits => _bypassLimits;
   double? get demoLat => _demoLat;
   double? get demoLng => _demoLng;
   double? get demoRadius => _demoRadius;
 
   void setDemoMode({
     required bool enabled,
+    bool bypassLimits = false,
     double? lat,
     double? lng,
     double? radius,
   }) {
     _demoMode = enabled;
+    _bypassLimits = bypassLimits;
     _demoLat = lat;
     _demoLng = lng;
     _demoRadius = radius;
@@ -138,10 +153,31 @@ class VerificationProvider extends ChangeNotifier {
     if (response.success && response.data != null) {
       final list = response.data!['logs'] as List? ?? [];
       _history = list.map((e) => AttendanceLogModel.fromJson(e as Map<String, dynamic>)).toList();
-      _nextAction = response.data!['next_action'] ?? 'check_in';
+      if (!_bypassLimits) {
+        _nextAction = response.data!['next_action'] ?? 'check_in';
+        _currentAttempts = response.data!['current_attempts'] ?? 0;
+        _maxAttempts = response.data!['max_attempts'] ?? 4;
+      }
     }
     
     _isLoadingHistory = false;
+    notifyListeners();
+  }
+
+  Future<void> fetchStats() async {
+    _isLoadingStats = true;
+    notifyListeners();
+
+    try {
+      final response = await ApiService.instance.getAttendanceStats();
+      if (response.success && response.data != null) {
+        _stats = response.data!;
+      }
+    } catch (e) {
+      debugPrint("Failed to fetch stats: \$e");
+    }
+    
+    _isLoadingStats = false;
     notifyListeners();
   }
 
@@ -178,12 +214,17 @@ class VerificationProvider extends ChangeNotifier {
     final frameCaptureFuture = _captureFrames();
     final gpsFuture = _getGPS();
 
-    final frames = await frameCaptureFuture;
-    final position = await gpsFuture;
+    List<String> frames = [];
+    Position? position;
     
-    // Turn camera off immediately after capturing frames
-    disposeCamera();
-    notifyListeners();
+    try {
+      frames = await frameCaptureFuture;
+      position = await gpsFuture;
+    } finally {
+      // Turn camera off immediately after capturing frames, even on error
+      await disposeCamera();
+      notifyListeners();
+    }
 
     if (frames.isEmpty) {
       _setStatus(VerificationStatus.error, 'Failed to capture frames from camera');
@@ -208,6 +249,7 @@ class VerificationProvider extends ChangeNotifier {
       demoLat: _demoMode ? _demoLat : null,
       demoLng: _demoMode ? _demoLng : null,
       demoRadius: _demoMode ? _demoRadius : null,
+      bypassLimits: _demoMode && _bypassLimits,
     );
 
     _progress = 1.0;
@@ -218,6 +260,14 @@ class VerificationProvider extends ChangeNotifier {
           ? VerificationStatus.success
           : VerificationStatus.failure;
       _setStatus(newStatus, _result!.reason);
+
+      if (_bypassLimits && _result!.isSuccess) {
+        if (_nextAction == 'check_in') {
+          _nextAction = 'check_out';
+        } else if (_nextAction == 'check_out') {
+          _nextAction = 'completed';
+        }
+      }
     } else {
       _setStatus(VerificationStatus.error, response.errorMessage ?? 'Verification failed');
     }
@@ -287,6 +337,10 @@ class VerificationProvider extends ChangeNotifier {
     _statusMessage = '';
     _result = null;
     _progress = 0.0;
+    // Clear history so stale records from previous session don't flash
+    _history = [];
+    _isLoadingHistory = false;
+    _nextAction = 'check_in';
     notifyListeners();
   }
 

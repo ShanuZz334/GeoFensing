@@ -1,0 +1,9 @@
+.img-sample {
+    cursor: pointer;
+    display: block;
+    width: 100%;
+}
+.img-sample-gray {
+    -webkit-filter: brightness(30%) grayscale(100%); /* Safari 6.0 - 9.0 */
+    filter: brightness(30%) grayscale(100%);
+}

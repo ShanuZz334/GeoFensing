@@ -1,13 +1,17 @@
+import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
 import 'package:camera/camera.dart';
+import 'dart:async';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/widgets/demo_setup_dialog.dart';
 import '../providers/verification_provider.dart';
+import '../widgets/dynamic_qr_widget.dart';
+import 'attendance_stats_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -16,8 +20,9 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   late AnimationController _pulseController;
+  late AnimationController _scanLineController;
 
   @override
   void initState() {
@@ -26,8 +31,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       vsync: this,
       duration: const Duration(seconds: 2),
     )..repeat(reverse: true);
+    
+    _scanLineController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<VerificationProvider>();
+      // Always reset stale result/status from previous session on every home entry
+      provider.reset();
       await provider.fetchSettings();
       await provider.fetchHistory();
     });
@@ -36,6 +48,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
   @override
   void dispose() {
     _pulseController.dispose();
+    _scanLineController.dispose();
     context.read<VerificationProvider>().disposeCamera();
     super.dispose();
   }
@@ -160,9 +173,15 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
+                      Text(
                         'GeoFace',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF7C3AED), letterSpacing: -0.5),
+                        style: TextStyle(
+                          fontFamily: 'Bitcount',
+                          fontSize: 28,
+                          fontWeight: FontWeight.w200,
+                          color: const Color(0xFF7C3AED),
+                          letterSpacing: -0.5,
+                        ),
                       ),
                       const SizedBox(width: 4),
                       InkWell(
@@ -227,13 +246,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.security, color: Color(0xFF7C3AED), size: 20),
-                          SizedBox(width: 8),
-                          Text('LPU', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1, color: Colors.white)),
-                        ],
-                      ),
+                      _buildPassportPhoto(user),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
                         decoration: BoxDecoration(
@@ -296,10 +309,12 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           const SizedBox(height: 16),
-                          Container(
-                            padding: const EdgeInsets.all(4),
-                            decoration: BoxDecoration(color: Colors.white.withValues(alpha: 0.9), borderRadius: BorderRadius.circular(4)),
-                            child: const Icon(Icons.qr_code_2, size: 40, color: Colors.black),
+                          GestureDetector(
+                            onTap: () => _showLargeQR(context),
+                            child: DynamicQrWidget(
+                              facultyId: user?.teacherId ?? '00000000',
+                              size: 40,
+                            ),
                           ),
                           const SizedBox(height: 6),
                           Text(barcodeId, style: TextStyle(fontFamily: 'monospace', fontSize: 10, color: Colors.white.withValues(alpha: 0.5), letterSpacing: 2)),
@@ -309,13 +324,38 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                         children: [
                           if (context.watch<VerificationProvider>().demoMode)
                             Container(
-                              margin: const EdgeInsets.only(right: 16, top: 16),
-                              width: 12,
-                              height: 12,
-                              decoration: const BoxDecoration(
-                                color: Colors.greenAccent,
-                                shape: BoxShape.circle,
-                                boxShadow: [BoxShadow(color: Colors.greenAccent, blurRadius: 6, spreadRadius: 2)],
+                              margin: const EdgeInsets.only(right: 12, top: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: const Color(0xFF7C3AED).withValues(alpha: 0.6),
+                                  width: 1.5,
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 5,
+                                    height: 5,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF7C3AED),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'DEMO',
+                                    style: TextStyle(
+                                      color: Color(0xFF7C3AED),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
                           Padding(
@@ -355,6 +395,80 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
     );
   }
 
+  Widget _buildPassportPhoto(UserModel? user) {
+    final hasPhoto = user?.profilePic != null && user!.profilePic!.isNotEmpty;
+    
+    return Container(
+      width: 50,
+      height: 64,
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(4),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.6), width: 1.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 6,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(2),
+        child: hasPhoto
+            ? _buildImage(user.profilePic!, user)
+            : _buildPlaceholderPhoto(user),
+      ),
+    );
+  }
+
+  Widget _buildImage(String profilePic, UserModel user) {
+    // Clean the string: remove whitespace and newlines which can break Base64 decoding
+    final cleanProfilePic = profilePic.trim().replaceAll(RegExp(r'\s+'), '');
+    
+    // Detect if this is likely a Base64 string vs a URL
+    // JPEG Base64 often starts with '/9j/' which can be mistaken for a relative URL path
+    bool isLikelyBase64 = cleanProfilePic.startsWith('data:image') || 
+                         (cleanProfilePic.length > 100 && !cleanProfilePic.startsWith('http'));
+
+    if (isLikelyBase64) {
+      try {
+        final base64String = cleanProfilePic.contains(',') ? cleanProfilePic.split(',').last : cleanProfilePic;
+        return Image.memory(
+          base64Decode(base64String),
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) => _buildPlaceholderPhoto(user),
+        );
+      } catch (e) {
+        // Fall through to network if decode fails and it looks like a path
+        if (!cleanProfilePic.startsWith('/')) return _buildPlaceholderPhoto(user);
+      }
+    }
+    
+    // Otherwise treat as URL (relative or absolute)
+    return Image.network(
+      profilePic,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) => _buildPlaceholderPhoto(user),
+    );
+  }
+
+  Widget _buildPlaceholderPhoto(UserModel? user) {
+    return Container(
+      color: const Color(0xFF7C3AED).withValues(alpha: 0.2),
+      child: Center(
+        child: Text(
+          user?.initials ?? '?',
+          style: const TextStyle(
+            color: Color(0xFF7C3AED),
+            fontWeight: FontWeight.w900,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildAttendanceHistory(VerificationProvider provider) {
     return Container(
       padding: const EdgeInsets.all(20),
@@ -362,56 +476,91 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Attendance History',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Attendance History',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+              ),
+              IconButton(
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                onPressed: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const AttendanceStatsScreen()),
+                ),
+                icon: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7C3AED), size: 20),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          provider.history.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 20),
-                    child: Text('No previous records found', style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 14)),
-                  ),
-                )
-              : ListView.separated(
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  itemCount: provider.history.length > 4 ? 4 : provider.history.length,
-                  separatorBuilder: (_, __) => Divider(height: 20, color: Colors.white.withValues(alpha: 0.1)),
-                  itemBuilder: (context, index) {
-                    final log = provider.history[index];
-                    final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(log.timestamp.toLocal());
-                    final isPresent = log.status.toLowerCase() == 'success';
-                    final isAbsentMark = log.attendanceMark == 'absent';
-                    final isHalfDay = log.attendanceMark == 'half_day';
-
-                    String statusText;
-                    if (isPresent) {
-                       statusText = log.actionType == 'check_in' ? 'Checked in' : 'Checked out';
-                       if (isHalfDay) statusText += ' (Half Day)';
-                    } else {
-                       statusText = isAbsentMark ? 'Marked Absent' : 'Failed ${log.actionType == 'check_in' ? "Check In" : "Check Out"}';
-                    }
-
-                    return Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(dateStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500)),
-                        Text(
-                          statusText,
-                          style: TextStyle(
-                            color: isPresent ? const Color(0xFF10B981) : const Color(0xFFEF4444),
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                      ],
-                    );
-                  },
-                ),
+          _buildHistoryList(provider),
         ],
       ),
+    );
+  }
+
+  Widget _buildHistoryList(VerificationProvider provider) {
+    const int maxItems = 4;
+    final history = provider.history;
+    
+    return Column(
+      children: List.generate(maxItems, (index) {
+        if (index < history.length) {
+          final log = history[index];
+          final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(log.timestamp.toLocal());
+          final isPresent = log.isSuccess;
+          final isAbsentMark = log.attendanceMark == 'absent';
+          final isHalfDay = log.attendanceMark == 'half_day';
+
+          String statusLabel = log.statusDisplay;
+          Color statusColor = const Color(0xFF10B981);
+          
+          if (isAbsentMark) {
+            statusColor = const Color(0xFFEF4444);
+          } else if (isHalfDay) {
+            statusColor = const Color(0xFFF59E0B);
+          } else if (!isPresent) {
+            statusColor = const Color(0xFFEF4444);
+          }
+
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(dateStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13)),
+                  Text(
+                    statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              if (index < maxItems - 1) Divider(height: 24, color: Colors.white.withValues(alpha: 0.1)),
+            ],
+          );
+        } else {
+          // Placeholder for empty slot
+          return Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text('No data', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13)),
+                  Text('--', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13)),
+                ],
+              ),
+              if (index < maxItems - 1) Divider(height: 24, color: Colors.white.withValues(alpha: 0.1)),
+            ],
+          );
+        }
+      }),
     );
   }
 
@@ -436,7 +585,7 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
       statusIcon = Icons.camera_alt_outlined;
       statusColor = const Color(0xFF7C3AED);
     } else if (isFailure) {
-      statusText = 'Failed ❌';
+      statusText = provider.statusMessage.contains('Absent') ? 'Marked Absent' : 'Failed ❌';
       statusIcon = Icons.error_outline_rounded;
       statusColor = const Color(0xFFEF4444);
     }
@@ -454,13 +603,31 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                 'Face Verification',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
               ),
-              Text(
-                provider.nextAction == 'check_in' ? 'Check In Mode' : 'Check Out Mode',
-                style: TextStyle(
-                  color: provider.nextAction == 'check_in' ? const Color(0xFF7C3AED) : const Color(0xFFEF4444),
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    (!provider.bypassLimits && provider.nextAction == 'completed') 
+                      ? 'Completed Today' 
+                      : (provider.nextAction == 'check_in' ? 'Check In Mode' : 'Check Out Mode'),
+                    style: TextStyle(
+                      color: (!provider.bypassLimits && provider.nextAction == 'completed') 
+                        ? const Color(0xFF10B981) 
+                        : (provider.nextAction == 'check_in' ? const Color(0xFF7C3AED) : const Color(0xFFEF4444)),
+                      fontSize: 13,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  if (!provider.bypassLimits && provider.nextAction != 'completed')
+                    Text(
+                      'Attempt ${provider.currentAttempts + 1}/${provider.maxAttempts}',
+                      style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
               ),
             ],
           ),
@@ -487,20 +654,53 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
                     ],
                   ),
                   child: ClipOval(
-                    child: provider.cameraController != null &&
-                            provider.cameraController!.value.isInitialized
-                        ? AspectRatio(
-                            aspectRatio: 1.0,
-                            child: CameraPreview(provider.cameraController!),
-                          )
-                        : Container(
-                            color: Colors.white.withValues(alpha: 0.05),
-                            child: isSuccess
-                                ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 80)
-                                : isFailure
-                                    ? const Icon(Icons.cancel, color: Color(0xFFEF4444), size: 80)
-                                    : const Icon(Icons.videocam_off_outlined, color: Colors.white38, size: 40),
+                    child: Stack(
+                      children: [
+                        provider.cameraController != null &&
+                                provider.cameraController!.value.isInitialized
+                            ? AspectRatio(
+                                aspectRatio: 1.0,
+                                child: CameraPreview(provider.cameraController!),
+                              )
+                            : Center(
+                                child: isSuccess
+                                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 80)
+                                    : isFailure
+                                        ? const Icon(Icons.cancel, color: Color(0xFFEF4444), size: 80)
+                                        : const Icon(Icons.videocam_off_outlined, color: Colors.white38, size: 60),
+                              ),
+                        if (isRecording)
+                          AnimatedBuilder(
+                            animation: _scanLineController,
+                            builder: (context, child) {
+                              return Positioned(
+                                top: _scanLineController.value * 200,
+                                left: 0,
+                                right: 0,
+                                child: Container(
+                                  height: 3,
+                                  decoration: BoxDecoration(
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: const Color(0xFF7C3AED).withValues(alpha: 0.6),
+                                        blurRadius: 15,
+                                        spreadRadius: 2,
+                                      ),
+                                    ],
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                                        const Color(0xFF7C3AED),
+                                        const Color(0xFF7C3AED).withValues(alpha: 0.1),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
                           ),
+                      ],
+                    ),
                   ),
                 );
               },
@@ -509,17 +709,18 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const SizedBox(height: 24),
 
           // Status & Progress
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(statusIcon, color: statusColor, size: 20),
-              const SizedBox(width: 8),
-              Text(
-                statusText,
-                style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: statusColor),
-              ),
-            ],
-          ),
+          if (!isSuccess && !isFailure)
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(statusIcon, color: statusColor, size: 20),
+                const SizedBox(width: 8),
+                Text(
+                  statusText,
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: statusColor),
+                ),
+              ],
+            ),
           if (isUploading) ...[
             const SizedBox(height: 12),
             const SizedBox(
@@ -534,9 +735,9 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           const SizedBox(height: 20),
 
           ElevatedButton(
-            onPressed: (isRecording || isUploading || provider.isTooLate()) ? null : _onStartPressed,
+            onPressed: (isRecording || isUploading || (!provider.bypassLimits && (provider.isTooLate() || provider.nextAction == 'completed'))) ? null : _onStartPressed,
             style: ElevatedButton.styleFrom(
-              backgroundColor: provider.isTooLate() ? Colors.redAccent : const Color(0xFF7C3AED),
+              backgroundColor: (!provider.bypassLimits && provider.isTooLate()) ? Colors.redAccent : const Color(0xFF7C3AED),
               disabledBackgroundColor: Colors.white24,
               minimumSize: const Size.fromHeight(56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -544,7 +745,13 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
               shadowColor: const Color(0xFF7C3AED).withValues(alpha: 0.5),
             ),
             child: Text(
-              provider.isTooLate() ? 'Marked Absent (Too Late)' : (isSuccess ? 'Scan Again' : (provider.nextAction == 'check_in' ? 'Start Scan (Check In)' : 'Start Scan (Check Out)')),
+              (!provider.bypassLimits && provider.isTooLate())
+                  ? 'Marked Absent (Too Late)' 
+                  : ((!provider.bypassLimits && provider.nextAction == 'completed')
+                      ? 'Completed for Today' 
+                      : (isSuccess 
+                          ? 'Scan Again' 
+                          : (provider.nextAction == 'check_in' ? 'Start Scan (Check In)' : 'Start Scan (Check Out)'))),
               style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
             ),
           ),
@@ -568,6 +775,28 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
           _buildInstructionItem('Ensure proper lighting'),
           _buildInstructionItem('Keep face centered'),
           _buildInstructionItem('Remove obstructions (mask, glasses if required)'),
+          const SizedBox(height: 16),
+          Center(
+            child: TextButton.icon(
+              onPressed: () {
+                final provider = context.read<VerificationProvider>();
+                if (provider.supportContact != null) {
+                  _showSupportDialog(provider.supportContact!);
+                } else {
+                  _showSupportDialog({"phone": "8089602280", "email": "shanifshaz546@gmail.com"});
+                }
+              },
+              icon: const Icon(Icons.help_outline, color: Color(0xFF7C3AED), size: 18),
+              label: const Text('Need Help? Contact Support', style: TextStyle(color: Color(0xFF7C3AED))),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                  side: BorderSide(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -589,6 +818,67 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
         ],
       ),
     );
+  }
+
+  void _showLargeQR(BuildContext context) {
+    final user = context.read<AuthProvider>().currentUser;
+    int secondsLeft = 10 - ((DateTime.now().millisecondsSinceEpoch ~/ 1000) % 10);
+    Timer? countdownTimer;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          countdownTimer ??= Timer.periodic(const Duration(seconds: 1), (timer) {
+            if (context.mounted) {
+              setState(() {
+                secondsLeft = 10 - ((DateTime.now().millisecondsSinceEpoch ~/ 1000) % 10);
+              });
+            } else {
+              timer.cancel();
+            }
+          });
+
+          return Dialog(
+            backgroundColor: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    'Faculty QR Code',
+                    style: TextStyle(color: Colors.black, fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Scannable for $secondsLeft second${secondsLeft == 1 ? '' : 's'}',
+                    style: const TextStyle(color: Colors.black54, fontSize: 12),
+                  ),
+                  const SizedBox(height: 24),
+                  DynamicQrWidget(
+                    facultyId: user?.teacherId ?? '00000000',
+                    size: 260,
+                  ),
+                  const SizedBox(height: 24),
+                  TextButton(
+                    onPressed: () {
+                      countdownTimer?.cancel();
+                      Navigator.pop(context);
+                    },
+                    child: const Text('Close', style: TextStyle(color: Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    ).then((_) => countdownTimer?.cancel());
   }
 }
 

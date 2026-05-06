@@ -13,6 +13,7 @@ class DemoSetupDialog extends StatefulWidget {
 
 class _DemoSetupDialogState extends State<DemoSetupDialog> {
   late bool _demoEnabled;
+  late bool _bypassLimits;
   late TextEditingController _latController;
   late TextEditingController _lngController;
   late TextEditingController _radiusController;
@@ -23,6 +24,7 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
     super.initState();
     final provider = context.read<VerificationProvider>();
     _demoEnabled = provider.demoMode;
+    _bypassLimits = provider.bypassLimits;
     _latController = TextEditingController(text: provider.demoLat?.toString() ?? '');
     _lngController = TextEditingController(text: provider.demoLng?.toString() ?? '');
     _radiusController = TextEditingController(text: provider.demoRadius?.toString() ?? '200');
@@ -49,16 +51,17 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
         });
       } else {
         // Permission denied fallback
-        _setLPUDefaults();
+        _setCampusDefaults();
       }
     } catch (_) {
-      _setLPUDefaults();
+      _setCampusDefaults();
     } finally {
       if (mounted) setState(() => _isLoadingLocation = false);
     }
   }
 
-  void _setLPUDefaults() {
+  void _setCampusDefaults() {
+    if (!mounted) return;
     setState(() {
       _latController.text = '31.2488';
       _lngController.text = '75.6994';
@@ -87,6 +90,7 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
 
     context.read<VerificationProvider>().setDemoMode(
       enabled: _demoEnabled,
+      bypassLimits: _bypassLimits,
       lat: lat,
       lng: lng,
       radius: rad,
@@ -121,6 +125,14 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
               activeThumbColor: AppTheme.primary,
               contentPadding: EdgeInsets.zero,
               onChanged: (v) => setState(() => _demoEnabled = v),
+            ),
+            SwitchListTile(
+              title: const Text('Disable All Limits', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              subtitle: const Text('Bypass attempt limits and stop saving data', style: TextStyle(color: Colors.grey, fontSize: 11)),
+              value: _bypassLimits,
+              activeThumbColor: AppTheme.primary,
+              contentPadding: EdgeInsets.zero,
+              onChanged: (v) => setState(() => _bypassLimits = v),
             ),
             if (_demoEnabled) ...[
               const SizedBox(height: 4),

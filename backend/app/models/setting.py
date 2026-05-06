@@ -19,6 +19,12 @@ class Setting(db.Model):
         }
 
     @classmethod
+    def get(cls, key: str, default=None):
+        """Helper to get a specific setting."""
+        setting = cls.query.get(key)
+        return setting.value if setting else default
+
+    @classmethod
     def get_all(cls) -> dict:
         """Helper to get all settings as a dictionary."""
         settings = cls.query.all()

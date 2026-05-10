@@ -1,12 +1,15 @@
 // GeoFace Faculty Authentication System - API Constants
 
+import '../services/remote_config_service.dart';
+
 class ApiConstants {
   ApiConstants._();
 
   // ── Base URL ──────────────────────────────────────────────────────────────
-  // Change this to your production URL for release builds
-  static const String baseUrl = '/api';
-  // static const String baseUrl = 'http://10.0.2.2:5000'; // Android emulator localhost
+  // Dynamically fetched from GitHub at app startup via RemoteConfigService.
+  // To change the server URL: update config/app_config.json on GitHub.
+  // NO APK REBUILD NEEDED.
+  static String get baseUrl => RemoteConfigService.baseUrl;
 
   // ── Endpoints ──────────────────────────────────────────────────────────────
   static const String login = '/login';

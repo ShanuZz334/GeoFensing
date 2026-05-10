@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 
+import 'core/services/remote_config_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/screens/splash_screen.dart';
@@ -13,6 +14,9 @@ import 'features/verification/screens/result_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Fetch live server URL from GitHub (updates without APK rebuild)
+  await RemoteConfigService.initialize();
 
   // Lock portrait orientation
   await SystemChrome.setPreferredOrientations([

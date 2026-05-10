@@ -658,9 +658,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         provider.cameraController != null &&
                                 provider.cameraController!.value.isInitialized
-                            ? AspectRatio(
-                                aspectRatio: 1.0,
-                                child: CameraPreview(provider.cameraController!),
+                            ? SizedBox.expand(
+                                child: FittedBox(
+                                  fit: BoxFit.cover,
+                                  child: SizedBox(
+                                    width: provider.cameraController!.value.aspectRatio,
+                                    height: 1.0,
+                                    child: CameraPreview(provider.cameraController!),
+                                  ),
+                                ),
                               )
                             : Center(
                                 child: isSuccess

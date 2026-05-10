@@ -1,3 +1,0 @@
-- [liveness](liveness) -> [avant-garde](https://www.doubango.org/SDKs/face-liveness/docs/Avant_garde.html#avant-garde), [3d face liveness](https://www.doubango.org/SDKs/face-liveness/docs/3D_passive_liveness.html#d-passive-liveness), [deepfake detection](https://www.doubango.org/SDKs/face-liveness/docs/Deepfake_detection.html#deepfake-detection) and [identity concealment check](https://www.doubango.org/SDKs/face-liveness/docs/Identity_concealment.html#identity-concealment).
-- [recognition](recognition) -> [face recognition check](https://www.doubango.org/SDKs/face-liveness/docs/Face_recognition.html#face-recognition).
-

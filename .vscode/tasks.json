@@ -1,0 +1,59 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "🚀 Start GeoFense Stack (Docker)",
+            "type": "shell",
+            "command": "docker-compose up -d",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🛑 Stop GeoFense Stack",
+            "type": "shell",
+            "command": "docker-compose down",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📋 View App Logs",
+            "type": "shell",
+            "command": "docker-compose logs -f",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "📱 Run Flutter App (Mobile)",
+            "type": "shell",
+            "command": "cd mobile && flutter run",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🐍 Run Backend Locally (No Docker)",
+            "type": "shell",
+            "command": "cd backend && .\\.venv\\Scripts\\activate && python run.py",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        }
+    ]
+}

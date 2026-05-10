@@ -658,15 +658,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       children: [
                         provider.cameraController != null &&
                                 provider.cameraController!.value.isInitialized
-                            ? SizedBox.expand(
-                                child: FittedBox(
-                                  fit: BoxFit.cover,
-                                  child: SizedBox(
-                                    width: provider.cameraController!.value.aspectRatio,
-                                    height: 1.0,
-                                    child: CameraPreview(provider.cameraController!),
-                                  ),
-                                ),
+                            ? Builder(
+                                builder: (ctx) {
+                                  double ratio = provider.cameraController!.value.aspectRatio;
+                                  if (MediaQuery.of(ctx).size.height > MediaQuery.of(ctx).size.width && ratio > 1.0) {
+                                    ratio = 1.0 / ratio;
+                                  }
+                                  return SizedBox.expand(
+                                    child: FittedBox(
+                                      fit: BoxFit.cover,
+                                      child: SizedBox(
+                                        width: 100 * ratio,
+                                        height: 100,
+                                        child: CameraPreview(provider.cameraController!),
+                                      ),
+                                    ),
+                                  );
+                                },
                               )
                             : Center(
                                 child: isSuccess

@@ -216,7 +216,24 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                 BoxShadow(color: Colors.black.withValues(alpha: 0.15), blurRadius: 12, offset: const Offset(0, 4)),
               ],
             ),
-            child: CameraPreview(_cameraController!),
+            child: Builder(
+              builder: (ctx) {
+                double ratio = _cameraController!.value.aspectRatio;
+                if (MediaQuery.of(ctx).size.height > MediaQuery.of(ctx).size.width && ratio > 1.0) {
+                  ratio = 1.0 / ratio;
+                }
+                return SizedBox.expand(
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: 100 * ratio,
+                      height: 100,
+                      child: CameraPreview(_cameraController!),
+                    ),
+                  ),
+                );
+              },
+            ),
           ),
           const SizedBox(height: 16),
           Row(

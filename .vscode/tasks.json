@@ -6,8 +6,7 @@
             "type": "shell",
             "command": "docker-compose up -d",
             "group": {
-                "kind": "build",
-                "isDefault": true
+                "kind": "build"
             },
             "presentation": {
                 "reveal": "always",
@@ -72,6 +71,10 @@
                 "🔗 Start Cloudflare Tunnel (Auto GitHub Update)"
             ],
             "dependsOrder": "sequence",
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
             "presentation": {
                 "reveal": "always",
                 "panel": "new"

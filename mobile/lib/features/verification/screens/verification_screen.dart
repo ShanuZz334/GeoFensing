@@ -262,18 +262,23 @@ class _CameraPreviewWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-    return SizedBox(
-      width: size.width,
-      height: size.height,
-      child: FittedBox(
-        fit: BoxFit.cover,
-        child: SizedBox(
-          width: controller.value.previewSize?.height ?? size.width,
-          height: controller.value.previewSize?.width ?? size.height,
-          child: CameraPreview(controller),
-        ),
-      ),
+    return Builder(
+      builder: (ctx) {
+        double ratio = controller.value.aspectRatio;
+        if (MediaQuery.of(ctx).size.height > MediaQuery.of(ctx).size.width && ratio > 1.0) {
+          ratio = 1.0 / ratio;
+        }
+        return SizedBox.expand(
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              width: 100 * ratio,
+              height: 100,
+              child: CameraPreview(controller),
+            ),
+          ),
+        );
+      },
     );
   }
 }

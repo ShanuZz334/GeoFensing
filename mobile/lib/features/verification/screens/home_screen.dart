@@ -761,40 +761,150 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   }
 
   Widget _buildInstructions() {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _darkBoxDecoration(),
-      child: Column(
+    final provider = context.watch<VerificationProvider>();
+    final rules = provider.settings['attendance_rules'] as Map<String, dynamic>?;
+
+    // Format "09:00" → "9:00 AM"
+    String fmt(String? t) {
+      if (t == null || t.isEmpty) return '--';
+      try {
+        final parts = t.split(':');
+        int h = int.parse(parts[0]);
+        final m = parts[1];
+        final period = h >= 12 ? 'PM' : 'AM';
+        if (h > 12) h -= 12;
+        if (h == 0) h = 12;
+        return '$h:$m $period';
+      } catch (_) { return t; }
+    }
+
+    final classStart   = fmt(rules?['class_start']  as String?);
+    final classEnd     = fmt(rules?['class_end']     as String?);
+    final halfDay      = fmt(rules?['half_day_limit'] as String?);
+    final absentLimit  = fmt(rules?['absent_limit']  as String?);
+    final halfCheckout = fmt(rules?['half_day_checkout_limit'] as String?);
+    final anytime      = rules?['anytime_checkout_full_day'] == true;
+
+    return SizedBox(
+      height: 320,
+      child: PageView(
+        physics: const ClampingScrollPhysics(),
+        children: [
+          // ── Page 1: Scan Tips ──────────────────────────────────────────
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: _darkBoxDecoration(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Text('Instructions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Spacer(),
+                    Text('Swipe for schedule →', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.35))),
+                  ],
+                ),
+                const SizedBox(height: 14),
+                _buildInstructionItem('Ensure proper lighting on your face'),
+                _buildInstructionItem('Keep your face centered in the circle'),
+                _buildInstructionItem('Remove obstructions (mask, glasses if required)'),
+                const SizedBox(height: 16),
+                Center(
+                  child: TextButton.icon(
+                    onPressed: () {
+                      final p = context.read<VerificationProvider>();
+                      if (p.supportContact != null) {
+                        _showSupportDialog(p.supportContact!);
+                      } else {
+                        _showSupportDialog({"phone": "8089602280", "email": "shanifshaz546@gmail.com"});
+                      }
+                    },
+                    icon: const Icon(Icons.help_outline, color: Color(0xFF7C3AED), size: 18),
+                    label: const Text('Need Help? Contact Support', style: TextStyle(color: Color(0xFF7C3AED))),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                        side: BorderSide(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          // ── Page 2: Live Schedule from Settings ────────────────────────
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: _darkBoxDecoration(),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.schedule_rounded, color: Color(0xFF7C3AED), size: 16),
+                    const SizedBox(width: 8),
+                    const Text('Attendance Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                    const Spacer(),
+                    Text('← Swipe back', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.35))),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                _buildScheduleRow(Icons.check_circle_outline,    'Full Day',   'Check in before $halfDay',                    const Color(0xFF10B981)),
+                _buildScheduleRow(Icons.timelapse_rounded,       'Half Day',   'Check in $halfDay – $absentLimit',            const Color(0xFFF59E0B)),
+                _buildScheduleRow(Icons.block_rounded,           'Absent',     'Check in after $absentLimit',                 const Color(0xFFEF4444)),
+                _buildScheduleRow(Icons.logout_rounded,          anytime ? 'Checkout' : 'Early Exit',
+                                                                  anytime ? 'Any time checkout counts as full day' : 'Before $halfCheckout counts as half day', const Color(0xFF7C3AED)),
+                if (classEnd != '--')
+                  _buildScheduleRow(Icons.access_time_filled_rounded, 'Class Hours', '$classStart – $classEnd', const Color(0xFF9CA3AF)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildScheduleRow(IconData icon, String label, String desc, Color color) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Instructions',
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, color: color, size: 14),
           ),
-          const SizedBox(height: 16),
-          _buildInstructionItem('Ensure proper lighting'),
-          _buildInstructionItem('Keep face centered'),
-          _buildInstructionItem('Remove obstructions (mask, glasses if required)'),
-          const SizedBox(height: 16),
-          Center(
-            child: TextButton.icon(
-              onPressed: () {
-                final provider = context.read<VerificationProvider>();
-                if (provider.supportContact != null) {
-                  _showSupportDialog(provider.supportContact!);
-                } else {
-                  _showSupportDialog({"phone": "8089602280", "email": "shanifshaz546@gmail.com"});
-                }
-              },
-              icon: const Icon(Icons.help_outline, color: Color(0xFF7C3AED), size: 18),
-              label: const Text('Need Help? Contact Support', style: TextStyle(color: Color(0xFF7C3AED))),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  side: BorderSide(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label, 
+                  style: const TextStyle(
+                    fontSize: 13, 
+                    fontWeight: FontWeight.w700, 
+                    color: Colors.white,
+                    letterSpacing: 0.3,
+                  )
                 ),
-              ),
+                const SizedBox(height: 2),
+                Text(
+                  desc, 
+                  style: TextStyle(
+                    fontSize: 12, 
+                    color: Colors.white.withValues(alpha: 0.5),
+                    height: 1.2,
+                  )
+                ),
+              ],
             ),
           ),
         ],

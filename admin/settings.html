@@ -9,6 +9,39 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    .info-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 13px; height: 13px; border-radius: 50%; background: transparent;
+      color: var(--text-muted); font-size: 9px; margin-left: 5px; cursor: help;
+      border: 1px solid var(--border); font-weight: 700;
+      position: relative; vertical-align: middle; flex-shrink: 0;
+      line-height: 1; font-style: normal;
+    }
+    .info-icon:hover { color: var(--primary, #7c3aed); border-color: var(--primary, #7c3aed); }
+    .info-icon::after {
+      content: attr(data-tip);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      transform: none;
+      background: #1e1e2e;
+      border: 1px solid #3a3a50;
+      color: #c9d1d9;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 400;
+      white-space: nowrap;
+      z-index: 9999;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      line-height: 1.4;
+    }
+    .info-icon:hover::after { opacity: 1; }
+  </style>
 </head>
 <body>
   <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
@@ -93,27 +126,29 @@
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Attendance Time Rules</h2>
         
         <div class="form-group">
-          <label>Class Start Time</label>
+          <label>Class Start Time <span class="info-icon" data-tip="Official start time of the class.">i</span></label>
           <input type="time" id="set-class-start" class="form-control" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Official start time of the class.</div>
         </div>
 
         <div class="form-group">
-          <label>Half-Day Limit Time</label>
+          <label>Class End Time <span class="info-icon" data-tip="Official end time of the class.">i</span></label>
+          <input type="time" id="set-class-end" class="form-control" />
+        </div>
+
+        <div class="form-group">
+          <label>Half-Day Limit Time <span class="info-icon" data-tip="Scanning after this time marks as Half Day.">i</span></label>
           <input type="time" id="set-halfday-limit" class="form-control" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Scanning after this time marks as Half Day.</div>
         </div>
 
         <div class="form-group">
-          <label>Absent Limit Time</label>
+          <label>Absent Limit Time <span class="info-icon" data-tip="Scanning after this time is blocked and marked Absent.">i</span></label>
           <input type="time" id="set-absent-limit" class="form-control" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Scanning after this time is blocked and marked Absent.</div>
         </div>
 
         <hr style="border: 0; border-top: 1px solid var(--border); margin: 20px 0;">
 
         <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text);">Check Out Rules</h3>
-        <div class="form-group" style="display:flex; align-items:center; gap:12px;">
+        <div class="form-group" style="display:flex; align-items:center; gap:12px; margin-bottom: 16px;">
           <label class="ios-checkbox">
             <input type="checkbox" id="set-anytime-checkout" />
             <div class="checkbox-wrapper">
@@ -123,14 +158,12 @@
               </svg>
             </div>
           </label>
-          <span style="cursor:pointer;color:var(--text);font-weight:500" onclick="document.getElementById('set-anytime-checkout').click()">Anytime Checkout as Full Day</span>
+          <span style="cursor:pointer;color:var(--text);font-weight:500" onclick="document.getElementById('set-anytime-checkout').click()">Anytime Checkout as Full Day <span class="info-icon" data-tip="If checked, teachers get full day regardless of when they check out.">i</span></span>
         </div>
-        <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-bottom:16px;">If checked, teachers get full day regardless of when they check out.</div>
 
         <div class="form-group">
-          <label>Half-Day Checkout Limit</label>
+          <label>Half-Day Checkout Limit <span class="info-icon" data-tip="Checking out before this time marks the day as Half Day. (Ignored if Anytime Checkout is enabled).">i</span></label>
           <input type="time" id="set-halfday-checkout-limit" class="form-control" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Checking out before this time marks the day as Half Day. (Ignored if Anytime Checkout is enabled).</div>
         </div>
       </div>
 
@@ -138,14 +171,12 @@
       <div class="card" style="padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px;">Verification Limits</h2>
         <div class="form-group">
-          <label>Max Check-In Attempts</label>
+          <label>Max Check-In Attempts <span class="info-icon" data-tip="Failed scans before marking absent.">i</span></label>
           <input type="number" id="set-max-checkin" class="form-control" min="1" max="100" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Failed scans before marking absent.</div>
         </div>
         <div class="form-group">
-          <label>Max Check-Out Attempts</label>
+          <label>Max Check-Out Attempts <span class="info-icon" data-tip="Failed scans before prompting support.">i</span></label>
           <input type="number" id="set-max-checkout" class="form-control" min="1" max="100" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Failed scans before prompting support.</div>
         </div>
       </div>
 
@@ -153,14 +184,12 @@
       <div class="card" style="padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px;">Leave Quotas</h2>
         <div class="form-group">
-          <label>Monthly Full-Day Leaves</label>
+          <label>Monthly Full-Day Leaves <span class="info-icon" data-tip="Full-day leaves allotted per month.">i</span></label>
           <input type="number" id="set-monthly-leaves" class="form-control" min="0" max="31" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Full-day leaves allotted per month.</div>
         </div>
         <div class="form-group">
-          <label>Monthly Half-Day Leaves</label>
+          <label>Monthly Half-Day Leaves <span class="info-icon" data-tip="Half-day leaves allotted per month.">i</span></label>
           <input type="number" id="set-monthly-half-leaves" class="form-control" min="0" max="31" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Half-day leaves allotted per month.</div>
         </div>
       </div>
 
@@ -168,14 +197,12 @@
       <div class="card" style="padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px;">Support Contact</h2>
         <div class="form-group">
-          <label>Support Email</label>
+          <label>Support Email <span class="info-icon" data-tip="Shown to teachers on failed verification.">i</span></label>
           <input type="email" id="set-support-email" class="form-control" placeholder="admin@college.edu" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Shown to teachers on failed verification.</div>
         </div>
         <div class="form-group">
-          <label>Support Phone</label>
+          <label>Support Phone <span class="info-icon" data-tip="Phone shown on failed verification.">i</span></label>
           <input type="text" id="set-support-phone" class="form-control" placeholder="+91 98765 43210" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Phone shown on failed verification.</div>
         </div>
       </div>
 
@@ -183,14 +210,12 @@
       <div class="card" style="padding: 20px 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
         <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 14px;">Semester Period</h2>
         <div class="form-group">
-          <label>Semester Start Date</label>
+          <label>Semester Start Date <span class="info-icon" data-tip="First day of the current semester.">i</span></label>
           <input type="date" id="set-semester-start" class="form-control" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">First day of the current semester.</div>
         </div>
         <div class="form-group">
-          <label>Semester End Date</label>
+          <label>Semester End Date <span class="info-icon" data-tip="Last day of the current semester.">i</span></label>
           <input type="date" id="set-semester-end" class="form-control" />
-          <div class="help-text" style="font-size:12px; color:var(--text-muted); margin-top:4px;">Last day of the current semester.</div>
         </div>
       </div>
 
@@ -274,15 +299,14 @@
   <script src="js/api.js?v=2"></script>
   <script src="js/app.js?v=2"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', async () => {
-      await loadSettings();
-    });
+    initApp('settings', loadSettings);
 
     async function loadSettings() {
       const data = await api('/admin/settings');
       if (data) {
         if (data.attendance_rules) {
           document.getElementById('set-class-start').value = data.attendance_rules.class_start || '';
+          document.getElementById('set-class-end').value = data.attendance_rules.class_end || '';
           document.getElementById('set-halfday-limit').value = data.attendance_rules.half_day_limit || '';
           document.getElementById('set-absent-limit').value = data.attendance_rules.absent_limit || '';
           document.getElementById('set-halfday-checkout-limit').value = data.attendance_rules.half_day_checkout_limit || '';
@@ -319,6 +343,7 @@
       const payload = {
         attendance_rules: {
           class_start: document.getElementById('set-class-start').value,
+          class_end: document.getElementById('set-class-end').value,
           half_day_limit: document.getElementById('set-halfday-limit').value,
           absent_limit: document.getElementById('set-absent-limit').value,
           half_day_checkout_limit: document.getElementById('set-halfday-checkout-limit').value,

@@ -578,7 +578,7 @@ def get_alerts():
 
     # 1.5 Today's Failed Logs
     failed_logs = AttendanceLog.query.filter(
-        AttendanceLog.status == 'failed',
+        AttendanceLog.status == 'failure',
         AttendanceLog.timestamp >= today_start
     ).all()
     for log in failed_logs:

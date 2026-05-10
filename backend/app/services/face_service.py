@@ -111,7 +111,7 @@ def process_frames(
 def compare_encodings(
     encodings: List[Optional[List[float]]],
     expected_teacher_encoding: List[float],
-    threshold: float = 1.1,
+    threshold: float = 1.2,
 ) -> Tuple[bool, float]:
     """
     Check if the expected teacher encoding matches any of the frame encodings.

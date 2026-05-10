@@ -3,6 +3,14 @@
    Premium Dark Design
    ============================================================================== */
 
+@font-face {
+  font-family: 'Bitcount';
+  src: url('../fonts/Bitcount-ExtraLight.ttf') format('truetype');
+  font-weight: 200;
+  font-style: normal;
+}
+
+
 :root {
   --bg:         #050505; /* Deep dark background */
   --surface:    #121212; /* Card surface */
@@ -62,19 +70,25 @@ body {
 }
 
 .logo-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 50%;
-  background: #ffffff;
+  width: 46px;
+  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  border-radius: 50%;
   overflow: hidden;
-  box-shadow: 0 4px 12px rgba(42, 56, 255, 0.3);
+  background: #000;
 }
-.logo-icon img { width: 75%; height: 75%; object-fit: contain; }
+.logo-icon img { width: 100%; height: 100%; object-fit: contain; }
 .logo-icon svg { width: 22px; height: 22px; color: white; }
+
+.sidebar-logo span {
+  font-family: 'Bitcount', monospace;
+  font-size: 20px;
+  letter-spacing: 1px;
+  color: var(--primary);
+}
 
 .sidebar-nav {
   flex: 1;
@@ -594,45 +608,55 @@ body {
   font-weight: bold;
 }
 
-/* Toggle Switch */
+/* Toggle Switch — Project Standard (pill, dark-mode) */
 .switch {
   position: relative;
   display: inline-block;
-  width: 44px;
-  height: 24px;
+  width: 36px;
+  height: 18px;
   flex-shrink: 0;
 }
+
 .switch input {
   opacity: 0;
   width: 0;
   height: 0;
+  position: absolute;
 }
+
 .slider {
   position: absolute;
   cursor: pointer;
   top: 0; left: 0; right: 0; bottom: 0;
-  background-color: rgba(255,255,255,0.12);
-  border: 1px solid rgba(255,255,255,0.15);
-  border-radius: 24px;
-  transition: background-color .25s, border-color .25s;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 18px;
+  transition: background-color 0.25s, border-color 0.25s;
+  box-shadow: none;
 }
+
 .slider:before {
   position: absolute;
   content: "";
-  width: 18px;
-  height: 18px;
+  width: 12px;
+  height: 12px;
   left: 3px;
-  top: 3px;
-  background-color: #fff;
+  top: 2px;
+  background-color: rgba(255, 255, 255, 0.5);
   border-radius: 50%;
-  transition: transform .25s;
+  border: none;
+  box-shadow: none;
+  transition: transform 0.25s, background-color 0.25s;
 }
+
 .switch input:checked + .slider {
   background-color: var(--primary);
   border-color: var(--primary);
 }
+
 .switch input:checked + .slider:before {
-  transform: translateX(20px);
+  transform: translateX(17px);
+  background-color: #ffffff;
 }
 
  / *    % %  G l o b a l   S p i n n e r   L o a d e r    % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % % %  * / 
@@ -696,11 +720,11 @@ body {
      t r a n s f o r m :   t r a n s l a t e Y ( - 1 0 0 % ) ; 
    } 
  } 
-  
+ 
+ 
  
 
-/* Focus glow for toggle */
-.switch input:focus + .slider { box-shadow: 0 0 0 3px rgba(139,92,246,0.25); }
+/* Toggle switch focus handled internally */
 
 /* ── Custom iOS Checkbox ─────────────────────────────────────────── */
 .checkbox-container {
@@ -790,102 +814,116 @@ body {
 .ios-checkbox input:focus + .checkbox-wrapper .checkbox-bg {
   box-shadow: 0 0 0 4px var(--checkbox-bg);
 }
-
-/* Animation */
-@keyframes bounce-checkbox {
-  0%,
-  100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-}
-
-.ios-checkbox input:checked + .checkbox-wrapper {
-  animation: bounce-checkbox 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ── Neumorphic Login Modal ───────────────────────────────────────────────── */
-.neu-login-card {
-  background: #1e1e1e !important;
-  border: none !important;
-  border-radius: 15px !important;
-  padding: 48px 32px !important;
-  box-shadow: 2px 2px 10px rgba(0,0,0,1), -1px -1px 5px rgba(255, 255, 255, 0.1) !important;
-  max-width: 400px;
-  width: 100%;
-}
-
-.neu-input-wrapper {
-  margin-bottom: 24px;
-}
-
-.neu-input-wrapper label {
-  display: block;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-
-.neu-input {
-  width: 100%;
-  background: #212121 !important;
-  border: 2px solid #212121 !important;
   border-radius: 6px !important;
-  color: #fff !important;
-  padding: 16px !important;
-  font-size: 14px;
-  box-shadow: 6px 6px 10px rgba(0,0,0,1), 1px 1px 10px rgba(255, 255, 255, 0.15) !important;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+
+/* Override backdrop blur for login modal */
+#login-modal {
+  backdrop-filter: none;
+  background: rgba(0, 0, 0, 0.88);
+}
+
+.new-login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.new-login-form {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  padding: 48px 40px 40px;
+  border-radius: 18px;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8),
+              inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  min-width: 320px;
+}
+
+.new-login-form_details {
+  font-size: 26px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.new-login-input {
+  width: 100%;
+  min-height: 46px;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.25s, box-shadow 0.25s;
+  padding: 0 14px;
+  background: #242424 !important;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  font-size: 14px;
+  font-family: inherit;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
 }
 
-.neu-input::placeholder {
-  color: #999 !important;
+/* Kill browser autofill white/blue override */
+.new-login-input:-webkit-autofill,
+.new-login-input:-webkit-autofill:hover,
+.new-login-input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0px 1000px #242424 inset !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.1);
+  transition: background-color 5000s ease-in-out 0s;
 }
 
-.neu-input:focus {
-  border-color: var(--primary) !important;
+.new-login-input::placeholder {
+  color: #555;
 }
 
-.neu-button {
+.new-login-input:focus::placeholder {
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.new-login-input:focus {
+  border-color: var(--primary);
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5),
+              0 0 0 3px rgba(124, 58, 237, 0.2);
+}
+
+.new-login-btn {
   width: 100%;
-  background: var(--primary) !important;
-  border: none !important;
-  border-radius: 6px !important;
-  color: #fff !important;
-  padding: 16px !important;
-  font-size: 16px;
-  font-weight: 700;
+  padding: 12px;
   cursor: pointer;
-  box-shadow: 6px 6px 10px rgba(0,0,0,0.5), 1px 1px 10px rgba(124, 58, 237, 0.3) !important;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+  background: transparent;
+  border-radius: 8px;
+  border: 2px solid var(--primary);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  letter-spacing: 0.5px;
+  transition: background 0.25s, box-shadow 0.25s, transform 0.15s;
+  margin-top: 4px;
 }
 
-.neu-button:active {
-  transform: scale(0.98);
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.5), 0px 0px 5px rgba(124, 58, 237, 0.3) !important;
+.new-login-btn:hover {
+  background: var(--primary);
+  box-shadow: 0 4px 20px rgba(124, 58, 237, 0.4);
+  transform: translateY(-1px);
 }
 
-.neu-button-dark {
-  width: 100%;
-  background: #212121 !important;
-  border: 2px solid #212121 !important;
-  border-radius: 6px !important;
-  color: #fff !important;
-  padding: 16px !important;
-  font-size: 16px;
-  font-weight: 700;
-  cursor: pointer;
-  box-shadow: 6px 6px 10px rgba(0,0,0,1), 1px 1px 10px rgba(255, 255, 255, 0.15) !important;
-  transition: transform 0.1s ease, box-shadow 0.1s ease;
+.new-login-btn:active {
+  transform: translateY(0);
 }
 
-.neu-button-dark:active {
-  transform: scale(0.98);
-  box-shadow: 2px 2px 5px rgba(0,0,0,1), 0px 0px 5px rgba(255, 255, 255, 0.15) !important;
+.new-login-btn:focus {
+  background: var(--primary);
+  outline: none;
 }
-
-

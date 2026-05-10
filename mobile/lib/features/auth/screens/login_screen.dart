@@ -402,18 +402,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               Center(
                 child: Column(
                   children: [
-                    Container(
-                      width: 100,
-                      height: 100,
-                      decoration: const BoxDecoration(
-                        color: Colors.white,
-                        shape: BoxShape.circle,
-                      ),
-                      padding: const EdgeInsets.all(12),
-                      child: ClipOval(
-                        child: Image.asset(
-                          'assets/images/logo_v4.png',
-                          fit: BoxFit.contain,
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(50),
+                      child: Container(
+                        width: 100,
+                        height: 100,
+                        child: ClipRect(
+                          child: Image.asset(
+                            'assets/images/logo_v4.png',
+                            fit: BoxFit.cover,
+                          ),
                         ),
                       ),
                     ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),

@@ -11,15 +11,28 @@ let failureChart = null;
  * Initialize the admin app.
  * Checks for a stored token; shows login modal if not found.
  */
-function initApp(page) {
-  // if (!getToken()) {
-  //   showLoginModal();
-  //   return;
-  // }
+function initApp(page, onReady) {
+  const isIndex = window.location.pathname.endsWith('index.html') ||
+                  window.location.pathname.endsWith('/admin/') ||
+                  window.location.pathname === '/admin';
+
+  if (!getToken()) {
+    if (isIndex) {
+      showLoginModal();
+    } else {
+      window.location.href = 'index.html';
+    }
+    return;
+  }
+
   hideLoginModal();
-  
+
   if (page === 'dashboard') {
     loadDashboard();
+  }
+
+  if (typeof onReady === 'function') {
+    onReady();
   }
 }
 

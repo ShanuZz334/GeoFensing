@@ -182,56 +182,16 @@
     </section>
   </main>
 
-  <!-- Admin Login Modal -->
+    <!-- Admin Login Modal -->
     <div class="modal-overlay" id="login-modal">
-    <div style="
-      width: 360px;
-      padding: 40px 28px;
-      border-radius: 20px;
-      background: #1c1c1c;
-      border: 1px solid rgba(255,255,255,0.07);
-      box-shadow: 0 32px 64px rgba(0,0,0,0.7);
-      text-align: center;
-    ">
-      <h2 style="font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 28px;">Login</h2>
-      <div id="login-error" class="error-banner" style="display:none; margin-bottom:16px;"></div>
-
-      <div style="margin-bottom: 16px;">
-        <input type="text" id="admin-reg-no" placeholder="Registration Number" style="
-          width: 100%; padding: 13px 16px; border: none; border-radius: 10px;
-          background: #2a2a2a;
-          color: #e0e0e0; font-size: 14px; outline: none;
-          box-sizing: border-box; font-family: inherit;
-        " />
+    <div class="new-login-container">
+      <div class="new-login-form">
+        <div class="new-login-form_details">Login</div>
+        <div id="login-error" class="error-banner" style="display:none; width: 100%; margin: 0;"></div>
+        <input type="text" id="admin-reg-no" class="new-login-input" placeholder="Reg No" required>
+        <input type="password" id="admin-password" class="new-login-input" placeholder="Password" required>
+        <button id="btn-login" class="new-login-btn" onclick="adminLogin()">Login</button>
       </div>
-
-      <div style="margin-bottom: 24px; position: relative;">
-        <input type="password" id="admin-password" placeholder="Password" style="
-          width: 100%; padding: 13px 46px 13px 16px; border: none; border-radius: 10px;
-          background: #2a2a2a;
-          color: #e0e0e0; font-size: 14px; outline: none;
-          box-sizing: border-box; font-family: inherit;
-        " />
-        <button type="button" onclick="togglePasswordVisibility()" style="
-          position: absolute; right: 13px; top: 50%; transform: translateY(-50%);
-          background: none; border: none; cursor: pointer; color: #777; padding: 4px;
-        ">
-          <svg id="eye-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
-            <circle cx="12" cy="12" r="3"/>
-          </svg>
-        </button>
-      </div>
-
-      <button id="btn-login" onclick="adminLogin()" style="
-        width: 100%; padding: 13px; border: none; border-radius: 10px; cursor: pointer;
-        background: #2a2a2a;
-        border: 1px solid rgba(255,255,255,0.06);
-        color: #fff; font-size: 15px; font-weight: 700;
-        transition: background 0.2s;
-      " onmouseover="this.style.background='#333'" onmouseout="this.style.background='#2a2a2a'">
-        Login
-      </button>
     </div>
   </div>
   <script>

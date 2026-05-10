@@ -95,7 +95,7 @@ async function adminLogin() {
   }).catch(() => null);
 
   btn.disabled = false;
-  btn.textContent = 'Sign In';
+  btn.textContent = 'Login';
 
   if (!res || !res.ok) {
     errEl.textContent = 'Invalid admin credentials';

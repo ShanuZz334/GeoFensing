@@ -54,6 +54,29 @@
                 "panel": "new"
             },
             "problemMatcher": []
+        },
+        {
+            "label": "🔗 Start Cloudflare Tunnel (Auto GitHub Update)",
+            "type": "shell",
+            "command": "powershell.exe -ExecutionPolicy Bypass -File \"${workspaceFolder}\\start_tunnel.ps1\"",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
+        },
+        {
+            "label": "🌐 Launch GeoFense + Tunnel (ONE CLICK)",
+            "dependsOn": [
+                "🚀 Start GeoFense Stack (Docker)",
+                "🔗 Start Cloudflare Tunnel (Auto GitHub Update)"
+            ],
+            "dependsOrder": "sequence",
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+            "problemMatcher": []
         }
     ]
 }

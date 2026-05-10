@@ -576,22 +576,9 @@ def get_alerts():
             "log_id": log.id
         })
 
-    # 1.5 Today's Failed Logs
-    failed_logs = AttendanceLog.query.filter(
-        AttendanceLog.status == 'failure',
-        AttendanceLog.timestamp >= today_start
-    ).all()
-    for log in failed_logs:
-        alerts.append({
-            "id": f"failed_{log.id}",
-            "type": "failed_log",
-            "title": "Failed Attempt",
-            "description": f"Teacher {log.teacher.full_name if log.teacher else 'Unknown'} failed to authenticate: {log.reason}",
-            "teacher_id": log.teacher_id,
-            "teacher_name": log.teacher.full_name if log.teacher else 'Unknown',
-            "timestamp": log.timestamp.isoformat(),
-            "log_id": log.id
-        })
+    # Note: Individual failed attempts are intentionally excluded from alerts.
+    # They are visible in the Attendance Logs page. Only "Unusual Activity"
+    # (>5 failures today) surfaces here as a meaningful pattern-based alert.
 
     # 2. Abandoned Check-ins (Checked in > 12h ago, no check out today)
     # We find all check_ins today that are older than 12h.

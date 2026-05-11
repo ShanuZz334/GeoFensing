@@ -275,7 +275,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                   Row(
                     children: [
                       Expanded(child: _buildTicketDetail('REG NO', user?.regNo ?? '-')),
-                      Expanded(child: _buildTicketDetail('DEPT', user?.department ?? '-')),
+                      Expanded(child: _buildTicketDetail('DEPT', _formatDept(user?.department))),
                     ],
                   ),
                 ],
@@ -1039,6 +1039,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         },
       ),
     ).then((_) => countdownTimer?.cancel());
+  }
+
+  String _formatDept(String? deptStr) {
+    if (deptStr == null || deptStr.isEmpty) return '-';
+    
+    final deptNicknames = {
+      "Computer Science": "CSE",
+      "Electronics & Electrical": "EEE/ECE",
+      "Civil Engineering": "CE",
+      "Mechanical Engineering": "ME",
+      "Mittal School of Business": "MSB",
+      "School of Law": "LAW",
+      "Hotel Management & Tourism": "HM",
+      "Architecture & Design": "ARCH",
+      "Agriculture": "AGRI",
+      "Pharmacy": "PHARMA",
+      "Bioengineering & Biosciences": "BIO",
+      "Physical Education": "PE",
+      "Fashion Design": "FD",
+      "Media & Communication": "MEDIA",
+      "Allied Medical Sciences": "PHYSIO",
+      "Computer Applications": "IT"
+    };
+
+    for (var entry in deptNicknames.entries) {
+      if (deptStr.contains(entry.key)) return entry.value;
+    }
+    
+    final match = RegExp(r'\((.*?)\)').firstMatch(deptStr);
+    if (match != null) return match.group(1)!;
+    
+    return deptStr;
   }
 }
 

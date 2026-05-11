@@ -119,7 +119,17 @@
       </div>
     </header>
 
-    <div class="settings-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px; max-width: 900px; margin-top: 24px;">
+    <div id="settings-wrapper" style="position: relative; margin-top: 24px; max-width: 900px;">
+      <!-- Lock Overlay -->
+      <div id="settings-lock-overlay" style="display:none; position:absolute; inset:-12px; z-index:10; flex-direction:column; align-items:center; justify-content:flex-start; background:rgba(15, 15, 15, 0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: var(--radius-md);">
+        <div style="background:var(--surface); padding:24px 32px; border-radius:12px; border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.5); text-align:center; position:sticky; top:50vh; transform:translateY(-50%); margin-left:120px;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <h2 style="font-size:18px; font-weight:600; margin-bottom:8px;">Access Restricted</h2>
+          <p style="color:var(--text-muted); font-size:14px; margin:0;">Only Head Admins can view and modify system settings.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid" id="settings-grid" style="display:grid; grid-template-columns: 1fr 1fr; gap: 24px;">
       
       <!-- Time-based Rules -->
       <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); grid-row: span 2;">
@@ -314,6 +324,7 @@
       </div>
 
     </div>
+    </div>
   </main>
 
   <script src="js/api.js?v=2"></script>
@@ -322,6 +333,16 @@
     initApp('settings', loadSettings);
 
     async function loadSettings() {
+      const adminData = getAdminData();
+      if (!adminData || !adminData.is_head_admin) {
+        document.getElementById('settings-lock-overlay').style.display = 'flex';
+        document.getElementById('settings-grid').style.pointerEvents = 'none';
+        document.getElementById('settings-grid').style.userSelect = 'none';
+        const saveBtn = document.getElementById('btn-save-settings');
+        if (saveBtn) saveBtn.style.display = 'none';
+        return; // Prevent API call and error toast
+      }
+
       const data = await api('/admin/settings');
       if (data) {
         if (data.attendance_rules) {

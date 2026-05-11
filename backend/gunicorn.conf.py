@@ -3,14 +3,18 @@
 # GeoFace Faculty Authentication System
 # ==============================================================================
 
-try:
-    from gevent import monkey
-    monkey.patch_all()
-except ImportError:
-    pass
-
 import multiprocessing
 import os
+
+worker_class = os.environ.get("GUNICORN_WORKER_CLASS", "gevent")
+
+if worker_class == "gevent":
+    try:
+        from gevent import monkey
+        monkey.patch_all()
+    except ImportError:
+        pass
+
 
 # Worker count: 2 × CPU_count + 1  (standard formula for I/O-bound apps)
 workers = int(os.environ.get("GUNICORN_WORKERS", multiprocessing.cpu_count() * 2 + 1))
@@ -38,7 +42,7 @@ access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s"
 keepalive = 5
 
 # Preload app for copy-on-write memory efficiency
-preload_app = True
+preload_app = False
 
 # Security
 limit_request_line = 4096

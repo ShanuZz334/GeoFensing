@@ -34,6 +34,23 @@ function initApp(page, onReady) {
   if (typeof onReady === 'function') {
     onReady();
   }
+
+  // Update alert badge globally
+  if (page !== 'alerts') {
+    updateGlobalAlertBadge();
+  }
+}
+
+async function updateGlobalAlertBadge() {
+  const data = await api('/admin/alerts');
+  if (data && data.alerts) {
+    const count = data.alerts.length;
+    const badge = document.getElementById('sidebar-alert-badge');
+    if (badge) {
+      badge.textContent = count;
+      badge.style.display = count > 0 ? 'flex' : 'none';
+    }
+  }
 }
 
 // ── Dashboard ──────────────────────────────────────────────

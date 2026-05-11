@@ -257,7 +257,7 @@
 
           <hr style="border:0; border-top:1px solid var(--border); margin:16px 0;">
 
-          <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:12px; align-items:flex-end;">
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:flex-end;">
             <div class="form-group" style="margin-bottom:0">
               <label>Leave Type</label>
               <select id="leave-type" class="form-control">
@@ -273,8 +273,15 @@
               </select>
             </div>
             <div class="form-group" style="margin-bottom:0">
-              <label>New Leave Count</label>
-              <input type="number" id="leave-new-count" class="form-control" min="0" max="60" placeholder="5" />
+              <label>Action</label>
+              <select id="leave-action" class="form-control" onchange="document.getElementById('leave-count-label').textContent = this.value === 'add' ? 'Leaves to Add' : 'New Exact Quota'">
+                <option value="add">Add to Existing</option>
+                <option value="set">Set Exact Quota</option>
+              </select>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label id="leave-count-label">Leaves to Add</label>
+              <input type="number" id="leave-new-count" class="form-control" min="-60" max="60" placeholder="5" />
             </div>
           </div>
 
@@ -378,6 +385,7 @@
     // ── Per-Teacher Leave Management ─────────────────────────────────────────
 
     let foundTeacher = null;
+    let currentSettings = null;
 
     async function searchTeacherForLeave() {
       const regNo = document.getElementById('leave-reg-no').value.trim();
@@ -403,9 +411,9 @@
       document.getElementById('leave-teacher-reg').textContent = data.reg_no;
 
       // Fetch global settings to compute effective quota
-      const settings = await api('/admin/settings');
-      const globalFull = settings?.monthly_allotted_leaves ?? 0;
-      const globalHalf = settings?.monthly_allotted_half_leaves ?? 0;
+      currentSettings = await api('/admin/settings');
+      const globalFull = currentSettings?.monthly_allotted_leaves ?? 0;
+      const globalHalf = currentSettings?.monthly_allotted_half_leaves ?? 0;
       const extraFull = data.extra_monthly_leaves ?? 0;
       const extraHalf = data.extra_half_monthly_leaves ?? 0;
 
@@ -420,18 +428,47 @@
       if (!foundTeacher) return;
       const leaveType = document.getElementById('leave-type').value;
       const quotaType = document.getElementById('leave-quota-type').value;
-      const count = parseInt(document.getElementById('leave-new-count').value);
+      const actionType = document.getElementById('leave-action').value;
+      let count = parseInt(document.getElementById('leave-new-count').value);
       const adminPassword = document.getElementById('leave-admin-password').value;
       const errEl = document.getElementById('leave-error');
       errEl.style.display = 'none';
 
-      if (isNaN(count) || count < 0) {
+      if (isNaN(count)) {
         errEl.textContent = 'Please enter a valid leave count.';
         errEl.style.display = 'block'; return;
       }
       if (!adminPassword) {
         errEl.textContent = 'Your admin password is required to apply leaves.';
         errEl.style.display = 'block'; return;
+      }
+      
+      let globalBase = 0;
+      if (currentSettings) {
+          if (leaveType === 'half' && quotaType === 'monthly') {
+              globalBase = currentSettings.monthly_allotted_half_leaves || 0;
+          } else if (leaveType === 'full' && quotaType === 'monthly') {
+              globalBase = currentSettings.monthly_allotted_leaves || 0;
+          }
+      }
+
+      if (actionType === 'add') {
+          let base = 0;
+          if (leaveType === 'half') {
+              base = quotaType === 'monthly' ? (foundTeacher.extra_half_monthly_leaves || 0) : (foundTeacher.extra_half_leaves || 0);
+          } else {
+              base = quotaType === 'monthly' ? (foundTeacher.extra_monthly_leaves || 0) : (foundTeacher.extra_leaves || 0);
+          }
+          count = base + count;
+      } else if (actionType === 'set') {
+          // count is the INTENDED TOTAL. We must subtract globalBase to get the required EXTRA amount.
+          count = count - globalBase;
+      }
+
+      // Prevent the TOTAL leaves from being negative, not just the extra leaves.
+      // Extra leaves CAN be negative to reduce a teacher's quota below the global default!
+      if (globalBase + count < 0) {
+          count = -globalBase; 
       }
 
       const btn = document.getElementById('btn-apply-leave');
@@ -449,10 +486,10 @@
 
       if (res) {
         showToast(`Leaves updated for ${foundTeacher.full_name}`);
-        document.getElementById('leave-current-full').textContent = res.extra_monthly_leaves ?? 0;
-        document.getElementById('leave-current-half').textContent = res.extra_half_monthly_leaves ?? 0;
         document.getElementById('leave-new-count').value = '';
         document.getElementById('leave-admin-password').value = '';
+        // Refresh the displayed data
+        searchTeacherForLeave();
       }
     }
 

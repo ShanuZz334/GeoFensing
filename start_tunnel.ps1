@@ -42,8 +42,8 @@ while ($null -eq $tunnelUrl -and $attempts -lt 60) {
     $attempts++
     if (Test-Path $logFile) {
         $content = Get-Content $logFile -Raw -ErrorAction SilentlyContinue
-        if ($content -match 'https://[a-z0-9\-]+\.trycloudflare\.com') {
-            $tunnelUrl = $Matches[0]
+        if ($content -match '\|\s+(https://[a-z0-9\-]+\.trycloudflare\.com)') {
+            $tunnelUrl = $Matches[1]
         }
     }
 }

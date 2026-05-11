@@ -213,7 +213,7 @@ def update_teacher_leaves(teacher_id):
         return jsonify({"error": "Admin access required"}), 403
         
     data = request.get_json() or {}
-    password = data.get("admin_password")
+    password = data.get("admin_password", "")
     extra_leaves = data.get("extra_leaves")
     extra_half_leaves = data.get("extra_half_leaves")
     leave_type = data.get("leave_type", "full") # 'full' or 'half'
@@ -223,8 +223,10 @@ def update_teacher_leaves(teacher_id):
         return jsonify({"error": "extra_leaves or extra_half_leaves required"}), 400
         
     # Verify Admin Password
-    cfg = current_app.config
-    if password != cfg.get("ADMIN_PASSWORD"):
+    current_reg = get_jwt_identity().replace(_ADMIN_PREFIX, "")
+    current_admin = Admin.query.filter_by(reg_no=current_reg).first()
+    
+    if not current_admin or not bcrypt.check_password_hash(current_admin.password_hash, password):
         return jsonify({"error": "Invalid admin password"}), 401
         
     teacher = Teacher.query.get(teacher_id)
@@ -237,12 +239,14 @@ def update_teacher_leaves(teacher_id):
             msg = f"Updated monthly half-day leaves for {teacher.full_name}"
         else:
             teacher.extra_half_leaves = int(extra_half_leaves)
+            msg = f"Updated semester half-day leaves for {teacher.full_name}"
     elif extra_leaves is not None:
         if quota_type == "monthly":
             teacher.extra_monthly_leaves = int(extra_leaves)
             msg = f"Updated monthly full-day leaves for {teacher.full_name}"
         else:
             teacher.extra_leaves = int(extra_leaves)
+            msg = f"Updated semester full-day leaves for {teacher.full_name}"
         
     db.session.commit()
     log_admin_action(get_jwt_identity(), "UPDATE_LEAVES", msg)
@@ -576,22 +580,6 @@ def get_alerts():
             "log_id": log.id
         })
 
-    # 1.5 Today's Failed Logs
-    failed_logs = AttendanceLog.query.filter(
-        AttendanceLog.status == 'failure',
-        AttendanceLog.timestamp >= today_start
-    ).all()
-    for log in failed_logs:
-        alerts.append({
-            "id": f"failed_{log.id}",
-            "type": "failed_log",
-            "title": "Failed Attempt",
-            "description": f"Teacher {log.teacher.full_name if log.teacher else 'Unknown'} failed to authenticate: {log.reason}",
-            "teacher_id": log.teacher_id,
-            "teacher_name": log.teacher.full_name if log.teacher else 'Unknown',
-            "timestamp": log.timestamp.isoformat(),
-            "log_id": log.id
-        })
 
     # 2. Abandoned Check-ins (Checked in > 12h ago, no check out today)
     # We find all check_ins today that are older than 12h.

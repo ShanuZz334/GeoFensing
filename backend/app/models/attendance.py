@@ -44,7 +44,7 @@ class AttendanceLog(db.Model):
     frames_count = db.Column(db.Integer, nullable=True)
     # Pipeline stage that failed (for analytics)
     failure_stage = db.Column(db.String(100), nullable=True)
-    # "check_in" or "check_out"
+    # "check_in", "check_out", or "demo_test"
     action_type = db.Column(db.String(20), nullable=True)
     # "present", "half_day", "absent", or "flagged" (late check-in pending admin review)
     attendance_mark = db.Column(db.String(20), nullable=False, default="present")
@@ -55,7 +55,9 @@ class AttendanceLog(db.Model):
             status_display = "ABSENT"
         else:
             status_display = self.status.upper()
-            if self.status == "success":
+            if self.action_type == "demo_test":
+                status_display = "DEMO TEST"
+            elif self.status == "success":
                 if self.attendance_mark == "leave":
                     status_display = "LEAVE"
                 elif self.action_type == "check_in":

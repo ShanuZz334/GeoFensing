@@ -149,14 +149,9 @@
 
         <h3 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--text);">Check Out Rules</h3>
         <div class="form-group" style="display:flex; align-items:center; gap:12px; margin-bottom: 16px;">
-          <label class="ios-checkbox">
+          <label class="uiverse-switch" style="flex-shrink:0;">
             <input type="checkbox" id="set-anytime-checkout" />
-            <div class="checkbox-wrapper">
-              <div class="checkbox-bg"></div>
-              <svg class="checkbox-icon" viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                <polyline class="check-path" points="2,7 5.5,10.5 12,3"/>
-              </svg>
-            </div>
+            <span class="uiverse-slider"></span>
           </label>
           <span style="cursor:pointer;color:var(--text);font-weight:500" onclick="document.getElementById('set-anytime-checkout').click()">Anytime Checkout as Full Day <span class="info-icon" data-tip="If checked, teachers get full day regardless of when they check out.">i</span></span>
         </div>
@@ -260,24 +255,42 @@
           <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:flex-end;">
             <div class="form-group" style="margin-bottom:0">
               <label>Leave Type</label>
-              <select id="leave-type" class="form-control">
-                <option value="full">Full Day</option>
-                <option value="half">Half Day</option>
-              </select>
+              <div class="uiverse-select form-control" id="leave-type" style="padding:0; border:none; background:transparent; width:100%">
+                <div class="uiverse-selected" style="height:42px;">
+                  <span class="uiverse-selected-text">Full Day</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                </div>
+                <div class="uiverse-options">
+                  <div title="Full Day"><input id="lt-full" value="full" name="leave-type" type="radio" checked><label class="uiverse-option" for="lt-full" data-txt="Full Day">Full Day</label></div>
+                  <div title="Half Day"><input id="lt-half" value="half" name="leave-type" type="radio"><label class="uiverse-option" for="lt-half" data-txt="Half Day">Half Day</label></div>
+                </div>
+              </div>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label>Quota Period</label>
-              <select id="leave-quota-type" class="form-control">
-                <option value="monthly">Monthly</option>
-                <option value="semester">Semester</option>
-              </select>
+              <div class="uiverse-select form-control" id="leave-quota-type" style="padding:0; border:none; background:transparent; width:100%">
+                <div class="uiverse-selected" style="height:42px;">
+                  <span class="uiverse-selected-text">Monthly</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                </div>
+                <div class="uiverse-options">
+                  <div title="Monthly"><input id="lqt-month" value="monthly" name="leave-quota-type" type="radio" checked><label class="uiverse-option" for="lqt-month" data-txt="Monthly">Monthly</label></div>
+                  <div title="Semester"><input id="lqt-sem" value="semester" name="leave-quota-type" type="radio"><label class="uiverse-option" for="lqt-sem" data-txt="Semester">Semester</label></div>
+                </div>
+              </div>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label>Action</label>
-              <select id="leave-action" class="form-control" onchange="document.getElementById('leave-count-label').textContent = this.value === 'add' ? 'Leaves to Add' : 'New Exact Quota'">
-                <option value="add">Add to Existing</option>
-                <option value="set">Set Exact Quota</option>
-              </select>
+              <div class="uiverse-select form-control" id="leave-action" style="padding:0; border:none; background:transparent; width:100%">
+                <div class="uiverse-selected" style="height:42px;">
+                  <span class="uiverse-selected-text">Add to Existing</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                </div>
+                <div class="uiverse-options">
+                  <div title="Add to Existing"><input id="la-add" value="add" name="leave-action" type="radio" checked onchange="document.getElementById('leave-count-label').textContent = this.value === 'add' ? 'Leaves to Add' : 'New Exact Quota'"><label class="uiverse-option" for="la-add" data-txt="Add to Existing">Add to Existing</label></div>
+                  <div title="Set Exact Quota"><input id="la-set" value="set" name="leave-action" type="radio" onchange="document.getElementById('leave-count-label').textContent = this.value === 'add' ? 'Leaves to Add' : 'New Exact Quota'"><label class="uiverse-option" for="la-set" data-txt="Set Exact Quota">Set Exact Quota</label></div>
+                </div>
+              </div>
             </div>
             <div class="form-group" style="margin-bottom:0">
               <label id="leave-count-label">Leaves to Add</label>
@@ -426,9 +439,9 @@
 
     async function applyTeacherLeave() {
       if (!foundTeacher) return;
-      const leaveType = document.getElementById('leave-type').value;
-      const quotaType = document.getElementById('leave-quota-type').value;
-      const actionType = document.getElementById('leave-action').value;
+      const leaveType = getUiverseSelectValue('leave-type');
+      const quotaType = getUiverseSelectValue('leave-quota-type');
+      const actionType = getUiverseSelectValue('leave-action');
       let count = parseInt(document.getElementById('leave-new-count').value);
       const adminPassword = document.getElementById('leave-admin-password').value;
       const errEl = document.getElementById('leave-error');

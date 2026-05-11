@@ -124,7 +124,8 @@ function renderFailureChart(stages) {
     'liveness': 'Liveness Check',
     'frame_decode': 'Frame Decode',
     'buffer_zone': 'Buffer Zone',
-    'attempt_limit': 'Attempt Limit'
+    'attempt_limit': 'Attempt Limit',
+    'auto_absent': 'Auto Absent'
   };
   const labels = Object.keys(stages).map(s => labelMap[s] || s || 'Unknown');
   const values = Object.values(stages);
@@ -284,3 +285,84 @@ function uiAlert(message, { type = 'info' } = {}) {
   });
 }
 
+
+// --- Uiverse Custom Dropdown Logic ---
+function initUiverseSelects() {
+  document.querySelectorAll('.uiverse-select').forEach(selectEl => {
+    // Prevent double initialization
+    if (selectEl.dataset.initialized) return;
+    selectEl.dataset.initialized = "true";
+
+    const selectedTextSpan = selectEl.querySelector('.uiverse-selected-text');
+    const radios = selectEl.querySelectorAll('input[type="radio"]');
+
+    // On load, set the text to the checked radio (if any)
+    const checkedRadio = selectEl.querySelector('input[type="radio"]:checked');
+    if (checkedRadio && checkedRadio.id) {
+      const label = selectEl.querySelector(`label[for="${checkedRadio.id}"]`);
+      if (label) selectedTextSpan.textContent = label.getAttribute('data-txt') || label.textContent;
+    }
+
+    const selectedDiv = selectEl.querySelector('.uiverse-selected');
+    if (selectedDiv) {
+      selectedDiv.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close other open selects
+        document.querySelectorAll('.uiverse-select').forEach(el => {
+          if (el !== selectEl) el.classList.remove('open');
+        });
+        selectEl.classList.toggle('open');
+      });
+    }
+
+    radios.forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        if (e.target.checked && e.target.id) {
+          const label = selectEl.querySelector(`label[for="${e.target.id}"]`);
+          if (label) {
+            selectedTextSpan.textContent = label.getAttribute('data-txt') || label.textContent;
+          }
+          selectEl.classList.remove('open');
+          // Dispatch a custom change event on the main select container for external listeners
+          selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      });
+    });
+  });
+
+  // Close selects when clicking outside
+  document.addEventListener('click', () => {
+    document.querySelectorAll('.uiverse-select.open').forEach(el => el.classList.remove('open'));
+  });
+}
+
+// Helper to get value
+function getUiverseSelectValue(selectId) {
+  const container = document.getElementById(selectId);
+  if (!container) return null;
+  const checked = container.querySelector('input[type="radio"]:checked');
+  return checked ? checked.value : null;
+}
+
+// Helper to set value
+function setUiverseSelectValue(selectId, value) {
+  const container = document.getElementById(selectId);
+  if (!container) return;
+  const radios = container.querySelectorAll('input[type="radio"]');
+  let matched = false;
+  radios.forEach(r => {
+    if (r.value === value || r.id === value) {
+      r.checked = true;
+      r.dispatchEvent(new Event('change'));
+      matched = true;
+    }
+  });
+  // If not matched, select the first option
+  if (!matched && radios.length > 0) {
+    radios[0].checked = true;
+    radios[0].dispatchEvent(new Event('change'));
+  }
+}
+
+// Auto-init on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', initUiverseSelects);

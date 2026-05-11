@@ -80,50 +80,70 @@
   </aside>
 
   <main class="main-content">
-    <header class="page-header">
+    <header class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
       <div>
         <h1 class="page-title">Attendance Logs</h1>
         <p class="page-subtitle">All verification attempts <span style="font-size:10px; color:var(--primary); font-weight:bold; vertical-align:middle; margin-left:8px; background:rgba(37,99,235,0.1); padding:2px 6px; border-radius:4px;">SYSTEM V1.2.1</span></p>
       </div>
+      <button class="btn-primary" onclick="downloadCSV()">Download CSV</button>
     </header>
 
     <!-- Filters -->
     <div class="filter-bar" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
-      <select id="filter-status" class="filter-select" onchange="applyFilters()">
-        <option value="">All statuses</option>
-        <option value="success">Success</option>
-        <option value="failure">Failure</option>
-      </select>
-      <select id="filter-action" class="filter-select" onchange="applyFilters()">
-        <option value="">All actions</option>
-        <option value="check_in">Check In</option>
-        <option value="check_out">Check Out</option>
-        <option value="who_is_in">Currently In</option>
-      </select>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">From</span>
-        <input type="date" id="filter-date-from" class="filter-input date-input" onchange="applyFilters()" />
+      <input type="text" id="filter-reg-no" name="reg_no_unique_search" class="filter-input" placeholder="Search Reg No..." style="width:150px" oninput="debounceApplyFilters()" autocomplete="new-password" />
+      <div class="uiverse-select filter-select-custom" id="filter-status" style="width:150px">
+        <div class="uiverse-selected">
+          <span class="uiverse-selected-text">All statuses</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="uiverse-options">
+          <div title="All statuses"><input id="fs-all" value="" name="filter-status" type="radio" checked onchange="applyFilters()"><label class="uiverse-option" for="fs-all" data-txt="All statuses">All statuses</label></div>
+          <div title="Success"><input id="fs-succ" value="success" name="filter-status" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fs-succ" data-txt="Success">Success</label></div>
+          <div title="Failure"><input id="fs-fail" value="failure" name="filter-status" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fs-fail" data-txt="Failure">Failure</label></div>
+        </div>
       </div>
-      <div style="display:flex;align-items:center;gap:6px;">
-        <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">To</span>
-        <input type="date" id="filter-date-to" class="filter-input date-input" onchange="applyFilters()" />
+      <div class="uiverse-select filter-select-custom" id="filter-action" style="width:150px">
+        <div class="uiverse-selected">
+          <span class="uiverse-selected-text">All actions</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="uiverse-options">
+          <div title="All actions"><input id="fa-all" value="" name="filter-action" type="radio" checked onchange="applyFilters()"><label class="uiverse-option" for="fa-all" data-txt="All actions">All actions</label></div>
+          <div title="Check In"><input id="fa-in" value="check_in" name="filter-action" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fa-in" data-txt="Check In">Check In</label></div>
+          <div title="Check Out"><input id="fa-out" value="check_out" name="filter-action" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fa-out" data-txt="Check Out">Check Out</label></div>
+          <div title="Currently In"><input id="fa-cur" value="who_is_in" name="filter-action" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fa-cur" data-txt="Currently In">Currently In</label></div>
+        </div>
       </div>
-      <select id="filter-sort" class="filter-select" onchange="applyFilters()">
-        <option value="timestamp_desc">Latest First</option>
-        <option value="timestamp_asc">Oldest First</option>
-        <option value="teacher_name_asc">Teacher (A-Z)</option>
-        <option value="teacher_name_desc">Teacher (Z-A)</option>
-      </select>
+      <div class="uiverse-select filter-select-custom" id="filter-sort" style="width:160px">
+        <div class="uiverse-selected">
+          <span class="uiverse-selected-text">Latest First</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="uiverse-options">
+          <div title="Latest First"><input id="fso-desc" value="timestamp_desc" name="filter-sort" type="radio" checked onchange="applyFilters()"><label class="uiverse-option" for="fso-desc" data-txt="Latest First">Latest First</label></div>
+          <div title="Oldest First"><input id="fso-asc" value="timestamp_asc" name="filter-sort" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fso-asc" data-txt="Oldest First">Oldest First</label></div>
+          <div title="Teacher (A-Z)"><input id="fso-tasc" value="teacher_name_asc" name="filter-sort" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fso-tasc" data-txt="Teacher (A-Z)">Teacher (A-Z)</label></div>
+          <div title="Teacher (Z-A)"><input id="fso-tdesc" value="teacher_name_desc" name="filter-sort" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fso-tdesc" data-txt="Teacher (Z-A)">Teacher (Z-A)</label></div>
+        </div>
+      </div>
+      <div style="display:flex; align-items:center; gap:10px; border: 1px solid rgba(124, 58, 237, 0.4); padding: 4px 10px; border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.05);">
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">From</span>
+          <input type="date" id="filter-date-from" class="filter-input date-input" onchange="applyFilters()" />
+        </div>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">To</span>
+          <input type="date" id="filter-date-to" class="filter-input date-input" onchange="applyFilters()" />
+        </div>
+      </div>
       
       <!-- Sacrificial inputs to trap browser autofill -->
       <div style="position: absolute; left: -10000px; top: -10000px; opacity: 0; pointer-events: none;">
         <input type="text" name="email_trap_v2">
         <input type="password" name="password_trap_v2">
       </div>
-      <input type="text" id="filter-reg-no" name="reg_no_unique_search" class="filter-input" placeholder="Search Reg No..." style="width:150px" oninput="debounceApplyFilters()" autocomplete="new-password" />
       
       <button class="btn-secondary" onclick="resetFilters()">Clear</button>
-      <button class="btn-primary" style="margin-left:auto" onclick="downloadCSV()">Download CSV</button>
     </div>
 
     <div class="table-wrapper">
@@ -148,9 +168,9 @@
 
     <!-- Pagination -->
     <div class="pagination" id="pagination">
-      <button class="btn-secondary" id="prev-btn" onclick="changePage(-1)" disabled>â† Prev</button>
+      <button class="btn-secondary" id="prev-btn" onclick="changePage(-1)" disabled>&larr; Prev</button>
       <span id="page-info">Page 1</span>
-      <button class="btn-secondary" id="next-btn" onclick="changePage(1)">Next â†’</button>
+      <button class="btn-secondary" id="next-btn" onclick="changePage(1)">Next &rarr;</button>
     </div>
   </main>
 
@@ -194,22 +214,22 @@
       filterTimeout = setTimeout(applyFilters, 500);
     }
     function resetFilters() {
-      document.getElementById('filter-status').value = '';
-      document.getElementById('filter-action').value = '';
+      setUiverseSelectValue('filter-status', '');
+      setUiverseSelectValue('filter-action', '');
       document.getElementById('filter-date-from').value = '';
       document.getElementById('filter-date-to').value = '';
-      document.getElementById('filter-sort').value = 'timestamp_desc';
+      setUiverseSelectValue('filter-sort', 'timestamp_desc');
       document.getElementById('filter-reg-no').value = '';
       applyFilters();
     }
     function changePage(dir) { currentPage += dir; loadLogs(); }
 
     async function loadLogs() {
-      const status = document.getElementById('filter-status').value;
-      const action = document.getElementById('filter-action').value;
+      const status = getUiverseSelectValue('filter-status');
+      const action = getUiverseSelectValue('filter-action');
       const from = document.getElementById('filter-date-from').value;
       const to = document.getElementById('filter-date-to').value;
-      const sortVal = document.getElementById('filter-sort').value || 'timestamp_desc';
+      const sortVal = getUiverseSelectValue('filter-sort') || 'timestamp_desc';
       const regNo = document.getElementById('filter-reg-no').value.trim();
       const sortParts = sortVal.split('_');
       const sortOrder = sortParts.pop();
@@ -241,7 +261,7 @@
       tbody.innerHTML = validLogs.map(log => {
         const isFlagged = log.attendance_mark === 'flagged';
         const rowStyle = isFlagged ? 'cursor: pointer; color: #facc15;' : 'cursor: pointer;';
-        const nameDisplay = isFlagged ? `<span style="color:#facc15">${escHtml(log.teacher_name || 'â€”')}</span>` : escHtml(log.teacher_name || 'â€”');
+        const nameDisplay = isFlagged ? `<span style="color:#facc15">${escHtml(log.teacher_name || 'Null')}</span>` : escHtml(log.teacher_name || 'Null');
 
         let statusBadge;
         if (isFlagged) {
@@ -269,13 +289,13 @@
         return `
         <tr style="${rowStyle}" onclick="handleRowClick(event, '${log.id}', ${isFlagged})" class="log-row">
           <td><strong>${nameDisplay}</strong></td>
-          <td style="${isFlagged ? '' : 'color:var(--text-muted);'}font-weight:500">${escHtml(log.reg_no || 'â€”')}</td>
-          <td>${log.action_type ? `<span class="badge badge--${log.action_type}">${log.action_type === 'check_in' ? 'Check In' : log.action_type === 'check_out' ? 'Check Out' : log.action_type.replace(/_/g, ' ')}</span>` : 'â€”'}</td>
+          <td style="${isFlagged ? '' : 'color:var(--text-muted);'}font-weight:500">${escHtml(log.reg_no || 'Null')}</td>
+          <td>${log.action_type ? `<span class="badge badge--${log.action_type}">${log.action_type === 'check_in' ? 'Check In' : log.action_type === 'check_out' ? 'Check Out' : log.action_type.replace(/_/g, ' ')}</span>` : 'Null'}</td>
           <td>${formatDt(log.timestamp)}</td>
           <td>${statusBadge}</td>
           <td style="max-width:220px;white-space:normal">${escHtml(log.reason)}</td>
-          <td style="font-size:12px">${log.latitude ? log.latitude.toFixed(4) + ', ' + log.longitude.toFixed(4) : 'â€”'}</td>
-          <td style="text-align:center">${log.frames_count ?? 'â€”'}</td>
+          <td style="font-size:12px">${log.latitude ? log.latitude.toFixed(4) + ', ' + log.longitude.toFixed(4) : 'Null'}</td>
+          <td style="text-align:center">${log.frames_count ?? 'Null'}</td>
         </tr>
       `}).join('');
     }
@@ -328,7 +348,7 @@
         const row = [
           `"${(log.teacher_name || '').replace(/"/g, '""')}"`,
           `"${log.reg_no || log.teacher_id}"`,
-          `"${log.action_type || 'â€”'}"`,
+          `"${log.action_type || 'Null'}"`,
           `"${log.timestamp}"`,
           `"${log.status}"`,
           `"${(log.reason || '').replace(/"/g, '""')}"`,

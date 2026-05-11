@@ -590,6 +590,15 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       statusColor = const Color(0xFFEF4444);
     }
 
+    // Determine if locked due to absent limit (past limit, no check-in yet)
+    final isAbsentLocked = !provider.bypassLimits &&
+        provider.isTooLate() &&
+        provider.nextAction != 'check_out' &&
+        provider.nextAction != 'completed';
+
+    // Determine if locked because day is fully done (checkout done / absent record exists)
+    final isDayCompleted = !provider.bypassLimits && provider.nextAction == 'completed' && !provider.isTooLate();
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: _darkBoxDecoration(),
@@ -751,22 +760,49 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ElevatedButton(
             onPressed: (isRecording || isUploading || (!provider.bypassLimits && (provider.isTooLate() || provider.nextAction == 'completed'))) ? null : _onStartPressed,
             style: ElevatedButton.styleFrom(
-              backgroundColor: (!provider.bypassLimits && provider.isTooLate()) ? Colors.redAccent : const Color(0xFF7C3AED),
-              disabledBackgroundColor: Colors.white24,
+              backgroundColor: isAbsentLocked
+                  ? Colors.redAccent
+                  : isDayCompleted
+                      ? const Color(0xFF10B981)
+                      : const Color(0xFF7C3AED),
+              disabledBackgroundColor: isAbsentLocked
+                  ? Colors.red.withValues(alpha: 0.3)
+                  : isDayCompleted
+                      ? Colors.green.withValues(alpha: 0.3)
+                      : Colors.white24,
               minimumSize: const Size.fromHeight(56),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               elevation: 5,
               shadowColor: const Color(0xFF7C3AED).withValues(alpha: 0.5),
             ),
-            child: Text(
-              (!provider.bypassLimits && provider.isTooLate())
-                  ? 'Marked Absent (Too Late)' 
-                  : ((!provider.bypassLimits && provider.nextAction == 'completed')
-                      ? 'Completed for Today' 
-                      : (isSuccess 
-                          ? 'Scan Again' 
-                          : (provider.nextAction == 'check_in' ? 'Start Scan (Check In)' : 'Start Scan (Check Out)'))),
-              style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  isAbsentLocked
+                      ? Icons.block_rounded
+                      : isDayCompleted
+                          ? Icons.check_circle_outline_rounded
+                          : (provider.nextAction == 'check_in'
+                              ? Icons.login_rounded
+                              : Icons.logout_rounded),
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  isAbsentLocked
+                      ? 'Absent - Limit Passed'
+                      : isDayCompleted
+                          ? 'Completed for Today'
+                          : (isSuccess
+                              ? 'Scan Again'
+                              : (provider.nextAction == 'check_in'
+                                  ? 'Start Scan (Check In)'
+                                  : 'Start Scan (Check Out)')),
+                  style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
+                ),
+              ],
             ),
           ),
         ],

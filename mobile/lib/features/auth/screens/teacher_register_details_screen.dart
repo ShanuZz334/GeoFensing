@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
+import '../../../../core/widgets/uiverse_dropdown.dart';
 
 class TeacherRegisterDetailsScreen extends StatefulWidget {
   const TeacherRegisterDetailsScreen({super.key});
@@ -17,7 +18,7 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
-  final _departmentController = TextEditingController();
+  String? _selectedDepartment;
   final _passwordController = TextEditingController();
   
   bool _obscurePassword = true;
@@ -76,7 +77,6 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
-    _departmentController.dispose();
     _passwordController.dispose();
     _cameraController?.dispose();
     super.dispose();
@@ -119,7 +119,7 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
       final success = await auth.completeSetup(
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
-        department: _departmentController.text.trim(),
+        department: _selectedDepartment ?? '',
         newPassword: _passwordController.text,
         profilePicBase64: _capturedImageBase64!,
       );
@@ -369,6 +369,36 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                 ),
                 const SizedBox(height: 20),
 
+                // Department Dropdown (positioned right after Reg No)
+                const Text('Department', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                UiverseDropdown<String>(
+                  value: _selectedDepartment,
+                  hintText: 'Select School / Department',
+                  items: [
+                    'School of Computer Science & Engineering (CSE)',
+                    'School of Engineering',
+                    'Mittal School of Business / Management & Commerce',
+                    'School of Agriculture',
+                    'School of Pharmacy / Pharmaceutical Sciences',
+                    'School of Law',
+                    'School of Architecture & Design',
+                    'School of Hotel Management & Tourism',
+                    'School of Humanities & Social Sciences',
+                    'School of Sciences',
+                    'School of Media, Animation & Multimedia',
+                    'School of Education & Physical Education',
+                    'School of Allied Medical Sciences / Physiotherapy',
+                    'School of Computer Applications & IT',
+                  ].map((dept) => DropdownMenuItem<String>(
+                    value: dept,
+                    child: Text(dept, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                  )).toList(),
+                  onChanged: (val) => setState(() => _selectedDepartment = val),
+                  validator: (v) => (v == null || v.isEmpty) ? 'Please select a department' : null,
+                ),
+                const SizedBox(height: 20),
+
                 // Full Name
                 const Text('Full Name', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
@@ -413,27 +443,6 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                     if (!v.contains('@')) return 'Invalid email';
                     return null;
                   },
-                ),
-                const SizedBox(height: 20),
-
-                // Department
-                const Text('Department', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                TextFormField(
-                  controller: _departmentController,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    hintText: 'e.g. Computer Science',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
-                    filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                  ),
-                  validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
                 ),
                 const SizedBox(height: 20),
 

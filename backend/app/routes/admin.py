@@ -800,3 +800,129 @@ def get_audit_logs():
         return jsonify({"error": "Admin access required"}), 403
     logs = AdminLog.query.order_by(AdminLog.timestamp.desc()).limit(500).all()
     return jsonify([l.to_dict() for l in logs]), 200
+
+
+# ── Auto-Absent Job ──────────────────────────────────────────────────────────
+
+def run_auto_absent_job(app=None):
+    """
+    Mark all active teachers who have not checked in today as absent,
+    but only if the absent_limit time has already passed.
+
+    This function is safe to call multiple times (idempotent):
+    teachers who already have an absent or success record today are skipped.
+    Weekends (Saturday=5, Sunday=6) are also skipped.
+
+    Can be called from the APScheduler background job or the admin endpoint.
+    Returns a dict with 'marked' count and 'skipped' count.
+    """
+    from ..extensions import db
+    from ..models import Teacher, AttendanceLog, Setting
+
+    use_ctx = app is not None
+    ctx = app.app_context() if use_ctx else None
+    if ctx:
+        ctx.push()
+
+    try:
+        now = datetime.now(timezone.utc)
+
+        # Skip weekends
+        if now.weekday() in (5, 6):
+            return {"marked": 0, "skipped": 0, "reason": "Weekend — skipped"}
+
+        # Check absent_limit setting
+        settings_dict = Setting.get_all()
+        rules = settings_dict.get("attendance_rules", {})
+        absent_limit = rules.get("absent_limit", "")
+        if not absent_limit:
+            return {"marked": 0, "skipped": 0, "reason": "absent_limit not configured"}
+
+        current_time_str = datetime.now().strftime("%H:%M")
+        if current_time_str <= absent_limit:
+            return {
+                "marked": 0,
+                "skipped": 0,
+                "reason": f"Absent limit ({absent_limit}) has not passed yet (now {current_time_str})"
+            }
+
+        # Range: start of today (UTC)
+        today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+
+        # Find all active teachers
+        active_teachers = Teacher.query.filter_by(is_active=True).all()
+
+        marked = 0
+        skipped = 0
+
+        for teacher in active_teachers:
+            # Check if any attendance record exists today for this teacher
+            existing = AttendanceLog.query.filter(
+                AttendanceLog.teacher_id == teacher.teacher_id,
+                AttendanceLog.timestamp >= today_start,
+            ).first()
+
+            if existing:
+                skipped += 1
+                continue
+
+            # No record — insert synthetic absent
+            absent_log = AttendanceLog(
+                teacher_id=teacher.teacher_id,
+                timestamp=datetime.now(timezone.utc),
+                latitude=None,
+                longitude=None,
+                status="failure",
+                reason=f"Auto-marked absent: did not check in before absent limit ({absent_limit})",
+                frames_count=0,
+                failure_stage="auto_absent",
+                action_type="check_in",
+                attendance_mark="absent",
+            )
+            db.session.add(absent_log)
+            marked += 1
+
+        db.session.commit()
+        return {"marked": marked, "skipped": skipped}
+
+    except Exception as e:
+        db.session.rollback()
+        raise e
+    finally:
+        if ctx:
+            ctx.pop()
+
+
+@admin_bp.route("/trigger-auto-absent", methods=["POST"])
+@jwt_required()
+def trigger_auto_absent():
+    """
+    POST /admin/trigger-auto-absent
+
+    Manually trigger the auto-absent job.
+    Marks all active teachers with no attendance record today as absent,
+    only if the absent_limit time has already passed.
+    Head Admin only.
+    """
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+
+    current_reg = identity.replace(_ADMIN_PREFIX, "")
+    current_admin = Admin.query.filter_by(reg_no=current_reg).first()
+    if not current_admin or not current_admin.is_head_admin:
+        return jsonify({"error": "Only Head Admins can trigger the auto-absent job"}), 403
+
+    try:
+        result = run_auto_absent_job()
+        log_admin_action(
+            identity,
+            "TRIGGER_AUTO_ABSENT",
+            f"Marked {result.get('marked', 0)} teachers absent, skipped {result.get('skipped', 0)}"
+        )
+        return jsonify({
+            "message": "Auto-absent job completed",
+            **result
+        }), 200
+    except Exception as e:
+        return jsonify({"error": f"Auto-absent job failed: {str(e)}"}), 500

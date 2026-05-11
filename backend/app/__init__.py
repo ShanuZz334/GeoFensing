@@ -58,3 +58,4 @@ def create_app(config_name: str = "production") -> Flask:
             print(f"Seeded initial Head Admin with Reg No: {head_admin_reg_no}")
 
     return app
+

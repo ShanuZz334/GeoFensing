@@ -1,14 +1,16 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-  <meta charset="UTF-8"/>
-  <link rel="icon" type="image/png" href="favicon.png"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoFace Admin — Teachers</title>
-  <link rel="stylesheet" href="css/styles.css?v=2"/>
-  <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="css/styles.css?v=2" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
 </head>
+
 <body>
   <aside class="sidebar" id="sidebar">
     <div class="sidebar-logo">
@@ -20,46 +22,60 @@
     <nav class="sidebar-nav">
       <a href="index.html" class="nav-item" id="nav-dashboard">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z" />
         </svg>
         Dashboard
       </a>
       <a href="alerts.html" class="nav-item" id="nav-alerts">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
         </svg>
         <span style="flex-grow: 1;">Alert Center</span>
-        <span id="sidebar-alert-badge" style="display:none; background:var(--error, #ef4444); color:white; font-size:11px; font-weight:bold; height:20px; min-width:20px; border-radius:10px; align-items:center; justify-content:center; padding:0 6px;">0</span>
+        <span id="sidebar-alert-badge"
+          style="display:none; background:var(--error, #ef4444); color:white; font-size:11px; font-weight:bold; height:20px; min-width:20px; border-radius:10px; align-items:center; justify-content:center; padding:0 6px;">0</span>
       </a>
       <a href="teachers.html" class="nav-item active" id="nav-teachers">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
         </svg>
         Teachers
       </a>
       <a href="logs.html" class="nav-item" id="nav-logs">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z" />
         </svg>
         Attendance Logs
       </a>
       <a href="map.html" class="nav-item" id="nav-map">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/>
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z" />
         </svg>
         Geofence Map
       </a>
       <a href="admins.html" class="nav-item" id="nav-admins">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" />
+        </svg>
         Manage Admins
       </a>
       <a href="audit.html" class="nav-item" id="nav-audit">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+        </svg>
         Audit Logs
       </a>
       <a href="settings.html" class="nav-item" id="nav-settings">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z">
+          </path>
           <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
         </svg>
         Settings
@@ -94,7 +110,9 @@
           </tr>
         </thead>
         <tbody id="teachers-tbody">
-          <tr><td colspan="6" class="td-loading">Loading…</td></tr>
+          <tr>
+            <td colspan="6" class="td-loading">Loading…</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -111,33 +129,43 @@
       <div id="register-success" class="success-banner" style="display:none;"></div>
 
       <!-- Temporary Registration Toggle -->
-      <div style="background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+      <div
+        style="background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
         <div>
           <div style="font-weight:600; font-size:14px;">Temporary Registration</div>
-          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Teacher completes face scan via app</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Teacher completes face scan via app
+          </div>
         </div>
-        <label class="switch" style="flex-shrink:0; margin-left:16px;">
+        <label class="uiverse-switch" style="flex-shrink:0; margin-left:16px;">
           <input type="checkbox" id="reg-is-temp" onchange="toggleTempMode()" />
-          <span class="slider"></span>
+          <span class="uiverse-slider"></span>
         </label>
       </div>
 
       <!-- Webcam face capture (Moved to Top) -->
       <div class="form-group" id="reg-face-section" style="text-align:center;">
         <div class="webcam-box" style="display:inline-flex; flex-direction:column; align-items:center;">
-          <video id="reg-webcam" autoplay muted playsinline style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 12px;"></video>
+          <video id="reg-webcam" autoplay muted playsinline
+            style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 12px;"></video>
           <canvas id="reg-canvas" style="display:none;"></canvas>
-          <div id="webcam-placeholder" class="webcam-placeholder" onclick="startWebcam()" style="width:120px; height:120px; border-radius:50%; margin-bottom: 12px; cursor:pointer; background: var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 2px dashed var(--border);">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="width:32px;height:32px;color:var(--text-muted)">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z"/>
+          <div id="webcam-placeholder" class="webcam-placeholder" onclick="startWebcam()"
+            style="width:120px; height:120px; border-radius:50%; margin-bottom: 12px; cursor:pointer; background: var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 2px dashed var(--border);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+              style="width:32px;height:32px;color:var(--text-muted)">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
             </svg>
           </div>
-          <div id="encoding-badge" class="badge badge--success" style="display:none;margin-top:8px;">✓ Face Captured</div>
+          <div id="encoding-badge" class="badge badge--success" style="display:none;margin-top:8px;">✓ Face Captured
+          </div>
           <div style="display:flex;gap:8px;margin-top:10px;">
             <button class="btn-secondary btn-sm" id="btn-start-cam" onclick="startWebcam()">Open Camera</button>
-            <button class="btn-primary btn-sm" id="btn-capture" onclick="captureFace()" style="display:none;">Capture Face</button>
-            <button class="btn-secondary btn-sm" id="btn-stop-cam" onclick="stopWebcam()" style="display:none;">Stop</button>
+            <button class="btn-primary btn-sm" id="btn-capture" onclick="captureFace()" style="display:none;">Capture
+              Face</button>
+            <button class="btn-secondary btn-sm" id="btn-stop-cam" onclick="stopWebcam()"
+              style="display:none;">Stop</button>
           </div>
         </div>
       </div>
@@ -150,6 +178,78 @@
         <label>Registration Number (Reg ID)</label>
         <input type="text" id="reg-no" placeholder="REG12345" />
       </div>
+      <div class="form-group" id="reg-dept-section">
+        <label>Department</label>
+        <div class="uiverse-select form-control" id="reg-department"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select School / Department</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path
+                d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z">
+              </path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select School / Department"><input id="rd-none" value="" name="reg-department" type="radio"
+                checked><label class="uiverse-option" for="rd-none" data-txt="Select School / Department">Select School
+                / Department</label></div>
+            <div title="School of Computer Science &amp; Engineering (CSE)"><input id="rd-cse"
+                value="School of Computer Science &amp; Engineering (CSE)" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-cse" data-txt="School of Computer Science &amp; Engineering (CSE)">School
+                of Computer Science &amp; Engineering (CSE)</label></div>
+            <div title="School of Engineering"><input id="rd-eng" value="School of Engineering" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-eng" data-txt="School of Engineering">School of
+                Engineering</label></div>
+            <div title="Mittal School of Business / Management &amp; Commerce"><input id="rd-biz"
+                value="Mittal School of Business / Management &amp; Commerce" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-biz"
+                data-txt="Mittal School of Business / Management &amp; Commerce">Mittal School of Business / Management
+                &amp; Commerce</label></div>
+            <div title="School of Agriculture"><input id="rd-agr" value="School of Agriculture" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-agr" data-txt="School of Agriculture">School of
+                Agriculture</label></div>
+            <div title="School of Pharmacy / Pharmaceutical Sciences"><input id="rd-phm"
+                value="School of Pharmacy / Pharmaceutical Sciences" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-phm" data-txt="School of Pharmacy / Pharmaceutical Sciences">School of
+                Pharmacy / Pharmaceutical Sciences</label></div>
+            <div title="School of Law"><input id="rd-law" value="School of Law" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-law" data-txt="School of Law">School of Law</label>
+            </div>
+            <div title="School of Architecture &amp; Design"><input id="rd-arc"
+                value="School of Architecture &amp; Design" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-arc" data-txt="School of Architecture &amp; Design">School of
+                Architecture &amp; Design</label></div>
+            <div title="School of Hotel Management &amp; Tourism"><input id="rd-hot"
+                value="School of Hotel Management &amp; Tourism" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-hot" data-txt="School of Hotel Management &amp; Tourism">School of Hotel
+                Management &amp; Tourism</label></div>
+            <div title="School of Humanities &amp; Social Sciences"><input id="rd-hum"
+                value="School of Humanities &amp; Social Sciences" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-hum" data-txt="School of Humanities &amp; Social Sciences">School of
+                Humanities &amp; Social Sciences</label></div>
+            <div title="School of Sciences"><input id="rd-sci" value="School of Sciences" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-sci" data-txt="School of Sciences">School of
+                Sciences</label></div>
+            <div title="School of Media, Animation &amp; Multimedia"><input id="rd-med"
+                value="School of Media, Animation &amp; Multimedia" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-med" data-txt="School of Media, Animation &amp; Multimedia">School of
+                Media, Animation &amp; Multimedia</label></div>
+            <div title="School of Education &amp; Physical Education"><input id="rd-edu"
+                value="School of Education &amp; Physical Education" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-edu" data-txt="School of Education &amp; Physical Education">School of
+                Education &amp; Physical Education</label></div>
+            <div title="School of Allied Medical Sciences / Physiotherapy"><input id="rd-meds"
+                value="School of Allied Medical Sciences / Physiotherapy" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-meds" data-txt="School of Allied Medical Sciences / Physiotherapy">School
+                of Allied Medical Sciences / Physiotherapy</label></div>
+            <div title="School of Computer Applications &amp; IT"><input id="rd-it"
+                value="School of Computer Applications &amp; IT" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-it" data-txt="School of Computer Applications &amp; IT">School of
+                Computer Applications &amp; IT</label></div>
+          </div>
+        </div>
+      </div>
       <div class="form-group" id="reg-email-section">
         <label>Email</label>
         <input type="email" id="reg-email" placeholder="teacher@college.edu" />
@@ -157,10 +257,6 @@
       <div class="form-group">
         <label>Password (min 8 chars)</label>
         <input type="password" id="reg-password" placeholder="••••••••" />
-      </div>
-      <div class="form-group" id="reg-dept-section">
-        <label>Department</label>
-        <input type="text" id="reg-department" placeholder="Computer Science" />
       </div>
 
       <div style="display:flex;gap:12px;margin-top:16px;">
@@ -174,30 +270,55 @@
   <div class="modal-overlay" id="share-modal" style="display:none;">
     <div class="modal-card" style="max-width:440px; text-align:center;">
       <!-- Success icon -->
-      <div style="width:56px;height:56px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+      <div
+        style="width:56px;height:56px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
       </div>
       <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">Teacher Registered!</h2>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Share these temporary credentials with the teacher. They will complete face registration via the app.</p>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Share these temporary credentials with the
+        teacher. They will complete face registration via the app.</p>
 
       <!-- Credential card -->
-      <div id="cred-card" style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;font-family:monospace;line-height:1.9;font-size:13px;white-space:pre-wrap;"></div>
+      <div id="cred-card"
+        style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;font-family:monospace;line-height:1.9;font-size:13px;white-space:pre-wrap;">
+      </div>
 
       <!-- Share buttons -->
       <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
         <!-- WhatsApp -->
-        <button onclick="shareViaWhatsApp()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:600;background:#25D366;color:#fff;transition:opacity .2s;" onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg>
+        <button onclick="shareViaWhatsApp()"
+          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:600;background:#25D366;color:#fff;transition:opacity .2s;"
+          onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
+          </svg>
           Share via WhatsApp
         </button>
         <!-- Copy -->
-        <button id="btn-copy-cred" onclick="copyCredentials()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;" onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <button id="btn-copy-cred" onclick="copyCredentials()"
+          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
+          onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+          </svg>
           Copy to Clipboard
         </button>
         <!-- Email -->
-        <button onclick="shareViaEmail()" style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;" onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+        <button onclick="shareViaEmail()"
+          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
+          onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+            stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+            <polyline points="22,6 12,13 2,6" />
+          </svg>
           Share via Email
         </button>
       </div>
@@ -226,15 +347,84 @@
         <input type="text" id="edit-no" />
       </div>
       <div class="form-group">
+        <label>Department</label>
+        <div class="uiverse-select form-control" id="edit-department"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select School / Department</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path
+                d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z">
+              </path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select School / Department"><input id="ed-none" value="" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-none" data-txt="Select School / Department">Select
+                School / Department</label></div>
+            <div title="School of Computer Science &amp; Engineering (CSE)"><input id="ed-cse"
+                value="School of Computer Science &amp; Engineering (CSE)" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-cse" data-txt="School of Computer Science &amp; Engineering (CSE)">School
+                of Computer Science &amp; Engineering (CSE)</label></div>
+            <div title="School of Engineering"><input id="ed-eng" value="School of Engineering" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-eng" data-txt="School of Engineering">School of
+                Engineering</label></div>
+            <div title="Mittal School of Business / Management &amp; Commerce"><input id="ed-biz"
+                value="Mittal School of Business / Management &amp; Commerce" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-biz"
+                data-txt="Mittal School of Business / Management &amp; Commerce">Mittal School of Business / Management
+                &amp; Commerce</label></div>
+            <div title="School of Agriculture"><input id="ed-agr" value="School of Agriculture" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-agr" data-txt="School of Agriculture">School of
+                Agriculture</label></div>
+            <div title="School of Pharmacy / Pharmaceutical Sciences"><input id="ed-phm"
+                value="School of Pharmacy / Pharmaceutical Sciences" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-phm" data-txt="School of Pharmacy / Pharmaceutical Sciences">School of
+                Pharmacy / Pharmaceutical Sciences</label></div>
+            <div title="School of Law"><input id="ed-law" value="School of Law" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-law" data-txt="School of Law">School of Law</label>
+            </div>
+            <div title="School of Architecture &amp; Design"><input id="ed-arc"
+                value="School of Architecture &amp; Design" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-arc" data-txt="School of Architecture &amp; Design">School of
+                Architecture &amp; Design</label></div>
+            <div title="School of Hotel Management &amp; Tourism"><input id="ed-hot"
+                value="School of Hotel Management &amp; Tourism" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-hot" data-txt="School of Hotel Management &amp; Tourism">School of Hotel
+                Management &amp; Tourism</label></div>
+            <div title="School of Humanities &amp; Social Sciences"><input id="ed-hum"
+                value="School of Humanities &amp; Social Sciences" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-hum" data-txt="School of Humanities &amp; Social Sciences">School of
+                Humanities &amp; Social Sciences</label></div>
+            <div title="School of Sciences"><input id="ed-sci" value="School of Sciences" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-sci" data-txt="School of Sciences">School of
+                Sciences</label></div>
+            <div title="School of Media, Animation &amp; Multimedia"><input id="ed-med"
+                value="School of Media, Animation &amp; Multimedia" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-med" data-txt="School of Media, Animation &amp; Multimedia">School of
+                Media, Animation &amp; Multimedia</label></div>
+            <div title="School of Education &amp; Physical Education"><input id="ed-edu"
+                value="School of Education &amp; Physical Education" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-edu" data-txt="School of Education &amp; Physical Education">School of
+                Education &amp; Physical Education</label></div>
+            <div title="School of Allied Medical Sciences / Physiotherapy"><input id="ed-meds"
+                value="School of Allied Medical Sciences / Physiotherapy" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-meds" data-txt="School of Allied Medical Sciences / Physiotherapy">School
+                of Allied Medical Sciences / Physiotherapy</label></div>
+            <div title="School of Computer Applications &amp; IT"><input id="ed-it"
+                value="School of Computer Applications &amp; IT" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-it" data-txt="School of Computer Applications &amp; IT">School of
+                Computer Applications &amp; IT</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
         <label>Email</label>
         <input type="email" id="edit-email" />
       </div>
       <div class="form-group">
-        <label>Department</label>
-        <input type="text" id="edit-department" />
-      </div>
-      <div class="form-group">
-        <label>New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep current)</span></label>
+        <label>New Password <span style="color:var(--text-muted);font-weight:400">(leave blank to keep
+            current)</span></label>
         <input type="password" id="edit-password" placeholder="••••••••" />
       </div>
 
@@ -245,7 +435,7 @@
     </div>
   </div>
 
-      <div class="modal-overlay" id="login-modal">
+  <div class="modal-overlay" id="login-modal">
     <div class="new-login-container">
       <div class="new-login-form">
         <div class="new-login-form_details">Login</div>
@@ -266,6 +456,37 @@
     let capturedEncoding = null;
     let capturedProfilePic = null;
 
+    const deptNicknames = {
+      "Computer Science": "CSE",
+      "Electronics & Electrical": "EEE/ECE",
+      "Civil Engineering": "CE",
+      "Mechanical Engineering": "ME",
+      "Mittal School of Business": "MSB",
+      "School of Law": "LAW",
+      "Hotel Management & Tourism": "HM",
+      "Architecture & Design": "ARCH",
+      "Agriculture": "AGRI",
+      "Pharmacy": "PHARMA",
+      "Bioengineering & Biosciences": "BIO",
+      "Physical Education": "PE",
+      "Fashion Design": "FD",
+      "Media & Communication": "MEDIA",
+      "Allied Medical Sciences": "PHYSIO",
+      "Computer Applications": "IT"
+    };
+
+    function formatDept(deptStr) {
+      if (!deptStr) return '—';
+      for (const [key, nickname] of Object.entries(deptNicknames)) {
+        if (deptStr.includes(key)) return nickname;
+      }
+      
+      // Fallback
+      const match = deptStr.match(/\((.*?)\)/);
+      if (match) return match[1];
+      return deptStr;
+    }
+
     async function loadTeachers() {
       const data = await api('/admin/teachers');
       if (!data) return;
@@ -275,7 +496,7 @@
           <td><code style="font-size:12px">${escHtml(t.reg_no || '—')}</code></td>
           <td><strong>${escHtml(t.full_name)}</strong></td>
           <td>${escHtml(t.email)}</td>
-          <td>${escHtml(t.department || '—')}</td>
+          <td>${escHtml(formatDept(t.department))}</td>
           <td><span class="badge badge--${t.has_face_encoding ? 'success' : 'warning'}">${t.has_face_encoding ? '✓ Yes' : '✗ No'}</span></td>
           <td><span class="badge badge--${t.is_active ? 'success' : 'neutral'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
           <td style="font-size:12px;color:var(--text-muted)">${formatDt(t.created_at)}</td>
@@ -285,9 +506,9 @@
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
               </button>
               <button class="btn-icon" title="${t.is_active ? 'Deactivate' : 'Activate'}" onclick="toggleActive('${t.teacher_id}', ${t.is_active})">
-                ${t.is_active ? 
-                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>' : 
-                  '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg>'}
+                ${t.is_active ?
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>' :
+          '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg>'}
               </button>
               <button class="btn-icon" title="Delete Teacher" onclick="deleteTeacher('${t.teacher_id}')" style="color:#ef4444">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
@@ -302,14 +523,15 @@
       document.getElementById('reg-name').value = '';
       document.getElementById('reg-no').value = '';
       document.getElementById('reg-email').value = '';
-      document.getElementById('reg-department').value = '';
+      setUiverseSelectValue('reg-department', '');
       document.getElementById('reg-password').value = '';
       document.getElementById('reg-is-temp').checked = false;
       document.getElementById('register-error').style.display = 'none';
       document.getElementById('register-success').style.display = 'none';
       // reset temp mode
-      ['reg-face-section','reg-name-section','reg-email-section','reg-dept-section'].forEach(id => {
-        document.getElementById(id).style.display = '';
+      ['reg-face-section', 'reg-name-section', 'reg-email-section', 'reg-dept-section'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
       });
       document.getElementById('register-modal').style.display = 'flex';
     }
@@ -324,10 +546,10 @@
     function toggleTempMode() {
       const isTemp = document.getElementById('reg-is-temp').checked;
       const hide = isTemp ? 'none' : '';
-      document.getElementById('reg-face-section').style.display = hide;
-      document.getElementById('reg-name-section').style.display = hide;
-      document.getElementById('reg-email-section').style.display = hide;
-      document.getElementById('reg-dept-section').style.display = hide;
+      ['reg-face-section', 'reg-name-section', 'reg-email-section', 'reg-dept-section'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = hide;
+      });
       if (isTemp) stopWebcam();
     }
 
@@ -354,7 +576,7 @@
     async function captureFace() {
       const video = document.getElementById('reg-webcam');
       const canvas = document.getElementById('reg-canvas');
-      
+
       // Crop to a center square
       const size = Math.min(video.videoWidth, video.videoHeight);
       const startX = (video.videoWidth - size) / 2;
@@ -363,11 +585,11 @@
       canvas.width = size;
       canvas.height = size;
       canvas.getContext('2d').drawImage(
-        video, 
+        video,
         startX, startY, size, size,
         0, 0, size, size
       );
-      
+
       const b64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
 
       const data = await api('/admin/encode-face', 'POST', { image: b64 });
@@ -404,7 +626,7 @@
 
       const name = document.getElementById('reg-name').value.trim();
       const email = document.getElementById('reg-email').value.trim();
-      const department = document.getElementById('reg-department').value.trim();
+      const department = (getUiverseSelectValue('reg-department') || '').trim();
 
       if (!name || !regNo || !email || !password || !department) {
         errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return;
@@ -427,7 +649,8 @@
       document.getElementById('edit-name').value = name;
       document.getElementById('edit-no').value = regNo;
       document.getElementById('edit-email').value = email;
-      document.getElementById('edit-department').value = department;
+      // Pre-select the department in the dropdown
+      setUiverseSelectValue('edit-department', department);
       document.getElementById('edit-password').value = '';
       document.getElementById('edit-modal').style.display = 'flex';
       document.getElementById('edit-error').style.display = 'none';
@@ -443,11 +666,11 @@
       const name = document.getElementById('edit-name').value.trim();
       const regNo = document.getElementById('edit-no').value.trim();
       const email = document.getElementById('edit-email').value.trim();
-      const department = document.getElementById('edit-department').value.trim();
+      const department = (getUiverseSelectValue('edit-department') || '').trim();
       const password = document.getElementById('edit-password').value;
       const errEl = document.getElementById('edit-error');
       const okEl = document.getElementById('edit-success');
-      
+
       errEl.style.display = 'none';
       okEl.style.display = 'none';
 
@@ -496,9 +719,9 @@
 
     function showCredentialShare(regNo, password) {
       currentShareCreds = { regNo, password };
-      
+
       const message = `Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${regNo}\nPassword: ${password}\n\nPlease keep these credentials secure.`;
-      
+
       document.getElementById('cred-card').textContent = message;
       document.getElementById('share-modal').style.display = 'flex';
     }
@@ -545,4 +768,5 @@
     initApp('teachers', loadTeachers);
   </script>
 </body>
+
 </html>

@@ -139,6 +139,20 @@ def _get_next_action_info(teacher_id: str):
     settings_dict = Setting.get_all()
     limits = settings_dict.get("verification_limits", {"max_checkin_attempts": 4, "max_checkout_attempts": 10})
     limit = limits.get("max_checkout_attempts", 10) if action == "check_out" else limits.get("max_checkin_attempts", 4)
+
+    # ── Server-side absent_limit enforcement ─────────────────────────────────
+    # If the teacher has no check-in yet and the absent_limit time has passed,
+    # return 'completed' so the mobile app's scan button stays locked.
+    if action == "check_in":
+        try:
+            rules = settings_dict.get("attendance_rules", {})
+            absent_limit = rules.get("absent_limit", "")
+            if absent_limit:
+                current_time_str = datetime.now().strftime("%H:%M")
+                if current_time_str > absent_limit:
+                    return "completed", 0, limit
+        except Exception:
+            pass
     
     return action, len(failures), limit
 
@@ -338,11 +352,22 @@ def get_attendance_stats():
             allotted = allotted_monthly + extra_monthly_leaves
             allotted_half = allotted_half_monthly + extra_half_monthly_leaves
             
+        # How many of the absent days are "covered" by the leave quota
+        # These should appear as attended in the pie chart centre.
+        # Only absences (not actual check-ins) count against leave quota.
+        absences_only = taken_full_leaves - approved_full_leaves
+        leaves_covered_absent = min(absences_only, max(0, allotted - approved_full_leaves))
+        
+        # The leave counter should only show consumed quota, capped at the quota
+        leaves_quota_used = min(taken_full_leaves, allotted)
+        
         return {
             "attended": attended,
             "absent": absent,
             "approved_full_leaves": approved_full_leaves,
             "taken_full_leaves": taken_full_leaves,
+            "leaves_quota_used": leaves_quota_used,
+            "leaves_covered_absent": leaves_covered_absent,
             "allotted_full_leaves": allotted,
             "taken_half_leaves": taken_half_leaves,
             "allotted_half_leaves": allotted_half,
@@ -423,6 +448,8 @@ def verify():
     longitude: float = float(data["longitude"])
     timestamp: float = float(data["timestamp"])
     bypass_limits: bool = data.get("bypass_limits", False)
+    # Demo mode is active if bypass_limits is set OR if demo geofence coordinates are provided
+    is_demo: bool = bypass_limits or ("demo_lat" in data and "demo_lng" in data)
     server_time = datetime.now(timezone.utc).isoformat()
 
     # ── Replay attack guard ──────────────────────────────────────────────────
@@ -473,6 +500,10 @@ def verify():
                         "timestamp": server_time}), 422
 
     action_type, failure_count, _ = _get_next_action_info(teacher_id)
+    
+    # Override action type for demo scans so admin logs are clearly labelled
+    if is_demo:
+        action_type = 'demo_test'
 
     # ── Fetch Dynamic Settings ───────────────────────────────────────────────
     from ..models import Setting

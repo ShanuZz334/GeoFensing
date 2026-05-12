@@ -67,7 +67,8 @@ if ($null -eq $tunnelUrl) {
         version  = 1
     } | ConvertTo-Json -Compress
 
-    Set-Content -Path $configPath -Value $configContent -Encoding UTF8
+    $Utf8NoBomEncoding = New-Object System.Text.UTF8Encoding $False
+    [System.IO.File]::WriteAllText($configPath, $configContent, $Utf8NoBomEncoding)
 
     # Git commit and push
     Push-Location $PSScriptRoot

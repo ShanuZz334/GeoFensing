@@ -12,8 +12,8 @@ class RemoteConfigService {
 
   // ── GitHub raw URL to your config file ─────────────────────────────────────
   // This is the public raw URL to config/app_config.json in your GitHub repo.
-  static const String _configUrl =
-      'https://raw.githubusercontent.com/ShanuZz334/GeoFensing/main/config/app_config.json';
+  static String get _configUrl =>
+      'https://raw.githubusercontent.com/ShanuZz334/GeoFensing/main/config/app_config.json?v=${DateTime.now().millisecondsSinceEpoch}';
 
   // ── Fallback URL if GitHub is unreachable ───────────────────────────────────
   // This is used offline or if GitHub fetch fails.
@@ -33,7 +33,11 @@ class RemoteConfigService {
           .timeout(const Duration(seconds: 5));
 
       if (response.statusCode == 200) {
-        final json = jsonDecode(response.body) as Map<String, dynamic>;
+        String body = response.body;
+        if (body.startsWith('\ufeff')) {
+          body = body.substring(1);
+        }
+        final json = jsonDecode(body) as Map<String, dynamic>;
         final url = json['base_url'] as String?;
         if (url != null && url.isNotEmpty) {
           _baseUrl = url;

@@ -17,7 +17,7 @@
       <div class="logo-icon">
         <img src="images/logo.png?v=6" alt="GeoFace Logo">
       </div>
-      <span>GeoFace</span>
+      <span>Geo<span class="face-text">Face</span></span>
     </div>
     <nav class="sidebar-nav">
       <a href="index.html" class="nav-item" id="nav-dashboard">
@@ -111,7 +111,7 @@
         </thead>
         <tbody id="teachers-tbody">
           <tr>
-            <td colspan="6" class="td-loading">Loading…</td>
+            <td colspan="6" class="td-loading"><div class="gear-loader"></div></td>
           </tr>
         </tbody>
       </table>
@@ -268,59 +268,60 @@
 
   <!-- Credential Share Modal (appears after temp registration) -->
   <div class="modal-overlay" id="share-modal" style="display:none;">
-    <div class="modal-card" style="max-width:440px; text-align:center;">
+    <div class="modal-card" style="max-width:400px; text-align:center;">
       <!-- Success icon -->
       <div
-        style="width:56px;height:56px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 16px;">
-        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"
+        style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"
           stroke-linecap="round" stroke-linejoin="round">
           <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
           <polyline points="22 4 12 14.01 9 11.01" />
         </svg>
       </div>
-      <h2 style="font-size:18px;font-weight:700;margin-bottom:4px;">Teacher Registered!</h2>
-      <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px;">Share these temporary credentials with the
-        teacher. They will complete face registration via the app.</p>
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:3px;">Teacher Registered!</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Share these credentials so they can set up the GeoFace app.</p>
 
-      <!-- Credential card -->
+      <!-- Compact credential card -->
       <div id="cred-card"
-        style="background:var(--surface-2);border:1px solid var(--border);border-radius:12px;padding:18px;text-align:left;margin-bottom:20px;font-family:monospace;line-height:1.9;font-size:13px;white-space:pre-wrap;">
+        style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:left;margin-bottom:16px;">
       </div>
 
       <!-- Share buttons -->
-      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
         <!-- WhatsApp -->
         <button onclick="shareViaWhatsApp()"
-          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:none;cursor:pointer;font-size:14px;font-weight:600;background:#25D366;color:#fff;transition:opacity .2s;"
+          style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:#25D366;color:#fff;transition:opacity .2s;"
           onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
             <path
               d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
           </svg>
           Share via WhatsApp
         </button>
-        <!-- Copy -->
-        <button id="btn-copy-cred" onclick="copyCredentials()"
-          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
-          onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
-            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-          </svg>
-          Copy to Clipboard
-        </button>
-        <!-- Email -->
-        <button onclick="shareViaEmail()"
-          style="display:flex;align-items:center;justify-content:center;gap:10px;padding:12px;border-radius:10px;border:1px solid var(--border);cursor:pointer;font-size:14px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
-          onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-            stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
-            <polyline points="22,6 12,13 2,6" />
-          </svg>
-          Share via Email
-        </button>
+        <div style="display:flex;gap:8px;">
+          <!-- Copy -->
+          <button id="btn-copy-cred" onclick="copyCredentials()"
+            style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
+            onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Copy
+          </button>
+          <!-- Email -->
+          <button onclick="shareViaEmail()"
+            style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
+            onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            Email
+          </button>
+        </div>
       </div>
 
       <button class="btn-secondary btn-full" onclick="closeShareModal()">Done</button>
@@ -720,9 +721,25 @@
     function showCredentialShare(regNo, password) {
       currentShareCreds = { regNo, password };
 
-      const message = `Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${regNo}\nPassword: ${password}\n\nPlease keep these credentials secure.`;
-
-      document.getElementById('cred-card').textContent = message;
+      // Compact structured card (display only)
+      document.getElementById('cred-card').innerHTML = `
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-family:inherit;">Temporary credentials for the GeoFace Teacher App</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-3,rgba(255,255,255,0.05));border-radius:6px;padding:8px 12px;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:inherit;text-transform:uppercase;letter-spacing:.5px;">Reg ID</span>
+            <code style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(regNo)}</code>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-3,rgba(255,255,255,0.05));border-radius:6px;padding:8px 12px;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:inherit;text-transform:uppercase;letter-spacing:.5px;">Password</span>
+            <code style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(password)}</code>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:6px;padding:8px 12px;gap:8px;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:inherit;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">App</span>
+            <a href="https://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk" target="_blank" style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;word-break:break-all;">Download GeoFace.apk ↗</a>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text-muted);font-family:inherit;line-height:1.6;">⚠ Change password on first login &nbsp;·&nbsp; Keep credentials confidential</div>
+      `;
       document.getElementById('share-modal').style.display = 'flex';
     }
 
@@ -733,20 +750,20 @@
 
     function shareViaWhatsApp() {
       if (!currentShareCreds) return;
-      const msg = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\n*Registration ID:* ${currentShareCreds.regNo}\n*Password:* ${currentShareCreds.password}\n\nPlease keep these credentials secure.`);
+      const msg = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration has been successfully completed.\n\nPlease use the credentials below to log in to the GeoFace Teacher App and complete your facial verification setup.\n\n*Registration ID:* ${currentShareCreds.regNo}\n*Temporary Password:* ${currentShareCreds.password}\n\n*Download the App:*\nhttps://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk\n\n*Important:*\n• Please change your password after your first login.\n• Do not share your credentials with anyone.\n• Keep this information secure and confidential.\n\nIf you experience any issues during login or registration, please contact the administrator.\n\nThank you,\nGeoFace Team`);
       window.open(`https://wa.me/?text=${msg}`, '_blank');
     }
 
     function shareViaEmail() {
       if (!currentShareCreds) return;
       const subject = encodeURIComponent('Your GeoFace Teacher App Credentials');
-      const body = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${currentShareCreds.regNo}\nPassword: ${currentShareCreds.password}\n\nPlease keep these credentials secure.`);
+      const body = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration has been successfully completed.\n\nPlease use the credentials below to log in to the GeoFace Teacher App and complete your facial verification setup.\n\nRegistration ID: ${currentShareCreds.regNo}\nTemporary Password: ${currentShareCreds.password}\n\nDownload the App:\nhttps://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk\n\nImportant:\n• Please change your password after your first login.\n• Do not share your credentials with anyone.\n• Keep this information secure and confidential.\n\nIf you experience any issues during login or registration, please contact the administrator.\n\nThank you,\nGeoFace Team`);
       window.location.href = `mailto:?subject=${subject}&body=${body}`;
     }
 
     async function copyCredentials() {
       if (!currentShareCreds) return;
-      const msg = `Welcome to GeoFace!\n\nYour temporary registration is complete. Please use the credentials below to log in to the GeoFace Teacher App and complete your face scan registration.\n\nRegistration ID: ${currentShareCreds.regNo}\nPassword: ${currentShareCreds.password}\n\nPlease keep these credentials secure.`;
+      const msg = `Welcome to GeoFace!\n\nYour temporary registration has been successfully completed.\n\nPlease use the credentials below to log in to the GeoFace Teacher App and complete your facial verification setup.\n\nRegistration ID: ${currentShareCreds.regNo}\nTemporary Password: ${currentShareCreds.password}\n\nDownload the App:\nhttps://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk\n\nImportant:\n• Please change your password after your first login.\n• Do not share your credentials with anyone.\n• Keep this information secure and confidential.\n\nIf you experience any issues during login or registration, please contact the administrator.\n\nThank you,\nGeoFace Team`;
       try {
         await navigator.clipboard.writeText(msg);
         const btn = document.getElementById('btn-copy-cred');

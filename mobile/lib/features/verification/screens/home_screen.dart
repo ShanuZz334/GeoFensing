@@ -8,7 +8,6 @@ import 'dart:async';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
-import '../../auth/widgets/demo_setup_dialog.dart';
 import '../providers/verification_provider.dart';
 import '../widgets/dynamic_qr_widget.dart';
 import 'attendance_stats_screen.dart';
@@ -173,21 +172,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'GeoFace',
-                        style: TextStyle(
-                          fontFamily: 'Bitcount',
-                          fontSize: 28,
-                          fontWeight: FontWeight.w200,
-                          color: const Color(0xFF7C3AED),
-                          letterSpacing: -0.5,
+                      RichText(
+                        text: const TextSpan(
+                          text: 'Geo',
+                          style: TextStyle(
+                            fontFamily: 'Bitcount',
+                            fontSize: 28,
+                            fontWeight: FontWeight.w200,
+                            color: Colors.white70,
+                            letterSpacing: -0.5,
+                          ),
+                          children: [
+                            TextSpan(
+                              text: 'Face',
+                              style: TextStyle(
+                                color: Color(0xFF9F00FF),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
-                      const SizedBox(width: 4),
-                      InkWell(
-                        onTap: () => showDialog(context: context, builder: (_) => const DemoSetupDialog()),
-                        child: const Icon(Icons.play_circle_outline, color: Color(0xFF7C3AED), size: 16),
-                      ),
+                      
                     ],
                   ),
                 ),
@@ -322,42 +327,6 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       Row(
                         children: [
-                          if (context.watch<VerificationProvider>().demoMode)
-                            Container(
-                              margin: const EdgeInsets.only(right: 12, top: 16),
-                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
-                                borderRadius: BorderRadius.circular(20),
-                                border: Border.all(
-                                  color: const Color(0xFF7C3AED).withValues(alpha: 0.6),
-                                  width: 1.5,
-                                ),
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Container(
-                                    width: 5,
-                                    height: 5,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF7C3AED),
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 4),
-                                  const Text(
-                                    'DEMO',
-                                    style: TextStyle(
-                                      color: Color(0xFF7C3AED),
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      letterSpacing: 0.8,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
                           Padding(
                             padding: const EdgeInsets.only(top: 16.0),
                             child: IconButton(

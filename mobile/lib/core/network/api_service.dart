@@ -52,9 +52,6 @@ class ApiService {
     required double latitude,
     required double longitude,
     required double timestamp,
-    double? demoLat,
-    double? demoLng,
-    double? demoRadius,
     bool bypassLimits = false,
   }) async {
     try {
@@ -68,9 +65,6 @@ class ApiService {
         'timestamp': timestamp,
       };
 
-      if (demoLat != null) body['demo_lat'] = demoLat;
-      if (demoLng != null) body['demo_lng'] = demoLng;
-      if (demoRadius != null) body['demo_radius'] = demoRadius;
       if (bypassLimits) body['bypass_limits'] = true;
 
       final response = await http

@@ -205,7 +205,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
         child: Center(
           child: _isLoading 
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF9F00FF)))
             : Text(
                 text,
                 style: const TextStyle(
@@ -402,28 +402,31 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               Center(
                 child: Column(
                   children: [
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(50),
-                      child: Container(
-                        width: 100,
-                        height: 100,
-                        child: ClipRect(
-                          child: Image.asset(
-                            'assets/images/logo_v4.png',
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
+                    Image.asset(
+                      'assets/images/logo.png',
+                      width: 100,
+                      height: 100,
+                      fit: BoxFit.contain,
                     ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
                     const SizedBox(height: 16),
-                    const Text(
-                      'GeoFace',
-                      style: TextStyle(
-                        fontFamily: 'Bitcount',
-                        fontSize: 32,
-                        fontWeight: FontWeight.w200,
-                        letterSpacing: 1.2,
-                        color: Color(0xFF7C3AED),
+                    RichText(
+                      text: const TextSpan(
+                        text: 'Geo',
+                        style: TextStyle(
+                          fontFamily: 'Bitcount',
+                          fontSize: 32,
+                          fontWeight: FontWeight.w200,
+                          letterSpacing: 1.2,
+                          color: Colors.white70,
+                        ),
+                        children: [
+                          TextSpan(
+                            text: 'Face',
+                            style: TextStyle(
+                              color: Color(0xFF9F00FF),
+                            ),
+                          ),
+                        ],
                       ),
                     ).animate().fadeIn(delay: 200.ms),
                   ],

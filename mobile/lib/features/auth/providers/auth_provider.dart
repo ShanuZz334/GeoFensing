@@ -26,24 +26,17 @@ class AuthProvider extends ChangeNotifier {
     _restoreSession();
   }
 
-  /// Restore persisted session on app launch
+  /// Clear persisted session on app launch to enforce security
   Future<void> _restoreSession() async {
     _status = AuthStatus.loading;
     notifyListeners();
 
     try {
-      final token = await _storage.read(key: ApiConstants.tokenKey);
-      final teacherJson = await _storage.read(key: ApiConstants.teacherKey);
-
-      if (token != null && teacherJson != null) {
-        _token = token;
-        _currentUser = UserModel.fromJson(
-          jsonDecode(teacherJson) as Map<String, dynamic>,
-        );
-        _status = AuthStatus.authenticated;
-      } else {
-        _status = AuthStatus.unauthenticated;
-      }
+      // Tighten security: require login on every app start
+      await _storage.deleteAll();
+      _token = null;
+      _currentUser = null;
+      _status = AuthStatus.unauthenticated;
     } catch (_) {
       _status = AuthStatus.unauthenticated;
     }

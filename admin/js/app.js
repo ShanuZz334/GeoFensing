@@ -171,7 +171,7 @@ async function loadRecentLogs() {
   if (!tbody) return;
 
   if (!data.logs.length) {
-    tbody.innerHTML = '<tr><td colspan="4" class="td-loading"><div class="spinner"></div></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="4" class="td-loading"><div class="gear-loader"></div></td></tr>';
     return;
   }
 

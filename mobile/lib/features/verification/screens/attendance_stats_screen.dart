@@ -72,8 +72,8 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
         ),
         centerTitle: true,
       ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator(color: Color(0xFF7C3AED)))
+        body: isLoading
+            ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(

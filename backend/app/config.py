@@ -41,7 +41,7 @@ class BaseConfig:
     GEOFENCE_BUFFER_METERS: int = int(os.environ.get("GEOFENCE_BUFFER_METERS", "15"))
 
     # Face Recognition
-    FACE_RECOGNITION_THRESHOLD: float = float(os.environ.get("FACE_RECOGNITION_THRESHOLD", "0.6"))
+    FACE_RECOGNITION_THRESHOLD: float = float(os.environ.get("FACE_RECOGNITION_THRESHOLD", "1.2"))
     MIN_FACE_FRAMES_RATIO: float = 0.25  # >25% of frames must have a face
     MAX_FRAMES: int = 12  # Limit frames processed per request (Reduced from 25 for speed)
 

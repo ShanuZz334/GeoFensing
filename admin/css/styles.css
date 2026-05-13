@@ -21,7 +21,7 @@
   --border: rgba(255, 255, 255, 0.1);
   --text: #ffffff;
   --text-muted: #94a3b8;
-  --primary: #7C3AED;
+  --primary: #9F00FF;
   /* Violet */
   --primary-dark: #6D28D9;
   --success: #10b981;
@@ -87,9 +87,6 @@ body {
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  border-radius: 50%;
-  overflow: hidden;
-  background: #000;
 }
 
 .logo-icon img {
@@ -108,6 +105,10 @@ body {
   font-family: 'Bitcount', monospace;
   font-size: 20px;
   letter-spacing: 1px;
+  color: #F8F9FA;
+}
+
+.sidebar-logo .face-text {
   color: var(--primary);
 }
 
@@ -1346,3 +1347,59 @@ align-items: center;
   transform: translateX(1.5em);
   background-color: #ffffff;
 }
+/* -- Gear Loader ------------------------------------------------------------ */
+.gear-loader {
+  --gear-color: var(--primary);
+  --gear-bg: var(--surface);
+  width: 60px;
+  height: 40px;
+  position: relative;
+  display: inline-block;
+}
+
+.gear-loader::before {
+  content: '';
+  left: 0;
+  top: 0;
+  position: absolute;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--gear-color);
+  background-image: radial-gradient(circle 8px at 18px 18px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 18px 0px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 0px 18px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 36px 18px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 18px 36px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 30px 5px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 30px 5px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 30px 30px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 5px 30px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 4px at 5px 5px, var(--gear-bg) 100%, transparent 0);
+  background-repeat: no-repeat;
+  box-sizing: border-box;
+  animation: rotationBack 3s linear infinite;
+}
+
+.gear-loader::after {
+  content: '';
+  left: 35px;
+  top: 15px;
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-color: var(--gear-color);
+  background-image: radial-gradient(circle 5px at 12px 12px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 12px 0px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 0px 12px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 24px 12px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 12px 24px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 20px 3px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 20px 3px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 20px 20px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 3px 20px, var(--gear-bg) 100%, transparent 0), radial-gradient(circle 2.5px at 3px 3px, var(--gear-bg) 100%, transparent 0);
+  background-repeat: no-repeat;
+  box-sizing: border-box;
+  animation: rotationBack 4s linear infinite reverse;
+}
+
+@keyframes rotationBack {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(-360deg); }
+}
+
+.gear-loader.loader-sm {
+  transform: scale(0.5);
+  transform-origin: center;
+  margin: -10px -15px;
+}
+
+.gear-loader.loader-white {
+  --gear-color: #ffffff;
+  --gear-bg: var(--primary);
+}
+

@@ -168,9 +168,20 @@ def get_teacher_attendance():
     """GET /attendance — returns aggregated attendance logs for the last 4 days."""
     teacher_id = get_jwt_identity()
     
-    logs = AttendanceLog.query.filter_by(teacher_id=teacher_id).order_by(AttendanceLog.timestamp.desc()).all()
+    now = datetime.now(timezone.utc)
+    dates_to_check = []
+    curr = now
     
-    # Group by date (YYYY-MM-DD)
+    # Generate up to 14 days back to find 4 valid working days
+    for _ in range(14):
+        dates_to_check.append(curr.strftime("%Y-%m-%d"))
+        curr -= timedelta(days=1)
+        
+    logs = AttendanceLog.query.filter(
+        AttendanceLog.teacher_id == teacher_id,
+        AttendanceLog.timestamp >= now - timedelta(days=14)
+    ).order_by(AttendanceLog.timestamp.desc()).all()
+    
     from collections import OrderedDict
     grouped = OrderedDict()
     
@@ -180,30 +191,58 @@ def get_teacher_attendance():
             grouped[date_str] = []
         grouped[date_str].append(log)
         
+    settings_dict = Setting.get_all()
+    rules = settings_dict.get("attendance_rules", {})
+    absent_limit = rules.get("absent_limit", "11:00")
+    current_time_str = datetime.now().strftime("%H:%M")
+    
     aggregated_logs = []
     
-    # Take the last 4 distinct days
-    for date_str, day_logs in list(grouped.items())[:4]:
-        has_success = any(l.status == "success" for l in day_logs)
-        status = "success" if has_success else "failure"
+    for date_str in dates_to_check:
+        synthetic_ts = datetime.fromisoformat(date_str).replace(hour=12, tzinfo=timezone.utc)
+        is_weekend = synthetic_ts.weekday() in [5, 6]
         
-        if has_success:
-            reason = "Present"
-        elif len(day_logs) >= 4:
-            reason = "Absent"
+        if date_str in grouped:
+            day_logs = grouped[date_str]
+            has_success = any(l.status == "success" for l in day_logs)
+            status = "success" if has_success else "failure"
+            
+            if has_success:
+                reason = "Present"
+            elif len(day_logs) >= 4:
+                reason = "Absent"
+            else:
+                reason = f"Failed ({len(day_logs)}/4 attempts)"
+            
+            success_logs = [l for l in day_logs if l.status == "success"]
+            if success_logs:
+                latest_log = success_logs[0]
+            else:
+                latest_log = day_logs[0]
+            
+            log_data = latest_log.to_dict()
+            log_data["status"] = status
+            log_data["reason"] = reason
+            aggregated_logs.append(log_data)
         else:
-            reason = f"Failed ({len(day_logs)}/4 attempts)"
-        
-        success_logs = [l for l in day_logs if l.status == "success"]
-        if success_logs:
-            latest_log = success_logs[0]
-        else:
-            latest_log = day_logs[0]
-        
-        log_data = latest_log.to_dict()
-        log_data["status"] = status
-        log_data["reason"] = reason
-        aggregated_logs.append(log_data)
+            if is_weekend:
+                continue
+            if date_str == now.strftime("%Y-%m-%d") and current_time_str <= absent_limit:
+                continue
+                
+            aggregated_logs.append({
+                "id": f"syn_{date_str}",
+                "teacher_id": teacher_id,
+                "timestamp": synthetic_ts.isoformat(),
+                "status": "failure",
+                "status_display": "ABSENT",
+                "action_type": "check_in",
+                "attendance_mark": "absent",
+                "reason": "No scan record"
+            })
+            
+        if len(aggregated_logs) >= 4:
+            break
         
     action, attempts, limit = _get_next_action_info(teacher_id)
     return jsonify({
@@ -654,7 +693,7 @@ def verify():
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, 1.0, server_time, action_type=action_type)
 
     # ── Step 4: Face Recognition ─────────────────────────────────────────────
-    threshold = cfg.get("FACE_RECOGNITION_THRESHOLD", 0.6)
+    threshold = cfg.get("FACE_RECOGNITION_THRESHOLD", 1.2)
     
     matched, best_distance = compare_encodings(encodings, teacher.face_encoding, threshold)
 

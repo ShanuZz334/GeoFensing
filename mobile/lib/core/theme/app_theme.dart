@@ -5,7 +5,7 @@ class AppTheme {
   AppTheme._();
 
   // ── Professional Color Palette ──────────────────────────────────────────────
-  static const primary      = Color(0xFF7C3AED); // Vibrant Blue from design
+  static const primary      = Color(0xFF9F00FF); // Vibrant Electric Purple from new logo
   static const primaryDark  = Color(0xFF1A26D9);
   static const slate        = Color(0xFF050505); // Deep Dark background
   static const slateLight   = Color(0xFF121212); // Card surface

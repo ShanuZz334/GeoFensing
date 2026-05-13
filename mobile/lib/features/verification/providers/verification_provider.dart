@@ -91,33 +91,8 @@ class VerificationProvider extends ChangeNotifier {
     }
   }
 
-  // ── Demo Mode ─────────────────────────────────────────────────────────────
-  bool _demoMode = false;
   bool _bypassLimits = false;
-  double? _demoLat;
-  double? _demoLng;
-  double? _demoRadius;
-
-  bool get demoMode => _demoMode;
   bool get bypassLimits => _bypassLimits;
-  double? get demoLat => _demoLat;
-  double? get demoLng => _demoLng;
-  double? get demoRadius => _demoRadius;
-
-  void setDemoMode({
-    required bool enabled,
-    bool bypassLimits = false,
-    double? lat,
-    double? lng,
-    double? radius,
-  }) {
-    _demoMode = enabled;
-    _bypassLimits = bypassLimits;
-    _demoLat = lat;
-    _demoLng = lng;
-    _demoRadius = radius;
-    notifyListeners();
-  }
 
   // ── Settings ──────────────────────────────────────────────────────────────
 
@@ -246,10 +221,7 @@ class VerificationProvider extends ChangeNotifier {
       latitude: position.latitude,
       longitude: position.longitude,
       timestamp: timestamp,
-      demoLat: _demoMode ? _demoLat : null,
-      demoLng: _demoMode ? _demoLng : null,
-      demoRadius: _demoMode ? _demoRadius : null,
-      bypassLimits: _demoMode && _bypassLimits,
+                        bypassLimits: _bypassLimits,
     );
 
     _progress = 1.0;
@@ -294,7 +266,7 @@ class VerificationProvider extends ChangeNotifier {
       try {
         final xFile = await _cameraController!.takePicture();
         final bytes = await xFile.readAsBytes();
-        final compressed = _compressFrame(bytes);
+        final compressed = await compute(_compressFrameTask, bytes);
         if (compressed != null) base64Frames.add(base64Encode(compressed));
         _progress = (i + 1) * 0.08;
         notifyListeners();
@@ -305,7 +277,7 @@ class VerificationProvider extends ChangeNotifier {
     return base64Frames;
   }
 
-  Uint8List? _compressFrame(Uint8List rawBytes) {
+  static Uint8List? _compressFrameTask(Uint8List rawBytes) {
     try {
       final decoded = img.decodeImage(rawBytes);
       if (decoded == null) return null;

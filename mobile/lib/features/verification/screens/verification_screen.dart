@@ -76,9 +76,9 @@ class _VerificationScreenState extends State<VerificationScreen> with SingleTick
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(color: Colors.white),
+                        CircularProgressIndicator(color: Color(0xFF9F00FF)),
                         SizedBox(height: 16),
-                        Text('Initializing camera…',
+                        Text('Initializing camera...',
                             style: TextStyle(color: Colors.white70, fontSize: 14)),
                       ],
                     ),
@@ -129,53 +129,7 @@ class _VerificationScreenState extends State<VerificationScreen> with SingleTick
                           ),
                         ),
                       ),
-                      if (provider.demoMode)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primary.withValues(alpha: 0.15),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                color: AppTheme.primary.withValues(alpha: 0.6),
-                                width: 1.5,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Container(
-                                  width: 6,
-                                  height: 6,
-                                  decoration: BoxDecoration(
-                                    color: AppTheme.primary,
-                                    shape: BoxShape.circle,
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: AppTheme.primary.withValues(alpha: 0.8),
-                                        blurRadius: 4,
-                                        spreadRadius: 1,
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                const SizedBox(width: 5),
-                                const Text(
-                                  'DEMO',
-                                  style: TextStyle(
-                                    color: AppTheme.primary,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700,
-                                    letterSpacing: 0.8,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        )
-                      else
-                        const SizedBox(width: 48),
+                      const SizedBox(width: 48),
                     ],
                   ),
                 ),
@@ -431,14 +385,7 @@ class _BottomPanel extends StatelessWidget {
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2.5,
-                          ),
-                        ),
+                        const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
                         const SizedBox(width: 10),
                         Text(
                           provider.status == VerificationStatus.recording

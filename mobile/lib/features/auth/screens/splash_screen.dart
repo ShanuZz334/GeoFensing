@@ -84,20 +84,31 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 140,
                       child: ClipRect(
                         child: Image.asset(
-                          'assets/images/logo_v4.png',
+                          'assets/images/logo.png',
                           fit: BoxFit.cover,
                         ),
                       ),
                     ),
                   ),
                   const SizedBox(height: 28),
-                  const Text(
-                    'GeoFace',
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF7C3AED),
-                      letterSpacing: 1.5,
+                  RichText(
+                    text: const TextSpan(
+                      text: 'Geo',
+                      style: TextStyle(
+                        fontFamily: 'Bitcount', // Assuming Bitcount is default or available
+                        fontSize: 32,
+                        fontWeight: FontWeight.w900,
+                        color: Colors.white70,
+                        letterSpacing: 1.5,
+                      ),
+                      children: [
+                        TextSpan(
+                          text: 'Face',
+                          style: TextStyle(
+                            color: Color(0xFF9F00FF),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const SizedBox(height: 8),
@@ -111,14 +122,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                   ),
                   const SizedBox(height: 64),
-                  SizedBox(
-                    width: 32,
-                    height: 32,
-                    child: CircularProgressIndicator(
-                      color: Colors.white.withValues(alpha: 0.8),
-                      strokeWidth: 2.5,
-                    ),
-                  ),
+                  const CircularProgressIndicator(color: Color(0xFF9F00FF)),
                 ],
               ),
             ),

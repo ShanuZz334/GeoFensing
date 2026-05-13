@@ -18,13 +18,11 @@ void main() async {
   // Fetch live server URL from GitHub (updates without APK rebuild)
   await RemoteConfigService.initialize();
 
-  // Lock portrait orientation
   await SystemChrome.setPreferredOrientations([
     DeviceOrientation.portraitUp,
     DeviceOrientation.portraitDown,
   ]);
 
-  // Transparent system UI overlays
   SystemChrome.setSystemUIOverlayStyle(
     const SystemUiOverlayStyle(
       statusBarColor: Colors.transparent,
@@ -35,8 +33,37 @@ void main() async {
   runApp(const GeoFaceApp());
 }
 
-class GeoFaceApp extends StatelessWidget {
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+class GeoFaceApp extends StatefulWidget {
   const GeoFaceApp({super.key});
+
+  @override
+  State<GeoFaceApp> createState() => _GeoFaceAppState();
+}
+
+class _GeoFaceAppState extends State<GeoFaceApp> with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      // Force logout when app goes to background
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      auth.logout();
+      navigatorKey.currentState?.pushNamedAndRemoveUntil('/login', (route) => false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -48,31 +75,23 @@ class GeoFaceApp extends StatelessWidget {
       child: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           return MaterialApp(
+            navigatorKey: navigatorKey,
             title: 'GeoFace Auth',
             debugShowCheckedModeBanner: false,
             themeMode: ThemeMode.light,
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.lightTheme,
-            initialRoute: AppRoutes.splash,
+            initialRoute: '/splash',
             routes: {
-              AppRoutes.splash: (_) => const SplashScreen(),
-              AppRoutes.login: (_) => const LoginScreen(),
-              AppRoutes.home: (_) => const HomeScreen(),
-              AppRoutes.verification: (_) => const VerificationScreen(),
-              AppRoutes.result: (_) => const ResultScreen(),
+              '/splash': (_) => const SplashScreen(),
+              '/login': (_) => const LoginScreen(),
+              '/home': (_) => const HomeScreen(),
+              '/verification': (_) => const VerificationScreen(),
+              '/result': (_) => const ResultScreen(),
             },
           );
         },
       ),
     );
   }
-}
-
-/// Application route name constants
-class AppRoutes {
-  static const splash = '/';
-  static const login = '/login';
-  static const home = '/home';
-  static const verification = '/verify';
-  static const result = '/result';
 }

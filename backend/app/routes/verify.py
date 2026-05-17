@@ -207,22 +207,36 @@ def get_teacher_attendance():
             has_success = any(l.status == "success" for l in day_logs)
             status = "success" if has_success else "failure"
             
-            if has_success:
-                reason = "Present"
-            elif len(day_logs) >= 4:
-                reason = "Absent"
-            else:
-                reason = f"Failed ({len(day_logs)}/4 attempts)"
-            
             success_logs = [l for l in day_logs if l.status == "success"]
             if success_logs:
                 latest_log = success_logs[0]
             else:
                 latest_log = day_logs[0]
+                
+            if has_success:
+                if latest_log.attendance_mark == 'flagged':
+                    reason = "Flagged / Processing"
+                    status_display = "FLAGGED"
+                elif latest_log.attendance_mark == 'half_day':
+                    reason = "Half Day"
+                    status_display = "HALF DAY"
+                elif latest_log.attendance_mark == 'absent':
+                    reason = "Absent"
+                    status_display = "ABSENT"
+                else:
+                    reason = "Present"
+                    status_display = "SUCCESS"
+            elif len(day_logs) >= 4:
+                reason = "Absent"
+                status_display = "FAILURE"
+            else:
+                reason = f"Failed ({len(day_logs)}/4 attempts)"
+                status_display = "FAILURE"
             
             log_data = latest_log.to_dict()
             log_data["status"] = status
             log_data["reason"] = reason
+            log_data["status_display"] = status_display
             aggregated_logs.append(log_data)
         else:
             if is_weekend:
@@ -554,6 +568,7 @@ def verify():
     absent_limit = rules.get("absent_limit", "11:00")
     half_day_checkout_limit = rules.get("half_day_checkout_limit", "")
     anytime_checkout_full_day = rules.get("anytime_checkout_full_day", False)
+    min_working_hours = float(rules.get("min_working_hours", 3))
     
     limits_cfg = settings_dict.get("verification_limits", {})
     max_checkin = limits_cfg.get("max_checkin_attempts", 4)
@@ -577,6 +592,34 @@ def verify():
         if not anytime_checkout_full_day and half_day_checkout_limit:
             if current_time_str < half_day_checkout_limit:
                 attendance_mark = 'half_day'
+                
+        # Factor in check-in state
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        check_in_log = AttendanceLog.query.filter(
+            AttendanceLog.teacher_id == teacher_id,
+            AttendanceLog.action_type == 'check_in',
+            AttendanceLog.status == 'success',
+            AttendanceLog.timestamp >= today_start
+        ).order_by(AttendanceLog.timestamp.desc()).first()
+
+        if check_in_log:
+            # 1. Configurable Minimum Gap Rule
+            # Check if the gap between check-in and check-out is less than min_working_hours
+            time_diff = datetime.utcnow() - check_in_log.timestamp
+            if time_diff.total_seconds() < (min_working_hours * 3600):
+                attendance_mark = 'absent'
+            else:
+                # 2. Inherit/Combine Check-in State
+                ci_mark = check_in_log.attendance_mark
+                if ci_mark == 'absent':
+                    attendance_mark = 'absent'
+                elif ci_mark == 'flagged':
+                    attendance_mark = 'flagged'
+                elif ci_mark == 'half_day':
+                    if attendance_mark == 'half_day':
+                        attendance_mark = 'absent'  # Missed both halves
+                    else:
+                        attendance_mark = 'half_day'
 
     limit = max_checkout if action_type == 'check_out' else max_checkin
     
@@ -672,7 +715,7 @@ def verify():
 
     # ── Step 2: Frame Processing ─────────────────────────────────────────────
     max_frames = cfg.get("MAX_FRAMES", 25)
-    images, encodings, landmarks_seq, face_frame_count = process_frames(frames, max_frames)
+    images, encodings, landmarks_seq, bboxes_seq, face_frame_count = process_frames(frames, max_frames)
     total_frames = len(images)
 
     if total_frames == 0:
@@ -693,7 +736,10 @@ def verify():
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, 1.0, server_time, action_type=action_type)
 
     # ── Step 4: Face Recognition ─────────────────────────────────────────────
-    threshold = cfg.get("FACE_RECOGNITION_THRESHOLD", 1.2)
+    # Threshold for Euclidean distance on L2-normalized 512-d InsightFace embeddings.
+    # buffalo_l same-person distances are typically 0.2–0.5; different people 0.8–1.4.
+    # 0.70 is a balanced operating point — real matches comfortably pass, impostors fail.
+    threshold = cfg.get("FACE_RECOGNITION_THRESHOLD", 0.70)
     
     matched, best_distance = compare_encodings(encodings, teacher.face_encoding, threshold)
 
@@ -703,12 +749,8 @@ def verify():
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
     # ── Step 5: Liveness Detection ────────────────────────────────────────────
-    ear_threshold = cfg.get("EAR_BLINK_THRESHOLD", 0.25)
-    min_blinks = cfg.get("MIN_BLINK_COUNT", 1)
-    move_threshold = cfg.get("HEAD_MOVE_THRESHOLD", 5)
-
     liveness_passed, liveness_reason = run_liveness_checks(
-        landmarks_seq, move_threshold
+        images, bboxes_seq
     )
 
     if not liveness_passed:

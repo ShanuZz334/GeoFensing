@@ -77,6 +77,85 @@ def admin_login():
         "admin": admin.to_dict()
     }), 200
 
+# ── TOTP Generation ──────────────────────────────────────────────────────────
+
+@admin_bp.route("/generate-totp", methods=["POST"])
+@jwt_required()
+def generate_totp():
+    """POST /admin/generate-totp — generates a 30s TOTP for teacher password resets."""
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    import random
+    totp_code = f"{random.randint(0, 999999):06d}"
+    
+    from ..models import Setting
+    settings_dict = Setting.get_all()
+    limits_cfg = settings_dict.get("verification_limits", {})
+    totp_duration = int(limits_cfg.get("totp_duration", 300))
+    
+    from .. import extensions
+    if extensions.redis_client:
+        extensions.redis_client.setex("admin_reset_totp", totp_duration, totp_code)
+        import logging
+        logging.getLogger('flask.app').info(f"Generated TOTP {totp_code} in Redis: {extensions.redis_client.get('admin_reset_totp')} at URL {extensions.redis_client.connection_pool.connection_kwargs}")
+        return jsonify({"totp": totp_code, "expires_in": totp_duration}), 200
+        
+    return jsonify({"error": "Redis not available. Cannot generate TOTP."}), 500
+
+@admin_bp.route("/teachers/<teacher_id>/reset-device", methods=["POST"])
+@jwt_required()
+def reset_device_lock(teacher_id):
+    """POST /admin/teachers/<id>/reset-device — forcefully clears device lock for a teacher."""
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    current_reg = identity.replace(_ADMIN_PREFIX, "")
+    current_admin = Admin.query.filter_by(reg_no=current_reg).first()
+    if not current_admin or not current_admin.is_head_admin:
+        return jsonify({"error": "Only Head Admins can reset device locks"}), 403
+        
+    teacher = Teacher.query.filter_by(teacher_id=teacher_id).first()
+    if not teacher:
+        return jsonify({"error": "Teacher not found"}), 404
+        
+    from .. import extensions
+    if extensions.redis_client:
+        extensions.redis_client.delete(f"active_device:{teacher_id}")
+        log_admin_action(identity, "RESET_DEVICE", f"Cleared device lock for teacher: {teacher.reg_no}")
+        return jsonify({"message": "Device lock cleared successfully."}), 200
+        
+    return jsonify({"error": "Redis not available. Cannot clear device lock."}), 500
+
+
+@admin_bp.route("/devices/reset-all", methods=["POST"])
+@jwt_required()
+def reset_all_device_locks():
+    """POST /admin/devices/reset-all — clears all active device session locks (Head Admin only)."""
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+
+    current_reg = identity.replace(_ADMIN_PREFIX, "")
+    current_admin = Admin.query.filter_by(reg_no=current_reg).first()
+    if not current_admin or not current_admin.is_head_admin:
+        return jsonify({"error": "Only Head Admins can reset all device locks"}), 403
+
+    from .. import extensions
+    if not extensions.redis_client:
+        return jsonify({"error": "Redis not available. Cannot clear device locks."}), 500
+
+    # Scan and delete all active_device:* keys
+    keys = extensions.redis_client.keys("active_device:*")
+    count = len(keys)
+    if keys:
+        extensions.redis_client.delete(*keys)
+
+    log_admin_action(identity, "RESET_ALL_DEVICES", f"Cleared {count} active device session lock(s)")
+    return jsonify({"message": f"All device locks cleared. {count} session(s) released."}), 200
+
 # ── Global Settings ──────────────────────────────────────────────────────────
 
 @admin_bp.route("/settings", methods=["GET"])
@@ -110,9 +189,18 @@ def update_settings():
     for key, value in data.items():
         setting = Setting.query.get(key)
         if setting:
-            if setting.value != value:
-                changes[key] = f"{setting.value} -> {value}"
-            setting.value = value
+            # If both existing and new value are dicts, merge them (preserve unset sub-keys)
+            if isinstance(setting.value, dict) and isinstance(value, dict):
+                merged = {**setting.value, **value}
+                if merged != setting.value:
+                    changes[key] = f"{setting.value} -> {merged}"
+                setting.value = merged
+            else:
+                if setting.value != value:
+                    changes[key] = f"{setting.value} -> {value}"
+                setting.value = value
+            from sqlalchemy.orm.attributes import flag_modified
+            flag_modified(setting, "value")
         else:
             changes[key] = f"None -> {value}"
             setting = Setting(key=key, value=value)
@@ -278,25 +366,7 @@ def update_teacher(teacher_id: str):
         if email != teacher.email and Teacher.query.filter_by(email=email).first():
             return jsonify({"error": "A teacher with this email already exists"}), 409
         teacher.email = email
-    if "password" in data and data["password"].strip():
-        password = data["password"].strip()
-        if len(password) < 8:
-            return jsonify({"error": "Password must be at least 8 characters"}), 400
-            
-        simple_sequences = ["12345678", "abcdefgh", "123456789", "qwertyui", "password"]
-        if any(seq in password.lower() for seq in simple_sequences):
-            return jsonify({"error": "Password cannot be a simple sequence or common word"}), 400
-            
-        full_name = data.get("full_name", teacher.full_name)
-        name_parts = [p.lower() for p in full_name.split() if len(p) > 2]
-        if any(part in password.lower() for part in name_parts):
-            return jsonify({"error": "Password cannot contain parts of your name"}), 400
-            
-        reg_no = data.get("reg_no", teacher.reg_no)
-        if reg_no and reg_no.strip().lower() in password.lower():
-            return jsonify({"error": "Password cannot contain your Registration Number"}), 400
-            
-        teacher.password_hash = bcrypt.generate_password_hash(password).decode("utf-8")
+
     if "is_active" in data:
         teacher.is_active = bool(data["is_active"])
     if "face_encoding" in data:
@@ -632,6 +702,25 @@ def get_alerts():
             "timestamp": datetime.now(timezone.utc).isoformat()
         })
 
+    # 4. Spoof Detection (Liveness failures today)
+    spoofs = AttendanceLog.query.filter(
+        AttendanceLog.status == 'failure',
+        AttendanceLog.failure_stage == 'liveness',
+        AttendanceLog.timestamp >= today_start
+    ).all()
+
+    for s in spoofs:
+        alerts.append({
+            "id": f"spoof_{s.id}",
+            "type": "spoof_detected",
+            "title": "Spoofing Attempt Detected",
+            "description": f"Teacher {s.teacher.full_name if s.teacher else 'Unknown'} failed liveness check: {s.reason}",
+            "teacher_id": s.teacher_id,
+            "teacher_name": s.teacher.full_name if s.teacher else 'Unknown',
+            "timestamp": s.timestamp.isoformat(),
+            "log_id": s.id
+        })
+
     # Sort alerts by timestamp desc
     alerts.sort(key=lambda x: x['timestamp'], reverse=True)
     
@@ -654,6 +743,40 @@ def resolve_alert():
         log = AttendanceLog.query.get(log_id)
         if log:
             log.attendance_mark = action # 'present', 'absent', 'half_day'
+            
+            # Find checkout log for the same day and cascade resolution
+            from datetime import timezone, datetime
+            today_start = log.timestamp.replace(hour=0, minute=0, second=0, microsecond=0)
+            today_end = today_start.replace(hour=23, minute=59, second=59)
+            
+            checkout_log = AttendanceLog.query.filter(
+                AttendanceLog.teacher_id == log.teacher_id,
+                AttendanceLog.action_type == 'check_out',
+                AttendanceLog.status == 'success',
+                AttendanceLog.timestamp >= today_start,
+                AttendanceLog.timestamp <= today_end
+            ).order_by(AttendanceLog.timestamp.desc()).first()
+            
+            if checkout_log:
+                if action == 'absent':
+                    checkout_log.attendance_mark = 'absent'
+                elif action == 'half_day':
+                    checkout_log.attendance_mark = 'half_day'
+                elif action == 'present':
+                    # Re-evaluate checkout time in case it was flagged
+                    from ..models import Setting
+                    settings_dict = Setting.get_all()
+                    rules = settings_dict.get("attendance_rules", {})
+                    half_day_checkout_limit = rules.get("half_day_checkout_limit", "")
+                    anytime_checkout_full_day = rules.get("anytime_checkout_full_day", False)
+                    
+                    co_time_str = checkout_log.timestamp.strftime("%H:%M")
+                    
+                    if not anytime_checkout_full_day and half_day_checkout_limit and co_time_str < half_day_checkout_limit:
+                        checkout_log.attendance_mark = 'half_day'
+                    else:
+                        checkout_log.attendance_mark = 'present'
+                        
             db.session.commit()
             return jsonify({"message": f"Log marked as {action}"}), 200
             
@@ -682,9 +805,6 @@ def resolve_alert():
 
     elif alert_type == "unusual_activity" and teacher_id:
         if action == "dismiss":
-            # Just dismiss (no DB change needed if we just ignore it, but we could add an 'acknowledged' flag to failures)
-            # For now, just delete the failures for today to clear the alert, or better yet, mark them 'flagged'.
-            # Actually, easiest is just to delete the spam failures to clean the DB.
             from datetime import timezone, datetime
             today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
             AttendanceLog.query.filter(
@@ -694,6 +814,15 @@ def resolve_alert():
             ).delete()
             db.session.commit()
             return jsonify({"message": "Unusual activity alerts dismissed (spam cleared)."}), 200
+
+    elif alert_type == "spoof_detected" and log_id:
+        if action == "dismiss":
+            log = AttendanceLog.query.get(log_id)
+            if log:
+                # Optionally, change the failure_stage so it doesn't show up again
+                log.failure_stage = "liveness_dismissed"
+                db.session.commit()
+                return jsonify({"message": "Spoof alert dismissed"}), 200
 
     return jsonify({"error": "Invalid resolution payload"}), 400
 

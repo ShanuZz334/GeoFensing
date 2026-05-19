@@ -1,69 +1,135 @@
 """
-GeoFace Faculty Authentication System - Liveness Detection Service
+GeoFace Faculty Authentication System - Passive Liveness Detection Service
 
-Implements anti-spoofing checks using facial landmarks from InsightFace.
-InsightFace provides 5 keypoints: left_eye, right_eye, nose, left_mouth, right_mouth.
+Implements anti-spoofing using MiniFASNetV2 via ONNX Runtime.
 """
 
 from __future__ import annotations
 
-import math
+import logging
+import os
+import statistics
 from typing import List, Optional, Tuple, Dict
+import cv2
+import numpy as np
 
-def check_head_movement_sequence(all_landmarks: List[Optional[Dict[str, List[Tuple[int, int]]]]]) -> Tuple[bool, str]:
+logger = logging.getLogger(__name__)
+
+# Try to initialize the ONNX session
+onnx_session = None
+try:
+    import onnxruntime as ort
+    model_path = "/app/models/MiniFASNetV2.onnx"
+    if os.path.exists(model_path):
+        onnx_session = ort.InferenceSession(model_path, providers=['CPUExecutionProvider'])
+        logger.info("Successfully loaded MiniFASNetV2 anti-spoofing model.")
+    else:
+        logger.error(f"Anti-spoofing model not found at {model_path}")
+except ImportError:
+    logger.error("onnxruntime is not installed. Passive liveness will fail.")
+except Exception as e:
+    logger.error(f"Failed to load anti-spoofing model: {e}")
+
+
+def get_crop(image: np.ndarray, bbox: List[float], scale: float = 2.7) -> Optional[np.ndarray]:
     """
-    Enforce strict head movement sequence: Left -> Middle -> Right.
-    Uses horizontal distance ratio of the nose relative to the eyes.
+    Crop the face based on the bounding box, scaled out to capture context 
+    (crucial for spoof detection as it captures phone edges, paper edges, etc).
     """
-    valid_landmarks = [l for l in all_landmarks if l is not None]
-    if len(valid_landmarks) < 3:
-        return False, "Failed liveness check: Not enough valid face frames received."
-        
-    n = len(valid_landmarks)
-    part1 = valid_landmarks[:n//3]
-    part2 = valid_landmarks[n//3 : 2*n//3]
-    part3 = valid_landmarks[2*n//3:]
-    
-    def _get_ratio(l):
-        if 'left_eye' in l and 'right_eye' in l and 'nose_bridge' in l:
-            lx = l['left_eye'][0][0]
-            rx = l['right_eye'][0][0]
-            nx = l['nose_bridge'][0][0]
-            if rx != lx:
-                return (nx - lx) / (rx - lx)
+    try:
+        x1, y1, x2, y2 = bbox
+        w = x2 - x1
+        h = y2 - y1
+        cx, cy = x1 + w / 2, y1 + h / 2
+
+        # Scale the bounding box
+        new_w = w * scale
+        new_h = h * scale
+
+        # Calculate new crop coordinates
+        new_x1 = max(0, int(cx - new_w / 2))
+        new_y1 = max(0, int(cy - new_h / 2))
+        new_x2 = min(image.shape[1], int(cx + new_w / 2))
+        new_y2 = min(image.shape[0], int(cy + new_h / 2))
+
+        crop = image[new_y1:new_y2, new_x1:new_x2]
+        if crop.size == 0:
+            return None
+        return crop
+    except Exception as e:
+        logger.warning(f"Failed to crop face for liveness: {e}")
         return None
 
-    ratios_1 = [_get_ratio(l) for l in part1 if _get_ratio(l) is not None]
-    ratios_2 = [_get_ratio(l) for l in part2 if _get_ratio(l) is not None]
-    ratios_3 = [_get_ratio(l) for l in part3 if _get_ratio(l) is not None]
-
-    # Ratio > 0.52 means nose is closer to right eye (user is looking left)
-    looked_left = any(r > 0.52 for r in ratios_1)
-    
-    # Ratio ~ 0.5 means nose is centered (user is looking straight)
-    looked_middle = any(0.44 <= r <= 0.56 for r in ratios_2)
-    
-    # Ratio < 0.48 means nose is closer to left eye (user is looking right)
-    looked_right = any(r < 0.48 for r in ratios_3)
-    
-    if not looked_left:
-        return False, "Failed liveness check: Please turn your head LEFT when prompted."
-    if not looked_middle:
-        return False, "Failed liveness check: Please look STRAIGHT when prompted."
-    if not looked_right:
-        return False, "Failed liveness check: Please turn your head RIGHT when prompted."
-        
-    return True, "Liveness sequence verified"
-
-
 def run_liveness_checks(
-    all_landmarks: List[Optional[Dict[str, List[Tuple[int, int]]]]],
-    movement_threshold: int = 8,
+    images: List[Optional[np.ndarray]],
+    bboxes: List[Optional[List[float]]],
+    threshold: float = 0.85
 ) -> Tuple[bool, str]:
     """
-    Run the strict sequential head movement liveness check.
-    Note: For production, active blinking is replaced by pose estimation
-    since InsightFace provides 5 landmarks (not enough for EAR blink detection).
+    Run the passive liveness check on the provided frames using MiniFASNetV2.
     """
-    # Bypass sequential checks for isolated stable recognition frames
-    return True, "Liveness sequence verified"
+    if onnx_session is None:
+        logger.error("ONNX Anti-spoofing model is not initialized — rejecting submission.")
+        # Fail CLOSED: never let a submission through if the liveness model
+        # is unavailable. This prevents spoofing attacks in a degraded state.
+        return False, "Liveness check unavailable (system error). Please try again or contact support."
+
+    valid_frames_tested = 0
+    real_scores = []
+
+    for img, bbox in zip(images, bboxes):
+        if img is None or bbox is None:
+            continue
+
+        crop = get_crop(img, bbox)
+        if crop is None:
+            continue
+
+        try:
+            # Preprocess the image for MiniFASNet
+            # Model expects 80x80 input
+            resized = cv2.resize(crop, (80, 80))
+            
+            # Convert HWC to CHW (Channel, Height, Width)
+            blob = np.transpose(resized, (2, 0, 1))
+            
+            # Add batch dimension (1, 3, 80, 80)
+            blob = np.expand_dims(blob, axis=0).astype(np.float32)
+
+            # Run inference
+            input_name = onnx_session.get_inputs()[0].name
+            out = onnx_session.run(None, {input_name: blob})
+            
+            # Output is shape (1, 3)
+            logits = out[0][0]
+            
+            # Softmax to get probabilities
+            exp_logits = np.exp(logits - np.max(logits))
+            probs = exp_logits / np.sum(exp_logits)
+            
+            # Class 1 is 'Real'
+            real_prob = probs[1]
+            real_scores.append(real_prob)
+            valid_frames_tested += 1
+
+        except Exception as e:
+            logger.error(f"Liveness inference failed: {e}")
+            continue
+
+    if valid_frames_tested == 0:
+        return False, "Failed liveness check: Could not extract face from any frames."
+
+    # Use MEDIAN real score — much harder to spoof than max() because a single
+    # high-confidence frame can no longer override many spoof-scored frames.
+    median_real_score = statistics.median(real_scores)
+
+    logger.info(
+        "Liveness Check — Frames Tested: %d, Median Real: %.4f, Max: %.4f, Min: %.4f",
+        valid_frames_tested, median_real_score, max(real_scores), min(real_scores)
+    )
+
+    liveness_threshold = 0.80  # Stricter — was effectively max-based 0.85
+    if median_real_score >= liveness_threshold:
+        return True, "Liveness verified"
+    else:
+        return False, f"Failed liveness check: Spoof detected (confidence: {(1 - median_real_score)*100:.1f}%)"

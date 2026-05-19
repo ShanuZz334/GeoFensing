@@ -42,6 +42,7 @@ def process_frames(
     List[Optional[np.ndarray]],
     List[Optional[List[float]]],
     List[Optional[Dict[str, List[Tuple[int, int]]]]],
+    List[Optional[List[float]]],
     int,
 ]:
     """
@@ -52,11 +53,12 @@ def process_frames(
     images: List[Optional[np.ndarray]] = []
     encodings_seq: List[Optional[List[float]]] = []
     landmarks_seq: List[Optional[Dict[str, List[Tuple[int, int]]]]] = []
+    bboxes_seq: List[Optional[List[float]]] = []
     face_count = 0
 
     if face_app is None:
         logger.error("FaceAnalysis app is not initialized.")
-        return [], [], [], 0
+        return [], [], [], [], 0
 
     for b64 in frames:
         image = decode_frame(b64)
@@ -64,6 +66,7 @@ def process_frames(
             images.append(None)
             encodings_seq.append(None)
             landmarks_seq.append(None)
+            bboxes_seq.append(None)
             continue
 
         images.append(image)
@@ -75,11 +78,25 @@ def process_frames(
             if not faces:
                 encodings_seq.append(None)
                 landmarks_seq.append(None)
+                bboxes_seq.append(None)
                 continue
 
-            # We only care about the first face for authentication
-            face_count += 1
+            # We only care about the first face for authentication.
+            # Require a minimum detection confidence score to reject partial
+            # faces (foreheads, side profiles, blurry detections).
             face = faces[0]
+            det_score = float(face.det_score) if face.det_score is not None else 0.0
+            if det_score < 0.70:
+                logger.debug(
+                    "Frame rejected: det_score %.3f < 0.70 (partial/low-quality face)",
+                    det_score
+                )
+                encodings_seq.append(None)
+                landmarks_seq.append(None)
+                bboxes_seq.append(None)
+                continue
+
+            face_count += 1
             
             # Get 512-d encodings
             if face.embedding is not None:
@@ -101,17 +118,23 @@ def process_frames(
             else:
                 landmarks_seq.append(None)
 
+            if face.bbox is not None:
+                bboxes_seq.append(face.bbox.tolist())
+            else:
+                bboxes_seq.append(None)
+
         except Exception as exc:
             logger.error("InsightFace processing failed: %s", exc)
             encodings_seq.append(None)
             landmarks_seq.append(None)
+            bboxes_seq.append(None)
 
-    return images, encodings_seq, landmarks_seq, face_count
+    return images, encodings_seq, landmarks_seq, bboxes_seq, face_count
 
 def compare_encodings(
     encodings: List[Optional[List[float]]],
     expected_teacher_encoding: List[float],
-    threshold: float = 1.2,
+    threshold: float = 0.70,
 ) -> Tuple[bool, float]:
     """
     Check if the expected teacher encoding matches any of the frame encodings.

@@ -21,6 +21,7 @@ class Admin(db.Model):
     name = db.Column(db.String(200), nullable=False)
     reg_no = db.Column(db.String(100), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(255), nullable=False)
+    profile_pic = db.Column(db.Text, nullable=True)
     is_head_admin = db.Column(db.Boolean, default=False, nullable=False)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
@@ -30,6 +31,7 @@ class Admin(db.Model):
             "id": self.id,
             "name": self.name,
             "reg_no": self.reg_no,
+            "profile_pic": self.profile_pic,
             "is_head_admin": self.is_head_admin,
             "is_active": self.is_active,
             "created_at": self.created_at.isoformat(),

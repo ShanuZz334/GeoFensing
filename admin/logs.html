@@ -4,93 +4,372 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoFace Admin â€” Attendance Logs</title>
-  <link rel="stylesheet" href="css/styles.css?v=1.2.1" />
+  <link rel="stylesheet" href="css/styles.css?v=1027" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
   <style>
-    /* Make date picker calendar icon visible on dark background */
-    input[type="date"].date-input::-webkit-calendar-picker-indicator {
-      filter: invert(1) brightness(0.7);
-      cursor: pointer;
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
     }
-    input[type="date"].date-input {
+    /* Premium Filter Bar Elements alignment & sizing */
+    .filter-bar .filter-input,
+    .filter-bar .uiverse-selected,
+    .filter-bar .btn-secondary,
+    .filter-date-range {
+      height: 38px !important;
+      box-sizing: border-box;
+    }
+
+    .filter-bar .uiverse-select {
+      min-width: auto !important;
+    }
+    
+    .filter-bar .uiverse-selected {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+
+    /* Cohesive premium translucent design system for inputs */
+    .filter-bar .filter-input,
+    .filter-bar .uiverse-selected {
+      border: 1px solid rgba(124, 58, 237, 0.25) !important;
+      background: rgba(124, 58, 237, 0.04) !important;
+      color: var(--text) !important;
+      border-radius: var(--radius-sm) !important;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition) !important;
+    }
+    
+    .filter-bar .filter-input:hover,
+    .filter-bar .uiverse-selected:hover {
+      border-color: rgba(124, 58, 237, 0.55) !important;
+      background: rgba(124, 58, 237, 0.06) !important;
+    }
+    
+    .filter-bar .filter-input:focus,
+    .filter-bar .uiverse-select.open > .uiverse-selected {
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15) !important;
+      background: rgba(124, 58, 237, 0.08) !important;
+      outline: none;
+    }
+
+    /* Chevron arrow micro-interaction */
+    .filter-bar .uiverse-select:hover .uiverse-arrow {
+      fill: var(--primary) !important;
+    }
+
+    /* Magnifying Glass Search SVG input wrapping */
+    .search-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 180px;
+    }
+    .search-wrapper svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+      transition: color var(--transition);
+    }
+    .search-wrapper:focus-within svg {
+      color: var(--primary);
+    }
+    .search-wrapper .filter-input {
+      width: 100%;
+      padding-left: 34px !important;
+    }
+    
+    /* Clean outline primary-tinted buttons with red-glow reset buttons */
+    .filter-bar .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      font-weight: 600;
+      font-size: 13px;
+      height: 38px !important;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    
+    .filter-bar .btn-secondary:hover {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #ef4444; /* Soft red on hover for clearing */
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+    }
+
+    /* Unified Premium Date Range Picker */
+    .filter-date-range {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      border: 1px solid rgba(124, 58, 237, 0.3);
+      border-radius: var(--radius-sm);
+      background: rgba(124, 58, 237, 0.04);
+      padding: 0 14px;
+      height: 38px !important;
+      box-sizing: border-box;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition);
+    }
+    .filter-date-range:hover {
+      border-color: rgba(124, 58, 237, 0.6);
+      background: rgba(124, 58, 237, 0.06);
+    }
+    .filter-date-range:focus-within {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15);
+      background: rgba(124, 58, 237, 0.08);
+    }
+    .filter-date-range span {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #a78bfa; /* Light purple */
+      font-weight: 600;
+      user-select: none;
+    }
+    .filter-date-range input[type="date"] {
+      border: none !important;
+      background: transparent !important;
+      color: var(--text) !important;
+      font-size: 13px;
+      outline: none;
+      font-family: inherit;
+      padding: 0;
+      height: 100%;
+      cursor: pointer;
       color-scheme: dark;
+      width: 120px;
+    }
+    .filter-date-range input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(1) brightness(0.8) sepia(1) saturate(5) hue-rotate(220deg); /* Purple-tinted calendar icon */
+      cursor: pointer;
+      margin-left: 4px;
+    }
+
+    /* Set proportional column widths to balance the table grid perfectly */
+    .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 18%; } /* Teacher */
+    .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 10%; } /* Reg No */
+    .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 12%; } /* Action */
+    .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 18%; } /* Timestamp */
+    .data-table th:nth-child(5), .data-table td:nth-child(5) { width: 12%; } /* Status */
+    .data-table th:nth-child(6), .data-table td:nth-child(6) { width: 20%; } /* Reason */
+    .data-table th:nth-child(7), .data-table td:nth-child(7) { width: 15%; } /* Location */
+    .data-table th:nth-child(8), .data-table td:nth-child(8) { width: 5%; text-align: center; } /* Frames */
+
+    /* Premium Capsule Pill Badges */
+    .data-table .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 100px; /* Pill style */
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    
+    .data-table .badge--success {
+      background: rgba(16, 185, 129, 0.08) !important;
+      border: 1px solid rgba(16, 185, 129, 0.15) !important;
+      color: #10b981 !important;
+    }
+    
+    .data-table .badge--failure,
+    .data-table .badge--error {
+      background: rgba(239, 68, 68, 0.08) !important;
+      border: 1px solid rgba(239, 68, 68, 0.15) !important;
+      color: #ef4444 !important;
+    }
+    
+    .data-table .badge--warning {
+      background: rgba(245, 158, 11, 0.08) !important;
+      border: 1px solid rgba(245, 158, 11, 0.15) !important;
+      color: #f59e0b !important;
+    }
+    
+    .data-table .badge--flagged {
+      background: rgba(250, 204, 21, 0.08) !important;
+      border: 1px solid rgba(250, 204, 21, 0.15) !important;
+      color: #facc15 !important;
+    }
+    
+    .data-table .badge--check_in {
+      background: rgba(139, 92, 246, 0.08) !important;
+      border: 1px solid rgba(139, 92, 246, 0.15) !important;
+      color: #a78bfa !important;
+    }
+    
+    .data-table .badge--check_out {
+      background: rgba(168, 85, 247, 0.08) !important;
+      border: 1px solid rgba(168, 85, 247, 0.15) !important;
+      color: #c084fc !important;
+    }
+    
+    .data-table .badge--absent {
+      background: rgba(239, 68, 68, 0.08) !important;
+      border: 1px solid rgba(239, 68, 68, 0.15) !important;
+      color: #ef4444 !important;
+    }
+
+    /* Elegant Monospace Coordinate Badge */
+    .coord-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(124, 58, 237, 0.04);
+      border: 1px solid rgba(124, 58, 237, 0.12);
+      padding: 4px 8px;
+      border-radius: 6px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 500;
+      transition: border-color 0.2s ease, background-color 0.2s ease;
+    }
+
+    .coord-badge:hover {
+      border-color: rgba(124, 58, 237, 0.3);
+      background: rgba(124, 58, 237, 0.08);
+    }
+
+    /* Row Hover Transition */
+    .data-table tr.log-row {
+      transition: background-color 0.2s ease;
+    }
+
+    /* Muted reason text for success, crimson for failure */
+    .data-table td.reason-cell {
+      max-width: 260px;
+      white-space: normal;
+      font-size: 13px;
+      line-height: 1.45;
     }
   </style>
 </head>
 <body>
-  <aside class="sidebar" id="sidebar">
-    <div class="sidebar-logo">
-      <div class="logo-icon">
-        <img src="images/logo.png?v=6" alt="GeoFace Logo">
+    <!-- -- Navbar ------------------------------------------------------- -->
+  <nav class="navbar" id="navbar">
+    <div class="navbar-left">
+      <div class="navbar-logo">
+        <div class="logo-icon">
+          <img src="images/logo.png?v=6" alt="GeoFace Logo">
+        </div>
+        <span>Geo<span class="face-text">Face</span></span>
       </div>
-      <span>Geo<span class="face-text">Face</span></span>
+      <div class="navbar-nav">
+        <a href="index.html" class="nav-item" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+          Dashboard
+        </a>
+        <a href="teachers.html" class="nav-item" id="nav-teachers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          Teachers
+        </a>
+        <a href="logs.html" class="nav-item active" id="nav-logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+          Scans
+        </a>
+        <a href="audit.html" class="nav-item" id="nav-audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          Reports
+        </a>
+        <a href="map.html" class="nav-item" id="nav-map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/></svg>
+          Map
+        </a>
+        <a href="settings.html" class="nav-item" id="nav-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </a>
+      </div>
     </div>
-    <nav class="sidebar-nav">
-      <a href="index.html" class="nav-item" id="nav-dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/>
-        </svg>
-        Dashboard
-      </a>
-      <a href="alerts.html" class="nav-item" id="nav-alerts">
+    
+    <div class="navbar-right">
+      <div class="nav-bell" onclick="window.location.href='alerts.html'">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
         </svg>
-        <span style="flex-grow: 1;">Alert Center</span>
-        <span id="sidebar-alert-badge" style="display:none; background:var(--error, #ef4444); color:white; font-size:11px; font-weight:bold; height:20px; min-width:20px; border-radius:10px; align-items:center; justify-content:center; padding:0 6px;">0</span>
-      </a>
-      <a href="teachers.html" class="nav-item" id="nav-teachers">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/>
-        </svg>
-        Teachers
-      </a>
-      <a href="logs.html" class="nav-item active" id="nav-logs">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
-        </svg>
-        Attendance Logs
-      </a>
-      <a href="map.html" class="nav-item" id="nav-map">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/>
-        </svg>
-        Geofence Map
-      </a>
-      <a href="admins.html" class="nav-item" id="nav-admins">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>
-        Manage Admins
-      </a>
-      <a href="audit.html" class="nav-item" id="nav-audit">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
-        Audit Logs
-      </a>
-      <a href="settings.html" class="nav-item" id="nav-settings">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
-          <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
-        </svg>
-        Settings
-      </a>
-    </nav>
-    <div class="sidebar-footer">
-      <button class="btn-signout" onclick="adminSignOut()">Sign Out</button>
+        <span class="nav-bell-badge" id="navbar-alert-badge" style="display:none;">0</span>
+      </div>
+      
+      <div class="nav-profile">
+        <img src="images/default-avatar.svg" alt="Admin" class="nav-profile-pic" id="nav-profile-pic" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'12\' cy=\'7\' r=\'4\'/%3E%3C/svg%3E'">
+        <div class="nav-profile-info">
+          <span class="nav-profile-name" id="nav-profile-name">Admin</span>
+          <span class="nav-profile-role" id="nav-profile-role">Administrator</span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        
+        <div class="nav-dropdown">
+          <a href="admins.html" class="nav-dropdown-item" id="nav-manage-admins" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>
+            Manage Admins
+          </a>
+          <div class="nav-dropdown-divider" id="nav-manage-admins-divider" style="display:none;"></div>
+          <a href="#" class="nav-dropdown-item" onclick="adminSignOut()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+            Sign Out
+          </a>
+        </div>
+      </div>
     </div>
-  </aside>
+  </nav>
 
   <main class="main-content">
-    <header class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
+    <!-- Prevent Chrome/Edge Autofill on Search Inputs -->
+    <input type="text" name="chrome_prevent_autofill_username" style="position: absolute; top: -9999px; left: -9999px; opacity: 0; width: 0; height: 0;" tabindex="-1" aria-hidden="true" />
+    <input type="password" name="chrome_prevent_autofill_password" style="position: absolute; top: -9999px; left: -9999px; opacity: 0; width: 0; height: 0;" tabindex="-1" aria-hidden="true" />
+
+    <header class="page-header" style="margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
       <div>
-        <h1 class="page-title">Attendance Logs</h1>
-        <p class="page-subtitle">All verification attempts <span style="font-size:10px; color:var(--primary); font-weight:bold; vertical-align:middle; margin-left:8px; background:rgba(37,99,235,0.1); padding:2px 6px; border-radius:4px;">SYSTEM V1.2.1</span></p>
+        <h1 class="page-title" style="font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #c084fc 0%, #6366f1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">Attendance Scans</h1>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Real-time biometric validation logs, geo-coordinates, and audit histories.</p>
       </div>
-      <button class="btn-primary" onclick="downloadCSV()">Download CSV</button>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <button class="btn-secondary" onclick="loadLogs()" style="display: inline-flex; align-items: center; gap: 8px; height: 38px; padding: 0 16px; border-radius: var(--radius-sm); font-weight: 600; margin: 0;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px;"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+          Refresh
+        </button>
+        <button class="btn-primary" onclick="downloadCSV()" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 16px; border-radius: var(--radius-sm); font-weight: 600; margin: 0;">
+          Download CSV
+        </button>
+      </div>
     </header>
 
     <!-- Filters -->
     <div class="filter-bar" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center;">
-      <input type="text" id="filter-reg-no" name="reg_no_unique_search" class="filter-input" placeholder="Search Reg No..." style="width:150px" oninput="debounceApplyFilters()" autocomplete="new-password" />
+      <div class="search-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="filter-reg-no" name="reg_no_unique_search" class="filter-input" placeholder="Search Reg No..." oninput="debounceApplyFilters()" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');" />
+      </div>
       <div class="uiverse-select filter-select-custom" id="filter-status" style="width:150px">
         <div class="uiverse-selected">
           <span class="uiverse-selected-text">All statuses</span>
@@ -126,15 +405,11 @@
           <div title="Teacher (Z-A)"><input id="fso-tdesc" value="teacher_name_desc" name="filter-sort" type="radio" onchange="applyFilters()"><label class="uiverse-option" for="fso-tdesc" data-txt="Teacher (Z-A)">Teacher (Z-A)</label></div>
         </div>
       </div>
-      <div style="display:flex; align-items:center; gap:10px; border: 1px solid rgba(124, 58, 237, 0.4); padding: 4px 10px; border-radius: var(--radius-sm); background: rgba(124, 58, 237, 0.05);">
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">From</span>
-          <input type="date" id="filter-date-from" class="filter-input date-input" onchange="applyFilters()" />
-        </div>
-        <div style="display:flex;align-items:center;gap:6px;">
-          <span style="font-size:12px;color:var(--text-muted);white-space:nowrap;">To</span>
-          <input type="date" id="filter-date-to" class="filter-input date-input" onchange="applyFilters()" />
-        </div>
+      <div class="filter-date-range">
+        <span>From</span>
+        <input type="date" id="filter-date-from" onchange="applyFilters()" />
+        <span>To</span>
+        <input type="date" id="filter-date-to" onchange="applyFilters()" />
       </div>
       
       <!-- Sacrificial inputs to trap browser autofill -->
@@ -201,8 +476,8 @@
   }
   </script>
 
-  <script src="js/api.js?v=1.2.1"></script>
-  <script src="js/app.js?v=1.2.1"></script>
+  <script src="js/api.js?v=1027"></script>
+  <script src="js/app.js?v=1027"></script>
   <script>
     let currentPage = 1;
     let filterTimeout;
@@ -260,8 +535,18 @@
       }
       tbody.innerHTML = validLogs.map(log => {
         const isFlagged = log.attendance_mark === 'flagged';
-        const rowStyle = isFlagged ? 'cursor: pointer; color: #facc15;' : 'cursor: pointer;';
-        const nameDisplay = isFlagged ? `<span style="color:#facc15">${escHtml(log.teacher_name || 'Null')}</span>` : escHtml(log.teacher_name || 'Null');
+        const rowStyle = 'cursor: pointer;';
+        
+        // Premium avatar displays with fallback
+        const avatarUrl = log.profile_pic ? (log.profile_pic.startsWith('data:') ? log.profile_pic : 'data:image/jpeg;base64,' + log.profile_pic) : 'images/default-avatar.svg';
+        const nameDisplay = `
+          <div style="display:flex; align-items:center; gap:10px;">
+            <img src="${avatarUrl}" alt="${escHtml(log.teacher_name || 'Teacher')}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; background:var(--surface-2); border:1px solid rgba(124, 58, 237, 0.2);" onerror="this.src='images/default-avatar.svg'" />
+            <div style="display:flex; flex-direction:column; gap:1px;">
+              <strong style="${isFlagged ? 'color:#facc15' : ''}">${escHtml(log.teacher_name || 'Null')}</strong>
+            </div>
+          </div>
+        `;
 
         let statusBadge;
         if (isFlagged) {
@@ -286,16 +571,35 @@
           }
         }
 
+        // Location item with Map Pin SVG inside premium monospace coord-badge
+        const locationDisplay = log.latitude 
+          ? `<div class="coord-badge">
+               <svg style="width:12px; height:12px; color:var(--primary); opacity:0.85;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+               <span>${log.latitude.toFixed(4)}, ${log.longitude.toFixed(4)}</span>
+             </div>`
+          : '<span style="color:var(--text-muted)">Null</span>';
+
+        // Frames badge with Image SVG (pill style)
+        const framesDisplay = log.frames_count !== null && log.frames_count !== undefined
+          ? `<div class="badge" style="background: rgba(124, 58, 237, 0.08) !important; border: 1px solid rgba(124, 58, 237, 0.15) !important; color: #a78bfa !important; gap:5px; padding: 4px 10px;">
+               <svg style="width:11px; height:11px; color:#a78bfa; opacity:0.85;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+               <span>${log.frames_count}</span>
+             </div>`
+          : '<span style="color:var(--text-muted)">Null</span>';
+
+        // Conditional styling for reason cell text
+        const reasonColor = log.status === 'success' ? 'var(--text-muted)' : 'rgba(239, 68, 68, 0.85)';
+
         return `
         <tr style="${rowStyle}" onclick="handleRowClick(event, '${log.id}', ${isFlagged})" class="log-row">
-          <td><strong>${nameDisplay}</strong></td>
+          <td>${nameDisplay}</td>
           <td style="${isFlagged ? '' : 'color:var(--text-muted);'}font-weight:500">${escHtml(log.reg_no || 'Null')}</td>
           <td>${log.action_type ? `<span class="badge badge--${log.action_type}">${log.action_type === 'check_in' ? 'Check In' : log.action_type === 'check_out' ? 'Check Out' : log.action_type.replace(/_/g, ' ')}</span>` : 'Null'}</td>
-          <td>${formatDt(log.timestamp)}</td>
+          <td style="color: var(--text-muted); font-weight: 500;">${formatDt(log.timestamp)}</td>
           <td>${statusBadge}</td>
-          <td style="max-width:220px;white-space:normal">${escHtml(log.reason)}</td>
-          <td style="font-size:12px">${log.latitude ? log.latitude.toFixed(4) + ', ' + log.longitude.toFixed(4) : 'Null'}</td>
-          <td style="text-align:center">${log.frames_count ?? 'Null'}</td>
+          <td class="reason-cell" style="color: ${reasonColor}">${escHtml(log.reason)}</td>
+          <td>${locationDisplay}</td>
+          <td style="text-align:center">${framesDisplay}</td>
         </tr>
       `}).join('');
     }

@@ -33,6 +33,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
 
   String? _errorText;
   bool _isLoading = false;
+  bool _showForgotPassword = false;
 
   @override
   void initState() {
@@ -59,6 +60,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   void _toggleFlip() {
     setState(() {
       _errorText = null;
+      _showForgotPassword = false;
     });
     if (_flipController.isCompleted) {
       _flipController.reverse();
@@ -73,6 +75,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     setState(() {
       _isLoading = true;
       _errorText = null;
+      _showForgotPassword = false;
     });
 
     final auth = context.read<AuthProvider>();
@@ -87,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       setState(() {
         _isLoading = false;
         _errorText = auth.errorMessage ?? 'Login failed. Please check your credentials.';
+        _showForgotPassword = true;
       });
     }
   }
@@ -130,6 +134,133 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showPasswordResetTerminal() {
+    final totpController = TextEditingController();
+    final newPasswordController = TextEditingController();
+    final confirmController = TextEditingController();
+    bool isResetLoading = false;
+    String? resetError;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+              child: Container(
+                padding: const EdgeInsets.all(24),
+                decoration: const BoxDecoration(
+                  color: Color(0xFF1E1E1E),
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const Text(
+                      'Reset Password',
+                      style: TextStyle(
+                        fontSize: 25,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Provide the 6-digit Admin TOTP and your new password.',
+                      style: TextStyle(color: Colors.white70, fontSize: 13),
+                    ),
+                    const SizedBox(height: 30),
+                    if (resetError != null) ...[
+                      Text(resetError!, style: const TextStyle(color: Colors.redAccent, fontSize: 13)),
+                      const SizedBox(height: 12),
+                    ],
+                    _buildNeuInput(
+                      child: TextField(
+                        controller: totpController,
+                        style: const TextStyle(color: Colors.white),
+                        keyboardType: TextInputType.number,
+                        decoration: _neuInputDecoration('Admin TOTP (6 digits)', null),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildNeuInput(
+                      child: TextField(
+                        controller: newPasswordController,
+                        obscureText: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _neuInputDecoration('New Password', null),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildNeuInput(
+                      child: TextField(
+                        controller: confirmController,
+                        obscureText: true,
+                        style: const TextStyle(color: Colors.white),
+                        decoration: _neuInputDecoration('Confirm Password', null),
+                      ),
+                    ),
+                    const SizedBox(height: 30),
+                    _buildNeuButton(
+                      text: 'Execute Reset',
+                      isLoadingOverride: isResetLoading,
+                      onPressed: () async {
+                        final totp = totpController.text.trim();
+                        final pass = newPasswordController.text;
+                        final conf = confirmController.text;
+                        
+                        if (totp.isEmpty || pass.isEmpty || conf.isEmpty) {
+                          setModalState(() => resetError = 'All fields are required.');
+                          return;
+                        }
+                        if (pass != conf) {
+                          setModalState(() => resetError = 'Passwords do not match.');
+                          return;
+                        }
+                        if (pass.length < 8) {
+                          setModalState(() => resetError = 'Password must be at least 8 characters.');
+                          return;
+                        }
+
+                        setModalState(() {
+                          isResetLoading = true;
+                          resetError = null;
+                        });
+
+                        final auth = context.read<AuthProvider>();
+                        final success = await auth.resetPassword(_loginRegNoController.text, totp, pass);
+
+                        if (success && mounted) {
+                          Navigator.pop(context); // Close sheet
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Password Reset Successfully!'), backgroundColor: Colors.green),
+                          );
+                          setState(() {
+                            _showForgotPassword = false;
+                            _loginPasswordController.clear();
+                          });
+                        } else {
+                          setModalState(() {
+                            isResetLoading = false;
+                            resetError = auth.errorMessage ?? 'Reset failed.';
+                          });
+                        }
+                      },
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   // Neumorphic Input Decoration
@@ -180,9 +311,10 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
   }
 
   // Neumorphic Button
-  Widget _buildNeuButton({required String text, required VoidCallback onPressed}) {
+  Widget _buildNeuButton({required String text, required VoidCallback onPressed, bool? isLoadingOverride}) {
+    final isLoading = isLoadingOverride ?? _isLoading;
     return GestureDetector(
-      onTap: _isLoading ? null : onPressed,
+      onTap: isLoading ? null : onPressed,
       child: Container(
         width: double.infinity,
         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -204,7 +336,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           ],
         ),
         child: Center(
-          child: _isLoading 
+          child: isLoading 
             ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF9F00FF)))
             : Text(
                 text,
@@ -257,6 +389,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
               child: TextFormField(
                 controller: _loginPasswordController,
                 obscureText: _isLoginObscured,
+                onChanged: (_) {
+                  if (_showForgotPassword) setState(() => _showForgotPassword = false);
+                },
                 style: const TextStyle(color: Colors.white),
                 decoration: _neuInputDecoration(
                   'Password',
@@ -272,7 +407,25 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                 validator: (v) => (v == null || v.trim().isEmpty) ? 'Required' : null,
               ),
             ),
-            const SizedBox(height: 30),
+            if (_showForgotPassword)
+              Padding(
+                padding: const EdgeInsets.only(top: 12),
+                child: Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _showPasswordResetTerminal,
+                    child: const Text(
+                      'Forgot Password?',
+                      style: TextStyle(
+                        color: AppTheme.primary,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ).animate().fadeIn(duration: 300.ms),
+                  ),
+                ),
+              ),
+            SizedBox(height: _showForgotPassword ? 20 : 30),
             _buildNeuButton(text: 'Login', onPressed: _submitLogin),
             const SizedBox(height: 24),
             Row(

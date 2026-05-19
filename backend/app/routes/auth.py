@@ -57,6 +57,10 @@ def login():
 
     reg_no = data["reg_no"].strip()
     password = data["password"]
+    device_id = data.get("device_id")
+
+    if not device_id:
+        return jsonify({"error": "Device ID is required for login"}), 400
 
     # Look up teacher
     teacher = Teacher.query.filter_by(reg_no=reg_no, is_active=True).first()
@@ -68,6 +72,17 @@ def login():
     if not bcrypt.check_password_hash(teacher.password_hash, password):
         return jsonify({"error": "Invalid credentials"}), 401
 
+    # Check Single-Device Lock
+    from .. import extensions
+    if extensions.redis_client:
+        active_device_key = f"active_device:{teacher.teacher_id}"
+        active_device = extensions.redis_client.get(active_device_key)
+        if active_device and active_device.decode("utf-8") != device_id:
+            return jsonify({"error": "You are currently logged in on another device. Please log out there first."}), 403
+        
+        # Lock device for 5 hours (18000 seconds)
+        extensions.redis_client.setex(active_device_key, 18000, device_id)
+
     # Issue JWT — identity = teacher_id
     access_token = create_access_token(identity=teacher.teacher_id)
 
@@ -78,6 +93,68 @@ def login():
             "teacher": teacher.to_dict(),
         }
     ), 200
+
+@auth_bp.route("/logout", methods=["POST"])
+@jwt_required()
+def logout():
+    """POST /logout — clears device lock."""
+    teacher_id = get_jwt_identity()
+    from .. import extensions
+    if extensions.redis_client:
+        extensions.redis_client.delete(f"active_device:{teacher_id}")
+    return jsonify({"message": "Logged out successfully"}), 200
+
+@auth_bp.route("/reset-password", methods=["POST"])
+def reset_password():
+    """
+    POST /reset-password
+    Expects: { "reg_no": "...", "totp": "...", "new_password": "..." }
+    """
+    data = request.get_json(silent=True) or {}
+    reg_no = data.get("reg_no", "").strip()
+    totp = data.get("totp", "").strip()
+    new_password = data.get("new_password", "").strip()
+
+    if not reg_no or not totp or not new_password:
+        return jsonify({"error": "Registration Number, TOTP, and New Password are required"}), 400
+
+    from .. import extensions
+    import logging
+    logger = logging.getLogger('flask.app')
+    
+    if not extensions.redis_client:
+        logger.error("Redis client is None in reset_password")
+        return jsonify({"error": "Internal server error: Redis not configured"}), 500
+
+    stored_totp = extensions.redis_client.get("admin_reset_totp")
+    logger.info(f"Retrieved stored_totp from Redis: {stored_totp}")
+    if not stored_totp:
+        return jsonify({"error": "TOTP has expired or was not generated. Please ask admin to generate a new one."}), 400
+
+    if stored_totp.decode("utf-8") != totp:
+        return jsonify({"error": "Invalid TOTP"}), 401
+
+    teacher = Teacher.query.filter_by(reg_no=reg_no, is_active=True).first()
+    if not teacher:
+        return jsonify({"error": "Teacher not found or inactive"}), 404
+
+    if len(new_password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
+
+    # Invalidate TOTP so it can't be reused
+    extensions.redis_client.delete("admin_reset_totp")
+
+    # Update password
+    teacher.password_hash = bcrypt.generate_password_hash(new_password).decode("utf-8")
+    
+    # Add to audit log
+    from ..models import AdminLog
+    log_entry = AdminLog(admin_reg_no="SYSTEM", action="PASSWORD RESET", details=f"Teacher {teacher.reg_no} reset password via TOTP")
+    db.session.add(log_entry)
+    
+    db.session.commit()
+
+    return jsonify({"message": "Password reset successfully. You can now login."}), 200
 
 @auth_bp.route("/complete_setup", methods=["PATCH"])
 @jwt_required()

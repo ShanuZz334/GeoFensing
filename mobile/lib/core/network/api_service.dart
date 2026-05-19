@@ -26,13 +26,52 @@ class ApiService {
   }
 
   /// POST /login
-  Future<ApiResponse> login(String regNo, String password) async {
+  Future<ApiResponse> login(String regNo, String password, String deviceId) async {
     try {
       final response = await http
           .post(
             Uri.parse('${ApiConstants.baseUrl}${ApiConstants.login}'),
             headers: _baseHeaders(),
-            body: jsonEncode({'reg_no': regNo, 'password': password}),
+            body: jsonEncode({'reg_no': regNo, 'password': password, 'device_id': deviceId}),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
+  /// POST /logout
+  Future<void> logout() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return;
+      await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/logout'),
+        headers: _baseHeaders(auth: true, token: token),
+      ).timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Ignore errors during logout (e.g. no connection)
+    }
+  }
+
+  /// POST /reset-password
+  Future<ApiResponse> resetPassword(String regNo, String totp, String newPassword) async {
+    try {
+      final response = await http
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/reset-password'),
+            headers: _baseHeaders(),
+            body: jsonEncode({
+              'reg_no': regNo,
+              'totp': totp,
+              'new_password': newPassword,
+            }),
           )
           .timeout(ApiConstants.connectTimeout);
 
@@ -52,6 +91,9 @@ class ApiService {
     required double latitude,
     required double longitude,
     required double timestamp,
+    double? demoLat,
+    double? demoLng,
+    double? demoRadius,
     bool bypassLimits = false,
   }) async {
     try {
@@ -65,6 +107,9 @@ class ApiService {
         'timestamp': timestamp,
       };
 
+      if (demoLat != null) body['demo_lat'] = demoLat;
+      if (demoLng != null) body['demo_lng'] = demoLng;
+      if (demoRadius != null) body['demo_radius'] = demoRadius;
       if (bypassLimits) body['bypass_limits'] = true;
 
       final response = await http

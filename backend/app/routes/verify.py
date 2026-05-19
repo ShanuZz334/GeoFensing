@@ -44,6 +44,28 @@ def _write_log(
     bypass_limits: bool = False,
 ) -> None:
     """Persist an attendance log record."""
+    from ..models import Setting
+    settings_dict = Setting.get_all()
+    demo_mode = settings_dict.get("demo_mode", False) is True
+
+    if demo_mode:
+        logger.info(f"Demo mode active: skipping DB save for {teacher_id}")
+        if redis_client and action_type in ['check_in', 'check_out']:
+            try:
+                if status == "success":
+                    redis_client.setex(f"demo_action:{teacher_id}", 43200, action_type)
+                    redis_client.delete(f"demo_failures:check_in:{teacher_id}")
+                    redis_client.delete(f"demo_failures:check_out:{teacher_id}")
+                    logger.info(f"Demo mode Redis: success, set demo_action:{teacher_id} = {action_type}")
+                else:
+                    failures_key = f"demo_failures:{action_type}:{teacher_id}"
+                    redis_client.incr(failures_key)
+                    redis_client.expire(failures_key, 43200)
+                    logger.info(f"Demo mode Redis: failure for {action_type}, incremented {failures_key}")
+            except Exception as e:
+                logger.warning("Redis tracking error in _write_log demo mode: %s", e)
+        return
+
     if bypass_limits:
         logger.info(f"Demo mode bypass active: skipping DB save for {teacher_id}")
         return
@@ -66,16 +88,30 @@ def _write_log(
 
 def _build_failure_response(teacher_id, reason, distance, face_frames, total_frames, face_distance, server_time, action_type='check_in'):
     """Build a standard failure response with remaining attempts count."""
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    failure_count = AttendanceLog.query.filter(
-        AttendanceLog.teacher_id == teacher_id,
-        AttendanceLog.timestamp >= today_start,
-        AttendanceLog.status == "failure",
-        AttendanceLog.action_type == action_type
-    ).count()
-    
     from ..models import Setting
     settings_dict = Setting.get_all()
+    demo_mode = settings_dict.get("demo_mode", False) is True
+
+    if demo_mode:
+        failure_count = 0
+        if redis_client:
+            try:
+                failures_key = f"demo_failures:{action_type}:{teacher_id}"
+                failures_val = redis_client.get(failures_key)
+                if failures_val:
+                    failures_val = failures_val.decode('utf-8') if isinstance(failures_val, bytes) else failures_val
+                    failure_count = int(failures_val)
+            except Exception as e:
+                logger.warning("Redis error in build_failure_response: %s", e)
+    else:
+        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        failure_count = AttendanceLog.query.filter(
+            AttendanceLog.teacher_id == teacher_id,
+            AttendanceLog.timestamp >= today_start,
+            AttendanceLog.status == "failure",
+            AttendanceLog.action_type == action_type
+        ).count()
+    
     limits_cfg = settings_dict.get("verification_limits", {})
     max_checkin = limits_cfg.get("max_checkin_attempts", 4)
     max_checkout = limits_cfg.get("max_checkout_attempts", 10)
@@ -114,6 +150,34 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
 
 def _get_next_action_info(teacher_id: str):
     """Determine the next attendance action and current attempt count."""
+    from ..models import Setting
+    settings_dict = Setting.get_all()
+    demo_mode = settings_dict.get("demo_mode", False) is True
+
+    if demo_mode:
+        action = "check_in"
+        failures_count = 0
+        limit = 4
+        if redis_client:
+            try:
+                demo_action_val = redis_client.get(f"demo_action:{teacher_id}")
+                if demo_action_val:
+                    demo_action_val = demo_action_val.decode('utf-8') if isinstance(demo_action_val, bytes) else demo_action_val
+                    if demo_action_val == "check_in":
+                        action = "check_out"
+                        limit = 10
+                    else:
+                        action = "check_in"
+                        limit = 4
+                demo_failures_key = f"demo_failures:{action}:{teacher_id}"
+                failures_val = redis_client.get(demo_failures_key)
+                if failures_val:
+                    failures_val = failures_val.decode('utf-8') if isinstance(failures_val, bytes) else failures_val
+                    failures_count = int(failures_val)
+            except Exception as e:
+                logger.warning("Redis error in get_next_action_info demo mode: %s", e)
+        return action, failures_count, limit
+
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
     
     today_logs = AttendanceLog.query.filter(
@@ -136,7 +200,6 @@ def _get_next_action_info(teacher_id: str):
     failures = [log for log in today_logs if log.status == "failure" and log.action_type == action]
     
     # Get limits
-    settings_dict = Setting.get_all()
     limits = settings_dict.get("verification_limits", {"max_checkin_attempts": 4, "max_checkout_attempts": 10})
     limit = limits.get("max_checkout_attempts", 10) if action == "check_out" else limits.get("max_checkin_attempts", 4)
 
@@ -496,11 +559,15 @@ def verify():
         return jsonify({"status": "failure", "reason": error,
                         "timestamp": datetime.now(timezone.utc).isoformat()}), 400
 
+    from ..models import Setting
+    settings_dict = Setting.get_all()
+    demo_mode = settings_dict.get("demo_mode", False) is True
+
     frames: list = data["frames"]
     latitude: float = float(data["latitude"])
     longitude: float = float(data["longitude"])
     timestamp: float = float(data["timestamp"])
-    bypass_limits: bool = data.get("bypass_limits", False)
+    bypass_limits: bool = data.get("bypass_limits", False) or demo_mode
     # Demo mode is active if bypass_limits is set OR if demo geofence coordinates are provided
     is_demo: bool = bypass_limits or ("demo_lat" in data and "demo_lng" in data)
     server_time = datetime.now(timezone.utc).isoformat()
@@ -547,15 +614,47 @@ def verify():
         return jsonify({"status": "failure", "reason": "Invalid token",
                         "timestamp": server_time}), 401
 
+    action_type, failure_count, _ = _get_next_action_info(teacher_id)
+
+    if demo_mode:
+        # Complete short-circuit for Demo Mode
+        # Skip geofencing, face matching, and liveness gates!
+        _write_log(
+            teacher_id=teacher_id,
+            latitude=latitude,
+            longitude=longitude,
+            status="success",
+            reason="Verification successful (Demo Mode)",
+            face_frames=len(frames),
+            failure_stage=None,
+            action_type=action_type,
+            attendance_mark="present",
+            bypass_limits=True
+        )
+        logger.info(
+            "Verification SUCCESS (Demo Mode): teacher=%s type=%s distance_m=0.00",
+            teacher_id, action_type
+        )
+        return jsonify({
+            "status": "success",
+            "reason": f"Verification successful - {action_type.replace('_', ' ').title()} (Demo Mode)",
+            "action_type": action_type,
+            "timestamp": server_time,
+            "details": {
+                "gps_distance_m": 0.0,
+                "face_frames": len(frames) or 1,
+                "total_frames": len(frames) or 1,
+                "face_distance": 0.1,
+            },
+        }), 200
+
     if teacher.face_encoding is None:
         return jsonify({"status": "failure",
                         "reason": "No face encoding registered for this teacher",
                         "timestamp": server_time}), 422
-
-    action_type, failure_count, _ = _get_next_action_info(teacher_id)
     
     # Override action type for demo scans so admin logs are clearly labelled
-    if is_demo:
+    if is_demo and not demo_mode:
         action_type = 'demo_test'
 
     # ── Fetch Dynamic Settings ───────────────────────────────────────────────
@@ -578,48 +677,49 @@ def verify():
     attendance_mark = 'present'
     current_time_str = datetime.now().strftime("%H:%M")
     
-    if action_type == 'check_in':
-        if current_time_str > absent_limit:
-            # Arrived after absent_limit — mark absent immediately
-            attendance_mark = 'absent'
-        elif current_time_str > half_day_limit:
-            # Arrived between half_day_limit and absent_limit — half day
-            attendance_mark = 'half_day'
-        elif current_time_str > class_start:
-            # Arrived after class_start but before half_day_limit — flag for admin review
-            attendance_mark = 'flagged'
-    elif action_type == 'check_out':
-        if not anytime_checkout_full_day and half_day_checkout_limit:
-            if current_time_str < half_day_checkout_limit:
-                attendance_mark = 'half_day'
-                
-        # Factor in check-in state
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-        check_in_log = AttendanceLog.query.filter(
-            AttendanceLog.teacher_id == teacher_id,
-            AttendanceLog.action_type == 'check_in',
-            AttendanceLog.status == 'success',
-            AttendanceLog.timestamp >= today_start
-        ).order_by(AttendanceLog.timestamp.desc()).first()
-
-        if check_in_log:
-            # 1. Configurable Minimum Gap Rule
-            # Check if the gap between check-in and check-out is less than min_working_hours
-            time_diff = datetime.utcnow() - check_in_log.timestamp
-            if time_diff.total_seconds() < (min_working_hours * 3600):
+    if not demo_mode:
+        if action_type == 'check_in':
+            if current_time_str > absent_limit:
+                # Arrived after absent_limit — mark absent immediately
                 attendance_mark = 'absent'
-            else:
-                # 2. Inherit/Combine Check-in State
-                ci_mark = check_in_log.attendance_mark
-                if ci_mark == 'absent':
+            elif current_time_str > half_day_limit:
+                # Arrived between half_day_limit and absent_limit — half day
+                attendance_mark = 'half_day'
+            elif current_time_str > class_start:
+                # Arrived after class_start but before half_day_limit — flag for admin review
+                attendance_mark = 'flagged'
+        elif action_type == 'check_out':
+            if not anytime_checkout_full_day and half_day_checkout_limit:
+                if current_time_str < half_day_checkout_limit:
+                    attendance_mark = 'half_day'
+                    
+            # Factor in check-in state
+            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            check_in_log = AttendanceLog.query.filter(
+                AttendanceLog.teacher_id == teacher_id,
+                AttendanceLog.action_type == 'check_in',
+                AttendanceLog.status == 'success',
+                AttendanceLog.timestamp >= today_start
+            ).order_by(AttendanceLog.timestamp.desc()).first()
+
+            if check_in_log:
+                # 1. Configurable Minimum Gap Rule
+                # Check if the gap between check-in and check-out is less than min_working_hours
+                time_diff = datetime.utcnow() - check_in_log.timestamp
+                if time_diff.total_seconds() < (min_working_hours * 3600):
                     attendance_mark = 'absent'
-                elif ci_mark == 'flagged':
-                    attendance_mark = 'flagged'
-                elif ci_mark == 'half_day':
-                    if attendance_mark == 'half_day':
-                        attendance_mark = 'absent'  # Missed both halves
-                    else:
-                        attendance_mark = 'half_day'
+                else:
+                    # 2. Inherit/Combine Check-in State
+                    ci_mark = check_in_log.attendance_mark
+                    if ci_mark == 'absent':
+                        attendance_mark = 'absent'
+                    elif ci_mark == 'flagged':
+                        attendance_mark = 'flagged'
+                    elif ci_mark == 'half_day':
+                        if attendance_mark == 'half_day':
+                            attendance_mark = 'absent'  # Missed both halves
+                        else:
+                            attendance_mark = 'half_day'
 
     limit = max_checkout if action_type == 'check_out' else max_checkin
     

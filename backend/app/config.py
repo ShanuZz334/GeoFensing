@@ -26,6 +26,9 @@ class BaseConfig:
     SQLALCHEMY_POOL_RECYCLE: int = 1800
     SQLALCHEMY_MAX_OVERFLOW: int = 20
 
+    # Redis
+    REDIS_URL: str = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+
     # JWT
     JWT_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "jwt-secret-change-me-production!")
     JWT_ACCESS_TOKEN_EXPIRES: timedelta = timedelta(hours=24)

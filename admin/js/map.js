@@ -299,4 +299,4 @@ async function loadMapData() {
   }
 }
 
-document.addEventListener('DOMContentLoaded', initMap);
+initApp('map', initMap);

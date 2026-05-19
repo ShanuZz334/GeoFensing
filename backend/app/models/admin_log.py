@@ -24,5 +24,5 @@ class AdminLog(db.Model):
             "admin_reg_no": self.admin_reg_no,
             "action": self.action,
             "details": self.details,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() + "Z",
         }

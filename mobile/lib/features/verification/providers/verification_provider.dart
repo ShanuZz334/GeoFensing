@@ -27,6 +27,7 @@ class VerificationProvider extends ChangeNotifier {
   String _statusMessage = '';
   VerificationModel? _result;
   CameraController? _cameraController;
+  CameraDescription? _cameraDescription;
   double _progress = 0.0;
 
   List<AttendanceLogModel> _history = [];
@@ -44,6 +45,7 @@ class VerificationProvider extends ChangeNotifier {
   String get statusMessage => _statusMessage;
   VerificationModel? get result => _result;
   CameraController? get cameraController => _cameraController;
+  CameraDescription? get cameraDescription => _cameraDescription;
   double get progress => _progress;
   List<AttendanceLogModel> get history => _history;
   Map<String, dynamic>? get stats => _stats;
@@ -62,6 +64,8 @@ class VerificationProvider extends ChangeNotifier {
   // ── Camera Setup ──────────────────────────────────────────────────────────
 
   Future<void> initCamera() async {
+    if (_cameraController != null) return;
+    
     final cameras = await availableCameras();
     // Prefer front camera
     CameraDescription? front;
@@ -74,11 +78,12 @@ class VerificationProvider extends ChangeNotifier {
     final selected = front ?? (cameras.isNotEmpty ? cameras.first : null);
     if (selected == null) return;
 
+    _cameraDescription = selected;
     _cameraController = CameraController(
       selected,
       ResolutionPreset.medium,
       enableAudio: false,
-      imageFormatGroup: ImageFormatGroup.jpeg,
+      imageFormatGroup: ImageFormatGroup.yuv420,
     );
     await _cameraController!.initialize();
     notifyListeners();
@@ -93,6 +98,32 @@ class VerificationProvider extends ChangeNotifier {
 
   bool _bypassLimits = false;
   bool get bypassLimits => _bypassLimits;
+
+  // -- Demo Mode --
+  bool _demoMode = false;
+  double _demoLat = 0.0;
+  double _demoLng = 0.0;
+  double _demoRadius = 100.0;
+
+  bool get demoMode => _demoMode;
+  double get demoLat => _demoLat;
+  double get demoLng => _demoLng;
+  double get demoRadius => _demoRadius;
+
+  void setDemoMode({
+    required bool enabled,
+    double? lat,
+    double? lng,
+    double? radius,
+    bool bypassLimits = false,
+  }) {
+    _demoMode = enabled;
+    _demoLat = lat ?? 0.0;
+    _demoLng = lng ?? 0.0;
+    _demoRadius = radius ?? 100.0;
+    _bypassLimits = bypassLimits;
+    notifyListeners();
+  }
 
   // ── Settings ──────────────────────────────────────────────────────────────
 
@@ -109,6 +140,7 @@ class VerificationProvider extends ChangeNotifier {
   }
 
   bool isTooLate() {
+    if (_bypassLimits) return false;
     if (_nextAction != 'check_in') return false;
     final rules = _settings['attendance_rules'] as Map<String, dynamic>?;
     if (rules == null) return false;
@@ -194,9 +226,13 @@ class VerificationProvider extends ChangeNotifier {
     
     try {
       frames = await frameCaptureFuture;
+      // Turn camera off immediately after capturing frames so it doesn't wait for GPS
+      await disposeCamera();
+      notifyListeners();
+      
       position = await gpsFuture;
     } finally {
-      // Turn camera off immediately after capturing frames, even on error
+      // Fallback in case of error
       await disposeCamera();
       notifyListeners();
     }
@@ -218,10 +254,13 @@ class VerificationProvider extends ChangeNotifier {
 
     final response = await ApiService.instance.verify(
       frames: frames,
-      latitude: position.latitude,
-      longitude: position.longitude,
+      latitude: _demoMode ? _demoLat : position.latitude,
+      longitude: _demoMode ? _demoLng : position.longitude,
       timestamp: timestamp,
-                        bypassLimits: _bypassLimits,
+      demoLat: _demoMode ? _demoLat : null,
+      demoLng: _demoMode ? _demoLng : null,
+      demoRadius: _demoMode ? _demoRadius : null,
+      bypassLimits: _bypassLimits,
     );
 
     _progress = 1.0;
@@ -261,9 +300,14 @@ class VerificationProvider extends ChangeNotifier {
     await Future.delayed(const Duration(seconds: 1));
 
     // Image Capture
-    for (int i = 0; i < 6; i++) {
-      if (_cameraController == null) break;
-      try {
+    try {
+      if (_cameraController!.value.isStreamingImages) {
+        try { await _cameraController!.stopImageStream(); } catch (_) {}
+      }
+      await Future.delayed(const Duration(milliseconds: 150));
+      
+      for (int i = 0; i < 6; i++) {
+        if (_cameraController == null) break;
         final xFile = await _cameraController!.takePicture();
         final bytes = await xFile.readAsBytes();
         final compressed = await compute(_compressFrameTask, bytes);
@@ -271,7 +315,9 @@ class VerificationProvider extends ChangeNotifier {
         _progress = (i + 1) * 0.08;
         notifyListeners();
         await Future.delayed(const Duration(milliseconds: 500));
-      } catch (_) {}
+      }
+    } catch (e) {
+      debugPrint("Camera capture error: $e");
     }
 
     return base64Frames;
@@ -309,10 +355,6 @@ class VerificationProvider extends ChangeNotifier {
     _statusMessage = '';
     _result = null;
     _progress = 0.0;
-    // Clear history so stale records from previous session don't flash
-    _history = [];
-    _isLoadingHistory = false;
-    _nextAction = 'check_in';
     notifyListeners();
   }
 

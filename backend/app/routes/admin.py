@@ -77,6 +77,20 @@ def admin_login():
         "admin": admin.to_dict()
     }), 200
 
+# ── Get Current Admin ───────────────────────────────────────────────────────
+
+@admin_bp.route("/me", methods=["GET"])
+@jwt_required()
+def get_current_admin():
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+    reg_no = identity.replace(_ADMIN_PREFIX, "")
+    admin = Admin.query.filter_by(reg_no=reg_no).first()
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+    return jsonify(admin.to_dict()), 200
+
 # ── TOTP Generation ──────────────────────────────────────────────────────────
 
 @admin_bp.route("/generate-totp", methods=["POST"])
@@ -547,12 +561,63 @@ def get_stats():
         .all()
     )
 
+    from datetime import timedelta
+    yesterday_start = today_start - timedelta(days=1)
+
+    yesterday_success = AttendanceLog.query.filter(
+        AttendanceLog.timestamp >= yesterday_start,
+        AttendanceLog.timestamp < today_start,
+        AttendanceLog.status == "success",
+    ).count()
+
+    yesterday_failure = AttendanceLog.query.filter(
+        AttendanceLog.timestamp >= yesterday_start,
+        AttendanceLog.timestamp < today_start,
+        AttendanceLog.status == "failure",
+    ).count()
+    
+    yesterday_total = yesterday_success + yesterday_failure
+    yesterday_rate = round(yesterday_success / yesterday_total * 100, 1) if yesterday_total > 0 else 0.0
+    
+    # Last 7 days trend for sparklines
+    from sqlalchemy import cast, Date
+    trend_start = today_start - timedelta(days=6)
+    
+    trend_data_query = (
+        db.session.query(
+            cast(AttendanceLog.timestamp, Date).label('date'),
+            AttendanceLog.status,
+            func.count(AttendanceLog.id).label('count')
+        )
+        .filter(AttendanceLog.timestamp >= trend_start)
+        .group_by(cast(AttendanceLog.timestamp, Date), AttendanceLog.status)
+        .all()
+    )
+    
+    trend = {}
+    for i in range(7):
+        d = (trend_start + timedelta(days=i)).date()
+        trend[str(d)] = {"success": 0, "failure": 0}
+        
+    for row in trend_data_query:
+        d_str = str(row.date)
+        if d_str in trend:
+            trend[d_str][row.status] = row.count
+            
+    success_trend = [trend[k]["success"] for k in sorted(trend.keys())]
+    failure_trend = [trend[k]["failure"] for k in sorted(trend.keys())]
+
     return jsonify({
         "total_teachers": total_teachers,
         "total_logs": total_logs,
         "today_success": today_success,
         "today_failure": today_failure,
         "overall_success_rate": success_rate,
+        "yesterday_success": yesterday_success,
+        "yesterday_failure": yesterday_failure,
+        "yesterday_rate": yesterday_rate,
+        "success_trend": success_trend,
+        "failure_trend": failure_trend,
         "failure_by_stage": {row.failure_stage or "unknown": row.count for row in stage_breakdown},
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }), 200
@@ -873,10 +938,13 @@ def create_admin():
         if not head_admin_password or not bcrypt.check_password_hash(current_admin.password_hash, head_admin_password):
             return jsonify({"error": "Your Head Admin password is required to grant Head Admin privileges"}), 401
 
+    profile_pic = data.get("profile_pic", None)
+
     new_admin = Admin(
         name=name,
         reg_no=reg_no,
         password_hash=bcrypt.generate_password_hash(password).decode("utf-8"),
+        profile_pic=profile_pic,
         is_head_admin=is_head_admin
     )
     db.session.add(new_admin)
@@ -918,6 +986,40 @@ def delete_admin(admin_id):
     
     log_admin_action(identity, "DELETE_ADMIN", f"Deleted admin: {target_reg}")
     return jsonify({"message": "Administrator removed successfully"}), 200
+
+@admin_bp.route("/admins/<admin_id>", methods=["PATCH"])
+@jwt_required()
+def update_admin(admin_id):
+    """PATCH /admin/admins/<id> — update an admin."""
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    current_reg = identity.replace(_ADMIN_PREFIX, "")
+    current_admin = Admin.query.filter_by(reg_no=current_reg).first()
+    
+    target_admin = Admin.query.get(admin_id)
+    if not target_admin:
+        return jsonify({"error": "Administrator not found"}), 404
+        
+    # Only head admin or the admin themselves can edit their profile
+    if not current_admin.is_head_admin and target_admin.id != current_admin.id:
+        return jsonify({"error": "Unauthorized to edit this administrator"}), 403
+
+    data = request.get_json() or {}
+    
+    if "name" in data:
+        target_admin.name = data["name"].strip()
+    if "profile_pic" in data:
+        target_admin.profile_pic = data["profile_pic"]
+    if "password" in data and data["password"]:
+        if len(data["password"]) < 8:
+            return jsonify({"error": "Password must be at least 8 characters"}), 400
+        target_admin.password_hash = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
+        
+    db.session.commit()
+    log_admin_action(identity, "UPDATE_ADMIN", f"Updated admin: {target_admin.reg_no}")
+    return jsonify({"message": "Administrator updated successfully", "admin": target_admin.to_dict()}), 200
 
 # ── Audit Logs ───────────────────────────────────────────────────────────────
 

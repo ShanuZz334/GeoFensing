@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/network/api_service.dart';
 import '../../../core/constants/api_constants.dart';
@@ -43,13 +45,25 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Get or generate a persistent device ID
+  Future<String> _getDeviceId() async {
+    final prefs = await SharedPreferences.getInstance();
+    String? deviceId = prefs.getString('device_id');
+    if (deviceId == null) {
+      deviceId = '${DateTime.now().millisecondsSinceEpoch}-${Random().nextInt(1000000)}';
+      await prefs.setString('device_id', deviceId);
+    }
+    return deviceId;
+  }
+
   /// POST /login
   Future<bool> login(String regNo, String password) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
     notifyListeners();
 
-    final response = await ApiService.instance.login(regNo.trim(), password);
+    final deviceId = await _getDeviceId();
+    final response = await ApiService.instance.login(regNo.trim(), password, deviceId);
 
     if (response.success && response.data != null) {
       final data = response.data!;
@@ -119,8 +133,29 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// POST /reset-password
+  Future<bool> resetPassword(String regNo, String totp, String newPassword) async {
+    _status = AuthStatus.loading;
+    _errorMessage = null;
+    notifyListeners();
+
+    final response = await ApiService.instance.resetPassword(regNo.trim(), totp.trim(), newPassword);
+
+    if (response.success) {
+      _status = AuthStatus.unauthenticated; // Keep them unauthenticated so they can login
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = response.errorMessage ?? 'Password reset failed';
+      _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return false;
+    }
+  }
+
   /// Sign out and clear secure storage
   Future<void> logout() async {
+    await ApiService.instance.logout();
     await _storage.deleteAll();
     _token = null;
     _currentUser = null;

@@ -1,16 +1,18 @@
-import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/material.dart';
+
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'dart:convert';
-import 'package:camera/camera.dart';
 import 'dart:async';
 
 import '../../auth/providers/auth_provider.dart';
 import '../../auth/models/user_model.dart';
+import '../../auth/widgets/demo_setup_dialog.dart';
+import '../../../core/constants/app_config.dart';
 import '../providers/verification_provider.dart';
 import '../widgets/dynamic_qr_widget.dart';
 import 'attendance_stats_screen.dart';
+import 'face_scan_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -20,24 +22,14 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
-  late AnimationController _pulseController;
-  late AnimationController _scanLineController;
+  late PageController _cardPageController;
 
   @override
   void initState() {
     super.initState();
-    _pulseController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-    
-    _scanLineController = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 3),
-    )..repeat(reverse: true);
+    _cardPageController = PageController(initialPage: 1000);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<VerificationProvider>();
-      // Always reset stale result/status from previous session on every home entry
       provider.reset();
       await provider.fetchSettings();
       await provider.fetchHistory();
@@ -46,109 +38,23 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
 
   @override
   void dispose() {
-    _pulseController.dispose();
-    _scanLineController.dispose();
-    context.read<VerificationProvider>().disposeCamera();
+    _cardPageController.dispose();
     super.dispose();
   }
 
-  Future<void> _onStartPressed() async {
-    final provider = context.read<VerificationProvider>();
-    
-    if (provider.isTooLate()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("You are too late. You have been marked as Absent."),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
-      return;
-    }
-
-    await provider.startVerification();
-    if (!mounted) return;
-
-    if (provider.result?.contactSupport != null) {
-      _showSupportDialog(provider.result!.contactSupport!);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(provider.statusMessage),
-          backgroundColor: provider.status == VerificationStatus.success ? Colors.green : Colors.redAccent,
-        ),
-      );
-    }
+  void _onStartPressed() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const FaceScanScreen()),
+    ).then((_) {
+      // Refresh history when returning from scan screen
+      if (mounted) context.read<VerificationProvider>().fetchHistory();
+    });
   }
 
-  void _showSupportDialog(Map<String, dynamic> contact) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF121212),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
-          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
-        ),
-        title: const Row(
-          children: [
-            Icon(Icons.contact_support_outlined, color: Color(0xFF7C3AED)),
-            SizedBox(width: 10),
-            Text('Contact Support', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
-          ],
-        ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('You have exceeded the maximum attempts. Please reach out to our team:', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
-            const SizedBox(height: 20),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: Colors.white.withValues(alpha: 0.05),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(
-                children: [
-                  ListTile(
-                    leading: const Icon(Icons.phone, color: Color(0xFF7C3AED)),
-                    title: Text(contact['phone'] ?? '8089602280', style: const TextStyle(color: Colors.white)),
-                    dense: true,
-                  ),
-                  ListTile(
-                    leading: const Icon(Icons.email, color: Color(0xFF7C3AED)),
-                    title: Text(contact['email'] ?? 'shanifshaz546@gmail.com', style: const TextStyle(color: Colors.white)),
-                    dense: true,
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close', style: TextStyle(color: Color(0xFF7C3AED))),
-          ),
-        ],
-      ),
-    );
-  }
 
-  BoxDecoration _darkBoxDecoration() {
-    return BoxDecoration(
-      color: const Color(0xFF121212),
-      borderRadius: BorderRadius.circular(16),
-      border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.white.withValues(alpha: 0.1),
-          blurRadius: 15,
-          offset: const Offset(0, 0),
-        ),
-      ],
-    );
-  }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -192,26 +98,27 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                           ],
                         ),
                       ),
-                      
+                      const SizedBox(width: 4),
+                      if (kDemoEnabled)
+                        InkWell(
+                          onTap: () => showDialog(context: context, builder: (_) => const DemoSetupDialog()),
+                          child: const Icon(Icons.play_circle_outline, color: Color(0xFF7C3AED), size: 16),
+                        ),
                     ],
                   ),
                 ),
               ),
 
-              // 1. User Info Section
+              // 1. Faculty Pass
               _buildUserInfo(context, user, auth),
               const SizedBox(height: 24),
 
-              // 2. Attendance History
-              _buildAttendanceHistory(verificationProvider),
+              // 2. Scan Button
+              _buildScanButton(verificationProvider),
               const SizedBox(height: 24),
 
-              // 3. Face Scanner
-              _buildFaceScanner(verificationProvider),
-              const SizedBox(height: 24),
-
-              // 4. Instructions
-              _buildInstructions(),
+              // 3. Infinite swipeable info cards
+              _buildSwipeableCards(verificationProvider),
             ],
           ),
         ),
@@ -327,6 +234,38 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                       ),
                       Row(
                         children: [
+                          if (kDemoEnabled && context.watch<VerificationProvider>().demoMode)
+                            Container(
+                              margin: const EdgeInsets.only(right: 12, top: 16),
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF7C3AED).withValues(alpha: 0.15),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
+                              ),
+                              child: Row(
+                                children: [
+                                  Container(
+                                    width: 6,
+                                    height: 6,
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF7C3AED),
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 4),
+                                  const Text(
+                                    'DEMO',
+                                    style: TextStyle(
+                                      color: Color(0xFF7C3AED),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w700,
+                                      letterSpacing: 0.8,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
                           Padding(
                             padding: const EdgeInsets.only(top: 16.0),
                             child: IconButton(
@@ -438,451 +377,284 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildAttendanceHistory(VerificationProvider provider) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _darkBoxDecoration(),
+  Widget _buildScanButton(VerificationProvider provider) {
+    final isAbsentLocked = !provider.bypassLimits &&
+        provider.isTooLate() &&
+        provider.nextAction != 'check_out' &&
+        provider.nextAction != 'completed';
+    final isCompleted = !provider.bypassLimits && provider.nextAction == 'completed';
+
+    Color btnColor;
+    String btnText;
+    IconData btnIcon;
+
+    if (isAbsentLocked) {
+      btnColor = const Color(0xFFEF4444);
+      btnText = 'Absent - Limit Passed';
+      btnIcon = Icons.block_rounded;
+    } else if (isCompleted) {
+      btnColor = const Color(0xFF10B981);
+      btnText = 'Completed for Today';
+      btnIcon = Icons.check_circle_outline_rounded;
+    } else {
+      btnColor = const Color(0xFF7C3AED);
+      btnText = provider.nextAction == 'check_in'
+          ? 'Start Scan (Check In)'
+          : 'Start Scan (Check Out)';
+      btnIcon = provider.nextAction == 'check_in'
+          ? Icons.login_rounded
+          : Icons.logout_rounded;
+    }
+
+    return ElevatedButton.icon(
+      onPressed: (isAbsentLocked || isCompleted) ? null : _onStartPressed,
+      icon: Icon(btnIcon, color: Colors.white, size: 20),
+      label: Text(btnText,
+          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: btnColor,
+        disabledBackgroundColor: btnColor.withValues(alpha: 0.35),
+        minimumSize: const Size.fromHeight(56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        elevation: 6,
+        shadowColor: btnColor.withValues(alpha: 0.4),
+      ),
+    );
+  }
+
+  Widget _buildSwipeableCards(VerificationProvider provider) {
+    return SizedBox(
+      height: 300,
+      child: PageView.builder(
+        controller: _cardPageController,
+        itemBuilder: (context, index) {
+          final page = index % 3;
+          if (page == 0) return _buildStatusCard(provider);
+          if (page == 1) return _buildHistoryCard(provider);
+          return _buildScheduleCard(provider);
+        },
+      ),
+    );
+  }
+
+  Widget _buildStatusCard(VerificationProvider provider) {
+    final isCompleted = !provider.bypassLimits && provider.nextAction == 'completed';
+    final isAbsentLocked = !provider.bypassLimits &&
+        provider.isTooLate() &&
+        provider.nextAction != 'check_out' &&
+        provider.nextAction != 'completed';
+
+    final modeText = isCompleted
+        ? 'Completed Today'
+        : isAbsentLocked
+            ? 'Marked Absent'
+            : provider.nextAction == 'check_in'
+                ? 'Check In Mode'
+                : 'Check Out Mode';
+    final modeColor = isCompleted
+        ? const Color(0xFF10B981)
+        : isAbsentLocked
+            ? const Color(0xFFEF4444)
+            : provider.nextAction == 'check_in'
+                ? const Color(0xFF7C3AED)
+                : const Color(0xFFEF4444);
+
+    return _cardShell(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text('Verification Status',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              Text('1/3', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.3))),
+            ],
+          ),
+          const SizedBox(height: 24),
+          Icon(
+            isCompleted ? Icons.check_circle_outline_rounded
+              : isAbsentLocked ? Icons.block_rounded
+              : Icons.face_retouching_natural_outlined,
+            color: modeColor,
+            size: 64,
+          ),
+          const SizedBox(height: 16),
+          Text(modeText,
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: modeColor)),
+          const SizedBox(height: 8),
+          if (!provider.bypassLimits && !isCompleted)
+            Text('Attempt ${provider.currentAttempts + 1}/${provider.maxAttempts}',
+                style: TextStyle(fontSize: 12, color: Colors.white.withValues(alpha: 0.4))),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (i) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == 0 ? 18 : 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: i == 0 ? const Color(0xFF7C3AED) : Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHistoryCard(VerificationProvider provider) {
+    const maxItems = 4;
+    final history = provider.history;
+    return _cardShell(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Attendance History',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              IconButton(
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-                onPressed: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AttendanceStatsScreen()),
-                ),
-                icon: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7C3AED), size: 20),
+              const Text('Attendance History',
+                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              Row(
+                children: [
+                  Text('2/3', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.3))),
+                  const SizedBox(width: 8),
+                  IconButton(
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: () => Navigator.push(context,
+                        MaterialPageRoute(builder: (_) => const AttendanceStatsScreen())),
+                    icon: const Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF7C3AED), size: 16),
+                  ),
+                ],
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          _buildHistoryList(provider),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Column(
+              children: List.generate(maxItems, (index) {
+                if (index < history.length) {
+                  final log = history[index];
+                  final dateStr = DateFormat('dd MMM, hh:mm a').format(log.timestamp.toLocal());
+                  Color statusColor = log.attendanceMark == 'absent'
+                      ? const Color(0xFFEF4444)
+                      : log.attendanceMark == 'half_day'
+                          ? const Color(0xFFF59E0B)
+                          : log.isSuccess ? const Color(0xFF10B981) : const Color(0xFFEF4444);
+                  return Expanded(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(dateStr, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500)),
+                            Text(log.statusDisplay, style: TextStyle(color: statusColor, fontSize: 11, fontWeight: FontWeight.w900)),
+                          ],
+                        ),
+                        if (index < maxItems - 1)
+                          Divider(height: 1, color: Colors.white.withValues(alpha: 0.08)),
+                      ],
+                    ),
+                  );
+                }
+                return Expanded(
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('No data', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 12)),
+                      Text('--', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 12)),
+                    ],
+                  ),
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (i) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == 1 ? 18 : 6, height: 6,
+              decoration: BoxDecoration(
+                color: i == 1 ? const Color(0xFF7C3AED) : Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(3),
+              ),
+            )),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildHistoryList(VerificationProvider provider) {
-    const int maxItems = 4;
-    final history = provider.history;
-    
-    return Column(
-      children: List.generate(maxItems, (index) {
-        if (index < history.length) {
-          final log = history[index];
-          final dateStr = DateFormat('dd MMM yyyy, hh:mm a').format(log.timestamp.toLocal());
-          final isPresent = log.isSuccess;
-          final isAbsentMark = log.attendanceMark == 'absent';
-          final isHalfDay = log.attendanceMark == 'half_day';
-
-          String statusLabel = log.statusDisplay;
-          Color statusColor = const Color(0xFF10B981);
-          
-          if (isAbsentMark) {
-            statusColor = const Color(0xFFEF4444);
-          } else if (isHalfDay) {
-            statusColor = const Color(0xFFF59E0B);
-          } else if (!isPresent) {
-            statusColor = const Color(0xFFEF4444);
-          }
-
-          return Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(dateStr, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500, fontSize: 13)),
-                  Text(
-                    statusLabel,
-                    style: TextStyle(
-                      color: statusColor,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ],
-              ),
-              if (index < maxItems - 1) Divider(height: 24, color: Colors.white.withValues(alpha: 0.1)),
-            ],
-          );
-        } else {
-          // Placeholder for empty slot
-          return Column(
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text('No data', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13)),
-                  Text('--', style: TextStyle(color: Colors.white.withValues(alpha: 0.2), fontSize: 13)),
-                ],
-              ),
-              if (index < maxItems - 1) Divider(height: 24, color: Colors.white.withValues(alpha: 0.1)),
-            ],
-          );
-        }
-      }),
-    );
-  }
-
-  Widget _buildFaceScanner(VerificationProvider provider) {
-    final isRecording = provider.status == VerificationStatus.recording;
-    final isUploading = provider.status == VerificationStatus.uploading;
-    final isSuccess = provider.status == VerificationStatus.success;
-    final isFailure = provider.status == VerificationStatus.failure;
-
-    String statusText = 'Ready to scan';
-    IconData statusIcon = Icons.camera_alt_outlined;
-    Color statusColor = const Color(0xFF7C3AED);
-
-    if (isRecording) {
-      statusText = provider.statusMessage.isNotEmpty ? provider.statusMessage : 'Scanning...';
-      statusIcon = Icons.face_retouching_natural_outlined;
-    } else if (isUploading) {
-      statusText = 'Processing...';
-      statusIcon = Icons.cloud_upload_outlined;
-    } else if (isSuccess) {
-      statusText = 'Ready to scan';
-      statusIcon = Icons.camera_alt_outlined;
-      statusColor = const Color(0xFF7C3AED);
-    } else if (isFailure) {
-      statusText = provider.statusMessage.contains('Absent') ? 'Marked Absent' : 'Failed ❌';
-      statusIcon = Icons.error_outline_rounded;
-      statusColor = const Color(0xFFEF4444);
+  Widget _buildScheduleCard(VerificationProvider provider) {
+    final rules = provider.settings['attendance_rules'] as Map<String, dynamic>?;
+    String fmt(String? t) {
+      if (t == null || t.isEmpty) return '--';
+      try {
+        final p = t.split(':'); int h = int.parse(p[0]); final m = p[1];
+        final period = h >= 12 ? 'PM' : 'AM';
+        if (h > 12) h -= 12; if (h == 0) h = 12;
+        return '$h:$m $period';
+      } catch (_) { return t; }
     }
+    final halfDay     = fmt(rules?['half_day_limit'] as String?);
+    final absentLimit = fmt(rules?['absent_limit'] as String?);
+    final halfCheckout= fmt(rules?['half_day_checkout_limit'] as String?);
+    final anytime     = rules?['anytime_checkout_full_day'] == true;
 
-    // Determine if locked due to absent limit (past limit, no check-in yet)
-    final isAbsentLocked = !provider.bypassLimits &&
-        provider.isTooLate() &&
-        provider.nextAction != 'check_out' &&
-        provider.nextAction != 'completed';
-
-    // Determine if locked because day is fully done (checkout done / absent record exists)
-    final isDayCompleted = !provider.bypassLimits && provider.nextAction == 'completed' && !provider.isTooLate();
-
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: _darkBoxDecoration(),
+    return _cardShell(
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Face Verification',
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
-              ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Text(
-                    (!provider.bypassLimits && provider.nextAction == 'completed') 
-                      ? 'Completed Today' 
-                      : (provider.nextAction == 'check_in' ? 'Check In Mode' : 'Check Out Mode'),
-                    style: TextStyle(
-                      color: (!provider.bypassLimits && provider.nextAction == 'completed') 
-                        ? const Color(0xFF10B981) 
-                        : (provider.nextAction == 'check_in' ? const Color(0xFF7C3AED) : const Color(0xFFEF4444)),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                  if (!provider.bypassLimits && provider.nextAction != 'completed')
-                    Text(
-                      'Attempt ${provider.currentAttempts + 1}/${provider.maxAttempts}',
-                      style: TextStyle(
-                        color: Colors.white.withValues(alpha: 0.5),
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                ],
-              ),
+              Row(children: [
+                const Icon(Icons.schedule_rounded, color: Color(0xFF7C3AED), size: 15),
+                const SizedBox(width: 6),
+                const Text('Attendance Schedule', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
+              ]),
+              Text('3/3', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.3))),
             ],
           ),
-          const SizedBox(height: 20),
-          
-          // Camera Preview Area
-          Center(
-            child: AnimatedBuilder(
-              animation: _pulseController,
-              builder: (context, child) {
-                return Container(
-                  width: 200,
-                  height: 200,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(color: statusColor, width: 3),
-                    boxShadow: [
-                      if (isRecording)
-                        BoxShadow(
-                          color: statusColor.withValues(alpha: 0.3 * _pulseController.value),
-                          blurRadius: 10 + 10 * _pulseController.value,
-                          spreadRadius: 2 + 3 * _pulseController.value,
-                        ),
-                    ],
-                  ),
-                  child: ClipOval(
-                    child: Stack(
-                      children: [
-                        provider.cameraController != null &&
-                                provider.cameraController!.value.isInitialized
-                            ? Builder(
-                                builder: (ctx) {
-                                  double ratio = provider.cameraController!.value.aspectRatio;
-                                  if (MediaQuery.of(ctx).size.height > MediaQuery.of(ctx).size.width && ratio > 1.0) {
-                                    ratio = 1.0 / ratio;
-                                  }
-                                  return SizedBox.expand(
-                                    child: FittedBox(
-                                      fit: BoxFit.cover,
-                                      child: SizedBox(
-                                        width: 100 * ratio,
-                                        height: 100,
-                                        child: CameraPreview(provider.cameraController!),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              )
-                            : Center(
-                                child: isSuccess
-                                    ? const Icon(Icons.check_circle, color: Color(0xFF10B981), size: 80)
-                                    : isFailure
-                                        ? const Icon(Icons.cancel, color: Color(0xFFEF4444), size: 80)
-                                        : const Icon(Icons.videocam_off_outlined, color: Colors.white38, size: 60),
-                              ),
-                        if (isRecording)
-                          AnimatedBuilder(
-                            animation: _scanLineController,
-                            builder: (context, child) {
-                              return Positioned(
-                                top: _scanLineController.value * 200,
-                                left: 0,
-                                right: 0,
-                                child: Container(
-                                  height: 3,
-                                  decoration: BoxDecoration(
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: const Color(0xFF7C3AED).withValues(alpha: 0.6),
-                                        blurRadius: 15,
-                                        spreadRadius: 2,
-                                      ),
-                                    ],
-                                    gradient: LinearGradient(
-                                      colors: [
-                                        const Color(0xFF7C3AED).withValues(alpha: 0.1),
-                                        const Color(0xFF7C3AED),
-                                        const Color(0xFF7C3AED).withValues(alpha: 0.1),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-                          ),
-                      ],
-                    ),
-                  ),
-                );
-              },
-            ),
-          ),
-          const SizedBox(height: 24),
-
-          // Status & Progress
-          if (!isSuccess && !isFailure)
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(statusIcon, color: statusColor, size: 20),
-                const SizedBox(width: 8),
-                Text(
-                  statusText,
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: statusColor),
-                ),
-              ],
-            ),
-          if (isUploading) ...[
-            const SizedBox(height: 12),
-            const SizedBox(
-              width: 140,
-              child: LinearProgressIndicator(
-                backgroundColor: Colors.white12,
-                color: Color(0xFF7C3AED),
-                minHeight: 4,
+          const SizedBox(height: 14),
+          _buildScheduleRow(Icons.check_circle_outline, 'Full Day', 'Check in before $halfDay', const Color(0xFF10B981)),
+          _buildScheduleRow(Icons.timelapse_rounded, 'Half Day', 'Check in $halfDay – $absentLimit', const Color(0xFFF59E0B)),
+          _buildScheduleRow(Icons.block_rounded, 'Absent', 'Check in after $absentLimit', const Color(0xFFEF4444)),
+          _buildScheduleRow(Icons.logout_rounded,
+            anytime ? 'Checkout' : 'Early Exit',
+            anytime ? 'Any time counts as full day' : 'Before $halfCheckout = half day',
+            const Color(0xFF7C3AED)),
+          const Spacer(),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(3, (i) => Container(
+              margin: const EdgeInsets.symmetric(horizontal: 3),
+              width: i == 2 ? 18 : 6, height: 6,
+              decoration: BoxDecoration(
+                color: i == 2 ? const Color(0xFF7C3AED) : Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(3),
               ),
-            ),
-          ],
-          const SizedBox(height: 20),
-
-          ElevatedButton(
-            onPressed: (isRecording || isUploading || (!provider.bypassLimits && (provider.isTooLate() || provider.nextAction == 'completed'))) ? null : _onStartPressed,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: isAbsentLocked
-                  ? Colors.redAccent
-                  : isDayCompleted
-                      ? const Color(0xFF10B981)
-                      : const Color(0xFF7C3AED),
-              disabledBackgroundColor: isAbsentLocked
-                  ? Colors.red.withValues(alpha: 0.3)
-                  : isDayCompleted
-                      ? Colors.green.withValues(alpha: 0.3)
-                      : Colors.white24,
-              minimumSize: const Size.fromHeight(56),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              elevation: 5,
-              shadowColor: const Color(0xFF7C3AED).withValues(alpha: 0.5),
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  isAbsentLocked
-                      ? Icons.block_rounded
-                      : isDayCompleted
-                          ? Icons.check_circle_outline_rounded
-                          : (provider.nextAction == 'check_in'
-                              ? Icons.login_rounded
-                              : Icons.logout_rounded),
-                  color: Colors.white,
-                  size: 20,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  isAbsentLocked
-                      ? 'Absent - Limit Passed'
-                      : isDayCompleted
-                          ? 'Completed for Today'
-                          : (isSuccess
-                              ? 'Scan Again'
-                              : (provider.nextAction == 'check_in'
-                                  ? 'Start Scan (Check In)'
-                                  : 'Start Scan (Check Out)')),
-                  style: const TextStyle(fontSize: 16, color: Colors.white, fontWeight: FontWeight.bold),
-                ),
-              ],
-            ),
+            )),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildInstructions() {
-    final provider = context.watch<VerificationProvider>();
-    final rules = provider.settings['attendance_rules'] as Map<String, dynamic>?;
-
-    // Format "09:00" → "9:00 AM"
-    String fmt(String? t) {
-      if (t == null || t.isEmpty) return '--';
-      try {
-        final parts = t.split(':');
-        int h = int.parse(parts[0]);
-        final m = parts[1];
-        final period = h >= 12 ? 'PM' : 'AM';
-        if (h > 12) h -= 12;
-        if (h == 0) h = 12;
-        return '$h:$m $period';
-      } catch (_) { return t; }
-    }
-
-    final classStart   = fmt(rules?['class_start']  as String?);
-    final classEnd     = fmt(rules?['class_end']     as String?);
-    final halfDay      = fmt(rules?['half_day_limit'] as String?);
-    final absentLimit  = fmt(rules?['absent_limit']  as String?);
-    final halfCheckout = fmt(rules?['half_day_checkout_limit'] as String?);
-    final anytime      = rules?['anytime_checkout_full_day'] == true;
-
-    return SizedBox(
-      height: 320,
-      child: PageView(
-        physics: const ClampingScrollPhysics(),
-        children: [
-          // ── Page 1: Scan Tips ──────────────────────────────────────────
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: _darkBoxDecoration(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Text('Instructions', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const Spacer(),
-                    Text('Swipe for schedule →', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.35))),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                _buildInstructionItem('Ensure proper lighting on your face'),
-                _buildInstructionItem('Keep your face centered in the circle'),
-                _buildInstructionItem('Remove obstructions (mask, glasses if required)'),
-                const SizedBox(height: 16),
-                Center(
-                  child: TextButton.icon(
-                    onPressed: () {
-                      final p = context.read<VerificationProvider>();
-                      if (p.supportContact != null) {
-                        _showSupportDialog(p.supportContact!);
-                      } else {
-                        _showSupportDialog({"phone": "8089602280", "email": "shanifshaz546@gmail.com"});
-                      }
-                    },
-                    icon: const Icon(Icons.help_outline, color: Color(0xFF7C3AED), size: 18),
-                    label: const Text('Need Help? Contact Support', style: TextStyle(color: Color(0xFF7C3AED))),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(8),
-                        side: BorderSide(color: const Color(0xFF7C3AED).withValues(alpha: 0.3)),
-                      ),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-
-          // ── Page 2: Live Schedule from Settings ────────────────────────
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: _darkBoxDecoration(),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.schedule_rounded, color: Color(0xFF7C3AED), size: 16),
-                    const SizedBox(width: 8),
-                    const Text('Attendance Schedule', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
-                    const Spacer(),
-                    Text('← Swipe back', style: TextStyle(fontSize: 11, color: Colors.white.withValues(alpha: 0.35))),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                _buildScheduleRow(Icons.check_circle_outline,    'Full Day',   'Check in before $halfDay',                    const Color(0xFF10B981)),
-                _buildScheduleRow(Icons.timelapse_rounded,       'Half Day',   'Check in $halfDay – $absentLimit',            const Color(0xFFF59E0B)),
-                _buildScheduleRow(Icons.block_rounded,           'Absent',     'Check in after $absentLimit',                 const Color(0xFFEF4444)),
-                _buildScheduleRow(Icons.logout_rounded,          anytime ? 'Checkout' : 'Early Exit',
-                                                                  anytime ? 'Any time checkout counts as full day' : 'Before $halfCheckout counts as half day', const Color(0xFF7C3AED)),
-                if (classEnd != '--')
-                  _buildScheduleRow(Icons.access_time_filled_rounded, 'Class Hours', '$classStart – $classEnd', const Color(0xFF9CA3AF)),
-              ],
-            ),
-          ),
-        ],
+  Widget _cardShell({required Widget child}) {
+    return Container(
+      margin: EdgeInsets.zero,
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12)),
       ),
+      child: child,
     );
   }
 
@@ -931,23 +703,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     );
   }
 
-  Widget _buildInstructionItem(String text) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8.0),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('• ', style: TextStyle(fontSize: 16, color: Color(0xFF7C3AED), fontWeight: FontWeight.bold)),
-          Expanded(
-            child: Text(
-              text,
-              style: TextStyle(fontSize: 14, color: Colors.white.withValues(alpha: 0.7), height: 1.4),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+
 
   void _showLargeQR(BuildContext context) {
     final user = context.read<AuthProvider>().currentUser;

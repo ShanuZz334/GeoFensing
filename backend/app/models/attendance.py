@@ -77,6 +77,7 @@ class AttendanceLog(db.Model):
             "teacher_id": self.teacher_id,
             "teacher_name": self.teacher.full_name if self.teacher else None,
             "reg_no": self.teacher.reg_no if self.teacher else None,
+            "profile_pic": self.teacher.profile_pic if self.teacher else None,
             "timestamp": self.timestamp.isoformat(),
             "latitude": self.latitude,
             "longitude": self.longitude,

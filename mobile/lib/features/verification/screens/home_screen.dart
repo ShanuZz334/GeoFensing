@@ -834,7 +834,7 @@ class _FacultyPassCardState extends State<_FacultyPassCard>
               padding: const EdgeInsets.fromLTRB(14, 8, 10, 8),
               child: Row(
                 children: [
-                // Fingerprint — tap to flip
+                // QR — tap to flip
                 GestureDetector(
                   onTap: _toggleFlip,
                   child: Container(
@@ -845,7 +845,7 @@ class _FacultyPassCardState extends State<_FacultyPassCard>
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: const Color(0xFF23253A)),
                     ),
-                    child: const Icon(Icons.fingerprint_rounded,
+                    child: const Icon(Icons.qr_code_scanner_rounded,
                         color: Color(0xFF6D64BA), size: 18),
                   ),
                 ),
@@ -1041,7 +1041,7 @@ class _FacultyPassCardState extends State<_FacultyPassCard>
                                       color: const Color(0xFF7C3AED)
                                           .withValues(alpha: 0.3)),
                                 ),
-                                child: const Icon(Icons.fingerprint_rounded,
+                                child: const Icon(Icons.qr_code_scanner_rounded,
                                     color: Color(0xFF7C3AED), size: 16),
                               ),
                               const SizedBox(width: 6),

@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoFace Admin — Settings</title>
   <meta name="description" content="GeoFace Settings - Configure time-based attendance and limits." />
-  <link rel="stylesheet" href="css/styles.css?v=1027" />
+  <link rel="stylesheet" href="css/styles.css?v=1028" />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
@@ -177,7 +177,7 @@
               <h2 style="font-size: 16px; font-weight: 600; margin: 0; color: #a78bfa;">System Demo Mode</h2>
             </div>
             <p style="font-size: 13px; color: var(--text-muted); margin: 0; line-height: 1.4;">
-              Enable Demo Mode to bypass all geofencing, face matching, liveness gates, scan attempt limits, and check-in/out schedules. Scans will run dynamically in the app but **no data** will be written to the database. Perfect for testing and demonstrations.
+              Enable Demo Mode to bypass completed scanning schedules and attempt limits. Scans will run dynamic facial recognition, geofencing, and liveness checks normally, but **no data** will be written to the database. Perfect for testing and demonstrations.
             </p>
           </div>
           <div style="display: flex; align-items: center; gap: 12px; flex-shrink: 0;">
@@ -395,8 +395,8 @@
     </div>
   </main>
 
-  <script src="js/api.js?v=1027"></script>
-  <script src="js/app.js?v=1027"></script>
+  <script src="js/api.js?v=1028"></script>
+  <script src="js/app.js?v=1028"></script>
   <script>
     initApp('settings', loadSettings);
 

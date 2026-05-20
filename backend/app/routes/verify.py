@@ -616,37 +616,7 @@ def verify():
 
     action_type, failure_count, _ = _get_next_action_info(teacher_id)
 
-    if demo_mode:
-        # Complete short-circuit for Demo Mode
-        # Skip geofencing, face matching, and liveness gates!
-        _write_log(
-            teacher_id=teacher_id,
-            latitude=latitude,
-            longitude=longitude,
-            status="success",
-            reason="Verification successful (Demo Mode)",
-            face_frames=len(frames),
-            failure_stage=None,
-            action_type=action_type,
-            attendance_mark="present",
-            bypass_limits=True
-        )
-        logger.info(
-            "Verification SUCCESS (Demo Mode): teacher=%s type=%s distance_m=0.00",
-            teacher_id, action_type
-        )
-        return jsonify({
-            "status": "success",
-            "reason": f"Verification successful - {action_type.replace('_', ' ').title()} (Demo Mode)",
-            "action_type": action_type,
-            "timestamp": server_time,
-            "details": {
-                "gps_distance_m": 0.0,
-                "face_frames": len(frames) or 1,
-                "total_frames": len(frames) or 1,
-                "face_distance": 0.1,
-            },
-        }), 200
+
 
     if teacher.face_encoding is None:
         return jsonify({"status": "failure",

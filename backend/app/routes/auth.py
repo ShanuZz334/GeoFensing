@@ -72,6 +72,10 @@ def login():
     if not bcrypt.check_password_hash(teacher.password_hash, password):
         return jsonify({"error": "Invalid credentials"}), 401
 
+    # Block pending teachers
+    if teacher.department == "Pending" or teacher.full_name == "Pending Registration":
+        return jsonify({"error": "Account registration is pending. Please contact admin to complete registration."}), 403
+
     # Check Single-Device Lock
     from .. import extensions
     if extensions.redis_client:

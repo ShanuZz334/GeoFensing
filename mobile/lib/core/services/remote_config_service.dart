@@ -17,7 +17,7 @@ class RemoteConfigService {
 
   // ── Fallback URL if GitHub is unreachable ───────────────────────────────────
   // This is used offline or if GitHub fetch fails.
-  static const String _fallbackUrl = 'https://maui-bacon-tony-fri.trycloudflare.com/api';
+  static const String _fallbackUrl = 'https://known-tubes-sonic-wish.trycloudflare.com/api';
 
   static const String _cacheKey = 'cached_base_url';
   static const _storage = FlutterSecureStorage();

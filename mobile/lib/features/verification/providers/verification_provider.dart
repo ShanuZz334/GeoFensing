@@ -141,6 +141,7 @@ class VerificationProvider extends ChangeNotifier {
 
   bool isTooLate() {
     if (_bypassLimits) return false;
+    if (_settings['demo_mode'] == true || _settings['demo_mode'] == 'true') return false;
     if (_nextAction != 'check_in') return false;
     final rules = _settings['attendance_rules'] as Map<String, dynamic>?;
     if (rules == null) return false;

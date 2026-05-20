@@ -345,7 +345,7 @@
 
   <!-- Register Teacher Modal -->
   <div class="modal-overlay" id="register-modal" style="display:none;">
-    <div class="modal-card" style="max-width:520px;">
+    <div class="modal-card" style="max-width:680px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
         <h2 class="modal-title" style="margin:0">Register New Teacher</h2>
         <button class="btn-icon" onclick="hideRegisterModal()">✕</button>
@@ -355,11 +355,10 @@
 
       <!-- Temporary Registration Toggle -->
       <div
-        style="background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:14px 16px; margin-bottom:16px; display:flex; align-items:center; justify-content:space-between;">
+        style="background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
         <div>
           <div style="font-weight:600; font-size:14px;">Temporary Registration</div>
-          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Teacher completes face scan via app
-          </div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Teacher completes face scan via app</div>
         </div>
         <label class="uiverse-switch" style="flex-shrink:0; margin-left:16px;">
           <input type="checkbox" id="reg-is-temp" onchange="toggleTempMode()" />
@@ -371,12 +370,12 @@
       <div class="form-group" id="reg-face-section" style="text-align:center;">
         <div class="webcam-box" style="display:inline-flex; flex-direction:column; align-items:center;">
           <video id="reg-webcam" autoplay muted playsinline
-            style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 12px;"></video>
+            style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 8px;"></video>
           <canvas id="reg-canvas" style="display:none;"></canvas>
           <div id="webcam-placeholder" class="webcam-placeholder" onclick="startWebcam()"
-            style="width:120px; height:120px; border-radius:50%; margin-bottom: 12px; cursor:pointer; background: var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 2px dashed var(--border);">
+            style="width:120px; height:120px; border-radius:50%; margin-bottom: 8px; cursor:pointer; background: var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 2px dashed var(--border);">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
-              style="width:32px;height:32px;color:var(--text-muted)">
+              style="width:28px;height:28px;color:var(--text-muted)">
               <path stroke-linecap="round" stroke-linejoin="round"
                 d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
               <path stroke-linecap="round" stroke-linejoin="round"
@@ -395,6 +394,7 @@
         </div>
       </div>
 
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
       <div class="form-group" id="reg-name-section">
         <label>Full Name</label>
         <input type="text" id="reg-name" placeholder="Dr. John Smith" />
@@ -403,7 +403,7 @@
         <label>Registration Number (Reg ID)</label>
         <input type="text" id="reg-no" placeholder="REG12345" />
       </div>
-      <div class="form-group" id="reg-dept-section">
+      <div class="form-group" id="reg-dept-section" style="grid-column: 1 / -1;">
         <label>Department</label>
         <div class="uiverse-select form-control" id="reg-department"
           style="padding:0; border:none; background:transparent; width:100%">
@@ -475,6 +475,34 @@
           </div>
         </div>
       </div>
+      <div class="form-group" id="reg-role-section">
+        <label>Role</label>
+        <div class="uiverse-select form-control" id="reg-role"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select Role</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path
+                d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z">
+              </path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select Role"><input id="rr-none" value="" name="reg-role" type="radio" checked><label class="uiverse-option" for="rr-none" data-txt="Select Role">Select Role</label></div>
+            <div title="Teaching Assistant (TA)"><input id="rr-ta" value="Teaching Assistant (TA)" name="reg-role" type="radio"><label class="uiverse-option" for="rr-ta" data-txt="Teaching Assistant (TA)">Teaching Assistant (TA)</label></div>
+            <div title="Assistant Professor"><input id="rr-ap" value="Assistant Professor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-ap" data-txt="Assistant Professor">Assistant Professor</label></div>
+            <div title="Associate Professor"><input id="rr-asp" value="Associate Professor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-asp" data-txt="Associate Professor">Associate Professor</label></div>
+            <div title="Professor"><input id="rr-p" value="Professor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-p" data-txt="Professor">Professor</label></div>
+            <div title="Head of Department (HOD)"><input id="rr-hod" value="Head of Department (HOD)" name="reg-role" type="radio"><label class="uiverse-option" for="rr-hod" data-txt="Head of Department (HOD)">Head of Department (HOD)</label></div>
+            <div title="Dean"><input id="rr-dean" value="Dean" name="reg-role" type="radio"><label class="uiverse-option" for="rr-dean" data-txt="Dean">Dean</label></div>
+            <div title="Director / Pro-Chancellor / Chancellor"><input id="rr-dir" value="Director / Pro-Chancellor / Chancellor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-dir" data-txt="Director / Pro-Chancellor / Chancellor">Director / Pro-Chancellor / Chancellor</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" id="reg-phone-section">
+        <label>Phone Number</label>
+        <input type="tel" id="reg-phone" placeholder="+1234567890" />
+      </div>
       <div class="form-group" id="reg-email-section">
         <label>Email</label>
         <input type="email" id="reg-email" placeholder="teacher@college.edu" />
@@ -482,6 +510,7 @@
       <div class="form-group">
         <label>Password (min 8 chars)</label>
         <input type="password" id="reg-password" placeholder="••••••••" />
+      </div>
       </div>
 
       <div style="display:flex;gap:12px;margin-top:16px;">
@@ -555,7 +584,7 @@
 
 
   <div class="modal-overlay" id="edit-modal" style="display:none;">
-    <div class="modal-card" style="max-width:520px;">
+    <div class="modal-card" style="max-width:680px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
         <h2 class="modal-title" style="margin:0">Edit Teacher Details</h2>
         <button class="btn-icon" onclick="hideEditModal()">✕</button>
@@ -564,6 +593,7 @@
       <div id="edit-success" class="success-banner" style="display:none;"></div>
 
       <input type="hidden" id="edit-id" />
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
       <div class="form-group">
         <label>Full Name</label>
         <input type="text" id="edit-name" />
@@ -572,7 +602,7 @@
         <label>Registration Number (Reg ID)</label>
         <input type="text" id="edit-no" />
       </div>
-      <div class="form-group">
+      <div class="form-group" style="grid-column: 1 / -1;">
         <label>Department</label>
         <div class="uiverse-select form-control" id="edit-department"
           style="padding:0; border:none; background:transparent; width:100%">
@@ -648,8 +678,35 @@
         <label>Email</label>
         <input type="email" id="edit-email" />
       </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="edit-phone" placeholder="e.g. 9876543210" />
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label>Role / Designation</label>
+        <div class="uiverse-select form-control" id="edit-role"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select Role</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select Role"><input id="er-none" value="" name="edit-role" type="radio" checked><label class="uiverse-option" for="er-none" data-txt="Select Role">Select Role</label></div>
+            <div title="Teaching Assistant (TA)"><input id="er-ta" value="Teaching Assistant (TA)" name="edit-role" type="radio"><label class="uiverse-option" for="er-ta" data-txt="Teaching Assistant (TA)">Teaching Assistant (TA)</label></div>
+            <div title="Assistant Professor"><input id="er-ap" value="Assistant Professor" name="edit-role" type="radio"><label class="uiverse-option" for="er-ap" data-txt="Assistant Professor">Assistant Professor</label></div>
+            <div title="Associate Professor"><input id="er-asp" value="Associate Professor" name="edit-role" type="radio"><label class="uiverse-option" for="er-asp" data-txt="Associate Professor">Associate Professor</label></div>
+            <div title="Professor"><input id="er-p" value="Professor" name="edit-role" type="radio"><label class="uiverse-option" for="er-p" data-txt="Professor">Professor</label></div>
+            <div title="Head of Department (HOD)"><input id="er-hod" value="Head of Department (HOD)" name="edit-role" type="radio"><label class="uiverse-option" for="er-hod" data-txt="Head of Department (HOD)">Head of Department (HOD)</label></div>
+            <div title="Dean"><input id="er-dean" value="Dean" name="edit-role" type="radio"><label class="uiverse-option" for="er-dean" data-txt="Dean">Dean</label></div>
+            <div title="Director / Pro-Chancellor / Chancellor"><input id="er-dir" value="Director / Pro-Chancellor / Chancellor" name="edit-role" type="radio"><label class="uiverse-option" for="er-dir" data-txt="Director / Pro-Chancellor / Chancellor">Director / Pro-Chancellor / Chancellor</label></div>
+          </div>
+        </div>
+      </div>
       <div class="form-group" style="display:none;">
         <input type="hidden" id="edit-password" />
+      </div>
       </div>
 
       <div style="display:flex;gap:12px;margin-top:16px;">
@@ -781,7 +838,7 @@
             <td style="font-size:12px;color:var(--text-muted)">${formatDt(t.created_at)}</td>
             <td>
               <div style="display:flex; gap:6px;">
-                <button class="btn-icon" title="Alter Details" onclick="showEditModal('${t.teacher_id}', '${escHtml(t.full_name)}', '${escHtml(t.email)}', '${escHtml(t.reg_no || '')}', '${escHtml(t.department || '')}')">
+                <button class="btn-icon" title="Alter Details" onclick="showEditModal('${t.teacher_id}', '${escHtml(t.full_name)}', '${escHtml(t.email)}', '${escHtml(t.reg_no || '')}', '${escHtml(t.department || '')}', '${escHtml(t.phone_no || '')}', '${escHtml(t.role || '')}')">  
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
                 </button>
                 <button class="btn-icon" title="${t.is_active ? 'Deactivate' : 'Activate'}" onclick="toggleActive('${t.teacher_id}', ${t.is_active})">
@@ -923,12 +980,14 @@
       const name = document.getElementById('reg-name').value.trim();
       const email = document.getElementById('reg-email').value.trim();
       const department = (getUiverseSelectValue('reg-department') || '').trim();
+      const role = (getUiverseSelectValue('reg-role') || '').trim();
+      const phoneNo = document.getElementById('reg-phone').value.trim();
 
-      if (!name || !regNo || !email || !password || !department) {
+      if (!name || !regNo || !email || !password || !department || !role || !phoneNo) {
         errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return;
       }
 
-      const payload = { full_name: name, reg_no: regNo, email, department, password };
+      const payload = { full_name: name, reg_no: regNo, email, department, role: role, phone_no: phoneNo, password };
       if (capturedEncoding) payload.face_encoding = capturedEncoding;
       if (capturedProfilePic) payload.profile_pic = capturedProfilePic;
 
@@ -940,11 +999,14 @@
       }
     }
 
-    function showEditModal(id, name, email, regNo, department) {
+    function showEditModal(id, name, email, regNo, department, phoneNo, role) {
       document.getElementById('edit-id').value = id;
       document.getElementById('edit-name').value = name;
       document.getElementById('edit-no').value = regNo;
       document.getElementById('edit-email').value = email;
+      document.getElementById('edit-phone').value = phoneNo || '';
+      // Pre-select role in the dropdown
+      setUiverseSelectValue('edit-role', role || '');
       // Pre-select the department in the dropdown
       setUiverseSelectValue('edit-department', department);
       document.getElementById('edit-password').value = '';
@@ -963,7 +1025,8 @@
       const regNo = document.getElementById('edit-no').value.trim();
       const email = document.getElementById('edit-email').value.trim();
       const department = (getUiverseSelectValue('edit-department') || '').trim();
-      const password = document.getElementById('edit-password').value;
+      const phoneNo = document.getElementById('edit-phone').value.trim();
+      const role = (getUiverseSelectValue('edit-role') || '').trim();
       const errEl = document.getElementById('edit-error');
       const okEl = document.getElementById('edit-success');
 
@@ -980,7 +1043,9 @@
         full_name: name,
         reg_no: regNo,
         email: email,
-        department: department
+        department: department,
+        phone_no: phoneNo,
+        role: role
       };
 
       const data = await api('/admin/teachers/' + id, 'PATCH', payload);

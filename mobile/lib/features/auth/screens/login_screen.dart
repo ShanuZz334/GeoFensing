@@ -6,6 +6,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 import '../providers/auth_provider.dart';
 import 'teacher_register_details_screen.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_loader.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -268,18 +269,11 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     return InputDecoration(
       hintText: hint,
       hintStyle: const TextStyle(color: Color(0xFF999999)),
-      filled: true,
-      fillColor: const Color(0xFF212121),
+      filled: false,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       suffixIcon: suffixIcon,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF212121), width: 2),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(6),
-        borderSide: const BorderSide(color: Color(0xFF212121), width: 2),
-      ),
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(6),
         borderSide: const BorderSide(color: AppTheme.primary, width: 2),
@@ -337,7 +331,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         ),
         child: Center(
           child: isLoading 
-            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF9F00FF)))
+            ? const SizedBox(height: 20, child: CustomLoader(color: AppTheme.primary))
             : Text(
                 text,
                 style: const TextStyle(
@@ -471,7 +465,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           mainAxisSize: MainAxisSize.min,
           children: [
             const Text(
-              'Sign Up',
+              'Activate Account',
               style: TextStyle(
                 fontSize: 25,
                 fontWeight: FontWeight.w600,

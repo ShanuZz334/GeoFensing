@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../providers/auth_provider.dart';
-
+import '../../../shared/widgets/custom_loader.dart';
+import '../../../core/theme/app_theme.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -69,63 +70,73 @@ class _SplashScreenState extends State<SplashScreen>
           ),
         ),
         child: Center(
-          child: FadeTransition(
-            opacity: _fadeAnim,
-            child: ScaleTransition(
-              scale: _scaleAnim,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // Logo
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(70),
-                    child: Container(
-                      width: 140,
-                      height: 140,
-                      child: ClipRect(
+          child: AnimatedBuilder(
+            animation: _controller,
+            builder: (context, child) {
+              return FadeTransition(
+                opacity: _fadeAnim,
+                child: ScaleTransition(
+                  scale: _scaleAnim,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Logo — rendered bg-less directly on dark background
+                      SizedBox(
+                        width: 140,
+                        height: 140,
                         child: Image.asset(
                           'assets/images/logo.png',
-                          fit: BoxFit.cover,
+                          fit: BoxFit.contain,
+                          errorBuilder: (context, error, stackTrace) {
+                            return const Icon(Icons.face_retouching_natural,
+                                color: Color(0xFF9F00FF), size: 80);
+                          },
                         ),
                       ),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  RichText(
-                    text: const TextSpan(
-                      text: 'Geo',
-                      style: TextStyle(
-                        fontFamily: 'Bitcount', // Assuming Bitcount is default or available
-                        fontSize: 32,
-                        fontWeight: FontWeight.w900,
-                        color: Colors.white70,
-                        letterSpacing: 1.5,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: 'Face',
+                      const SizedBox(height: 28),
+                      RichText(
+                        text: const TextSpan(
+                          text: 'Geo',
                           style: TextStyle(
-                            color: Color(0xFF9F00FF),
+                            fontFamily: 'Bitcount', // Assuming Bitcount is default or available
+                            fontSize: 32,
+                            fontWeight: FontWeight.w900,
+                            color: Colors.white70,
+                            letterSpacing: 1.5,
                           ),
+                          children: [
+                            TextSpan(
+                              text: 'Face',
+                              style: TextStyle(
+                                color: Color(0xFF9F00FF),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Faculty Authentication System',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withValues(alpha: 0.85),
+                          fontWeight: FontWeight.w400,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      const SizedBox(height: 64),
+                      if (_controller.value > 0.8)
+                        const SizedBox(
+                          height: 20,
+                          child: CustomLoader(color: AppTheme.primary),
+                        )
+                      else
+                        const SizedBox(height: 20), // Placeholder so UI doesn't jump
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Faculty Authentication System',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.white.withValues(alpha: 0.85),
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 64),
-                  const CircularProgressIndicator(color: Color(0xFF9F00FF)),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ),
       ),

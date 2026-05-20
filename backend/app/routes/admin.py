@@ -252,6 +252,8 @@ def register_teacher():
         data["full_name"] = "Pending Registration"
         data["email"] = f"temp_{reg}@geoface.local"
         data["department"] = "Pending"
+        data["role"] = "Pending"
+        data["phone_no"] = "Pending"
 
     valid, error = validate_teacher_register_payload(data)
     if not valid:
@@ -276,6 +278,8 @@ def register_teacher():
         email=email,
         reg_no=data["reg_no"].strip(),
         department=data["department"].strip(),
+        role=data.get("role", "").strip(),
+        phone_no=data.get("phone_no", "").strip(),
         password_hash=password_hash,
         face_encoding=encoding,
         profile_pic=profile_pic,
@@ -380,6 +384,10 @@ def update_teacher(teacher_id: str):
         if email != teacher.email and Teacher.query.filter_by(email=email).first():
             return jsonify({"error": "A teacher with this email already exists"}), 409
         teacher.email = email
+    if "phone_no" in data:
+        teacher.phone_no = data["phone_no"].strip()
+    if "role" in data:
+        teacher.role = data["role"].strip()
 
     if "is_active" in data:
         teacher.is_active = bool(data["is_active"])

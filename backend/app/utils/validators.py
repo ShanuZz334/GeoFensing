@@ -92,7 +92,7 @@ def validate_teacher_register_payload(data: Dict[str, Any]) -> Tuple[bool, Optio
     if not data:
         return False, "Request body is required"
 
-    for field in ("full_name", "email", "reg_no", "password", "department"):
+    for field in ("full_name", "email", "reg_no", "password", "department", "role", "phone_no"):
         if not data.get(field):
             return False, f"{field} is required"
 

@@ -16,6 +16,8 @@ CREATE TABLE IF NOT EXISTS teachers (
     email            VARCHAR(255)  NOT NULL UNIQUE,
     reg_no           VARCHAR(100)  UNIQUE,
     department       VARCHAR(100),
+    role             VARCHAR(100),
+    phone_no         VARCHAR(20),
     profile_pic      TEXT,
     password_hash    VARCHAR(255)  NOT NULL,
     -- 128-element float array stored as JSONB for efficient indexing

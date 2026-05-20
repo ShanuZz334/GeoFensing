@@ -179,6 +179,8 @@ def complete_setup():
         "full_name": data.get("full_name"),
         "email": data.get("email"),
         "department": data.get("department"),
+        "role": data.get("role"),
+        "phone_no": data.get("phone_no"),
         "password": data.get("new_password"),
         "reg_no": teacher.reg_no,
         "face_encoding": [0.0]*512 # dummy to pass validation, real one calculated below
@@ -203,6 +205,8 @@ def complete_setup():
     teacher.full_name = data["full_name"].strip()
     teacher.email = email
     teacher.department = data["department"].strip()
+    teacher.role = data["role"].strip()
+    teacher.phone_no = data["phone_no"].strip()
     teacher.password_hash = bcrypt.generate_password_hash(data["new_password"]).decode("utf-8")
     teacher.profile_pic = profile_pic
     teacher.face_encoding = encoding
@@ -210,3 +214,40 @@ def complete_setup():
     db.session.commit()
     
     return jsonify({"message": "Registration completed successfully", "teacher": teacher.to_dict()}), 200
+
+@auth_bp.route("/profile/update", methods=["PATCH"])
+@jwt_required()
+def update_profile():
+    """
+    PATCH /profile/update
+    Updates teacher profile details and display picture.
+    Does NOT affect face recognition encodings.
+    """
+    teacher_id = get_jwt_identity()
+    teacher = Teacher.query.get(teacher_id)
+    
+    if not teacher or not teacher.is_active:
+        return jsonify({"error": "Teacher not found or inactive"}), 404
+        
+    data = request.get_json(silent=True) or {}
+    
+    if "email" in data:
+        email = data["email"].strip().lower()
+        if Teacher.query.filter(Teacher.email == email, Teacher.teacher_id != teacher_id).first():
+            return jsonify({"error": "A teacher with this email already exists"}), 409
+        teacher.email = email
+        
+    if "phone_no" in data:
+        teacher.phone_no = data["phone_no"].strip()
+        
+    if "password" in data and len(data["password"]) >= 8:
+        teacher.password_hash = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
+        
+    if "profile_pic" in data:
+        teacher.profile_pic = data["profile_pic"]
+        # Note: We purposely DO NOT update face_encoding here, as requested by the user,
+        # to ensure the original security registration remains active.
+        
+    db.session.commit()
+    
+    return jsonify({"message": "Profile updated successfully", "teacher": teacher.to_dict()}), 200

@@ -20,6 +20,7 @@ dependencies:
 
   # Camera & video
   camera: ^0.12.0+1
+  image_picker: ^1.1.2
 
   # Real-time face detection
   google_mlkit_face_detection: ^0.11.0

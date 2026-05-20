@@ -135,6 +135,8 @@ class ApiService {
     required String fullName,
     required String email,
     required String department,
+    required String role,
+    required String phoneNo,
     required String newPassword,
     required String profilePicBase64,
   }) async {
@@ -146,6 +148,8 @@ class ApiService {
         'full_name': fullName,
         'email': email,
         'department': department,
+        'role': role,
+        'phone_no': phoneNo,
         'new_password': newPassword,
         'profile_pic': profilePicBase64,
       };
@@ -153,6 +157,41 @@ class ApiService {
       final response = await http
           .patch(
             Uri.parse('${ApiConstants.baseUrl}/complete_setup'),
+            headers: _baseHeaders(auth: true, token: token),
+            body: jsonEncode(body),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
+  /// PATCH /profile/update
+  Future<ApiResponse> updateProfile({
+    String? email,
+    String? phoneNo,
+    String? password,
+    String? profilePicBase64,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
+
+      final body = <String, dynamic>{};
+      if (email != null) body['email'] = email;
+      if (phoneNo != null) body['phone_no'] = phoneNo;
+      if (password != null) body['password'] = password;
+      if (profilePicBase64 != null) body['profile_pic'] = profilePicBase64;
+
+      final response = await http
+          .patch(
+            Uri.parse('${ApiConstants.baseUrl}/profile/update'),
             headers: _baseHeaders(auth: true, token: token),
             body: jsonEncode(body),
           )

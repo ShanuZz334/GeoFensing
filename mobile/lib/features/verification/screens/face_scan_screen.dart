@@ -176,7 +176,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
         backgroundColor: isSuccess ? Colors.green : Colors.redAccent,
       ));
       if (isSuccess && mounted) {
-        await Future.delayed(const Duration(seconds: 8));
+        await Future.delayed(const Duration(seconds: 2));
         if (mounted) Navigator.pop(context);
       }
     }
@@ -377,7 +377,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                   shape: BoxShape.circle,
                   border: Border.all(
                     color: isSuccess
-                        ? const Color(0xFF10B981)
+                        ? const Color(0xFF7C3AED)
                         : isFailure
                             ? const Color(0xFFEF4444)
                             : const Color(0xFF7C3AED),
@@ -407,9 +407,9 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                           );
                         })
                       else if (isSuccess)
-                        const ColoredBox(color: Color(0xFF0D2D1A),
+                        const ColoredBox(color: Color(0xFF190F2E),
                           child: Center(child: Icon(Icons.check_circle,
-                              color: Color(0xFF10B981), size: 100)))
+                              color: Color(0xFF7C3AED), size: 100)))
                       else if (isFailure)
                         const ColoredBox(color: Color(0xFF2D0D0D),
                           child: Center(child: Icon(Icons.cancel,
@@ -485,7 +485,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
   }
 
   List<Widget> _buildCorners() {
-    const color = Color(0xFF10B981);
+    const color = Color(0xFF7C3AED);
     const sz = 28.0, st = 3.0, off = 20.0;
     return [
       Positioned(top: off, left: off,
@@ -512,7 +512,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       color = const Color(0xFF7C3AED);
     } else if (isSuccess) {
       text = 'Verified ✓'; icon = Icons.check_circle_outline;
-      color = const Color(0xFF10B981);
+      color = const Color(0xFF7C3AED);
     } else if (isFailure) {
       text = 'Scan Failed'; icon = Icons.error_outline;
       color = const Color(0xFFEF4444);
@@ -641,9 +641,9 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       statusColor = Colors.white24;
       statusIcon = Icons.radio_button_unchecked_rounded;
     } else if (ok) {
-      iconBg = const Color(0xFF10B981).withValues(alpha: 0.12);
-      iconColor = const Color(0xFF10B981);
-      statusColor = const Color(0xFF10B981);
+      iconBg = const Color(0xFF7C3AED).withValues(alpha: 0.12);
+      iconColor = const Color(0xFF7C3AED);
+      statusColor = const Color(0xFF7C3AED);
       statusIcon = Icons.check_circle_rounded;
     } else {
       iconBg = const Color(0xFFF59E0B).withValues(alpha: 0.12);
@@ -765,7 +765,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(children: [
         Expanded(child: _footerTile(
-          Icons.shield_outlined, const Color(0xFF10B981),
+          Icons.shield_outlined, const Color(0xFF7C3AED),
           'Secure & Encrypted', 'Your data is protected',
         )),
         const SizedBox(width: 10),

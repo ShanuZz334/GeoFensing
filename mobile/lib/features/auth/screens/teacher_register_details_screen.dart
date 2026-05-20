@@ -6,6 +6,7 @@ import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import 'login_screen.dart';
 import '../../../../core/widgets/uiverse_dropdown.dart';
+import '../../../shared/widgets/custom_loader.dart';
 
 class TeacherRegisterDetailsScreen extends StatefulWidget {
   const TeacherRegisterDetailsScreen({super.key});
@@ -19,6 +20,8 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   String? _selectedDepartment;
+  String? _selectedRole;
+  final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   
   bool _obscurePassword = true;
@@ -77,6 +80,7 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
   void dispose() {
     _nameController.dispose();
     _emailController.dispose();
+    _phoneController.dispose();
     _passwordController.dispose();
     _cameraController?.dispose();
     super.dispose();
@@ -120,6 +124,8 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
         department: _selectedDepartment ?? '',
+        role: _selectedRole ?? '',
+        phoneNo: _phoneController.text.trim(),
         newPassword: _passwordController.text,
         profilePicBase64: _capturedImageBase64!,
       );
@@ -159,8 +165,8 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
       return Column(
         children: [
           Container(
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               border: Border.all(color: AppTheme.primary, width: 3),
@@ -206,8 +212,8 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
       return Column(
         children: [
           Container(
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
             clipBehavior: Clip.hardEdge,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
@@ -273,8 +279,8 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
         GestureDetector(
           onTap: _startCamera,
           child: Container(
-            width: 120,
-            height: 120,
+            width: 200,
+            height: 200,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: Colors.white.withValues(alpha: 0.05),
@@ -392,14 +398,62 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                     'School of Computer Applications & IT',
                   ].map((dept) => DropdownMenuItem<String>(
                     value: dept,
-                    child: Text(dept, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                    child: Text(dept, style: const TextStyle(color: Colors.white, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
                   )).toList(),
                   onChanged: (val) => setState(() => _selectedDepartment = val),
                   validator: (v) => (v == null || v.isEmpty) ? 'Please select a department' : null,
                 ),
                 const SizedBox(height: 20),
 
-                // Full Name
+                // Role Dropdown
+                const Text('Role', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                UiverseDropdown<String>(
+                  value: _selectedRole,
+                  hintText: 'Select Your Role',
+                  items: [
+                    'Teaching Assistant (TA)',
+                    'Assistant Professor',
+                    'Associate Professor',
+                    'Professor',
+                    'Head of Department (HOD)',
+                    'Dean',
+                    'Director / Pro-Chancellor / Chancellor',
+                  ].map((role) => DropdownMenuItem<String>(
+                    value: role,
+                    child: Text(role, style: const TextStyle(color: Colors.white, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  )).toList(),
+                  onChanged: (val) => setState(() => _selectedRole = val),
+                  validator: (v) => (v == null || v.isEmpty) ? 'Please select your role' : null,
+                ),
+                const SizedBox(height: 20),
+
+                // Phone Number
+                const Text('Phone Number', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                TextFormField(
+                  controller: _phoneController,
+                  keyboardType: TextInputType.phone,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: '+1234567890',
+                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    prefixIcon: Icon(Icons.phone_outlined, color: Colors.white.withValues(alpha: 0.5), size: 20),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
+                  validator: (v) {
+                    if (v == null || v.trim().isEmpty) return 'Required';
+                    if (v.trim().length < 7) return 'Enter a valid phone number';
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 20),
                 const Text('Full Name', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
                 TextFormField(
@@ -488,7 +542,7 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
+                      ? const SizedBox(height: 20, child: CustomLoader(color: Colors.white))
                       : const Text('Complete Registration', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
                 const SizedBox(height: 40),

@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import '../../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 import 'teacher_register_details_screen.dart';
+import '../../../shared/widgets/custom_loader.dart';
 
 class TeacherRegisterAuthScreen extends StatefulWidget {
   const TeacherRegisterAuthScreen({super.key});
@@ -212,7 +213,7 @@ class _TeacherRegisterAuthScreenState extends State<TeacherRegisterAuthScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   child: _isLoading
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF9F00FF)))
+                      ? const SizedBox(height: 20, child: CustomLoader(color: AppTheme.primary))
                       : const Text('Continue', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                 ),
               ],

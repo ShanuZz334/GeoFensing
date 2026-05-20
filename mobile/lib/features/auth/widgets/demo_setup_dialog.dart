@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:geolocator/geolocator.dart';
 import '../../verification/providers/verification_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_loader.dart';
 
 class DemoSetupDialog extends StatefulWidget {
   const DemoSetupDialog({super.key});
@@ -141,7 +142,7 @@ class _DemoSetupDialogState extends State<DemoSetupDialog> {
                 child: TextButton.icon(
                   onPressed: _isLoadingLocation ? null : _fetchCurrentLocation,
                   icon: _isLoadingLocation 
-                    ? const SizedBox(width: 14, height: 14, child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.primary)) 
+                    ? const SizedBox(height: 14, child: CustomLoader(color: AppTheme.primary)) 
                     : const Icon(Icons.my_location_rounded, size: 16),
                   label: Text(_isLoadingLocation ? 'Locating...' : 'Use Current Location', style: const TextStyle(fontSize: 12)),
                 ),

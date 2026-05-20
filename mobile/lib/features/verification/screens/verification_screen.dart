@@ -7,6 +7,7 @@ import 'dart:math' as math;
 
 import '../providers/verification_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../../shared/widgets/custom_loader.dart';
 
 class VerificationScreen extends StatefulWidget {
   const VerificationScreen({super.key});
@@ -76,7 +77,7 @@ class _VerificationScreenState extends State<VerificationScreen> with SingleTick
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        CircularProgressIndicator(color: Color(0xFF9F00FF)),
+                        SizedBox(height: 20, child: CustomLoader(color: AppTheme.primary)),
                         SizedBox(height: 16),
                         Text('Initializing camera...',
                             style: TextStyle(color: Colors.white70, fontSize: 14)),
@@ -385,7 +386,7 @@ class _BottomPanel extends StatelessWidget {
                   ? Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)),
+                        const SizedBox(height: 20, child: CustomLoader(color: Colors.white)),
                         const SizedBox(width: 10),
                         Text(
                           provider.status == VerificationStatus.recording

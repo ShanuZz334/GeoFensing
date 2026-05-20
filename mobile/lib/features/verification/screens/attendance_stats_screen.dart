@@ -5,6 +5,8 @@ import 'package:intl/intl.dart';
 
 import '../providers/verification_provider.dart';
 import '../models/attendance_log_model.dart';
+import '../../../shared/widgets/custom_loader.dart';
+import '../../../core/theme/app_theme.dart';
 
 class AttendanceStatsScreen extends StatefulWidget {
   const AttendanceStatsScreen({super.key});
@@ -42,9 +44,14 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
     final int allottedFullLeaves = currentData?['allotted_full_leaves'] ?? 0;
     final double takenHalfLeaves = (currentData?['taken_half_leaves'] ?? 0).toDouble();
     final int allottedHalfLeaves = currentData?['allotted_half_leaves'] ?? 0;
+    
+    final double halfLeavesQuotaUsed = takenHalfLeaves > allottedHalfLeaves ? allottedHalfLeaves.toDouble() : takenHalfLeaves;
+    final double extraHalfLeaves = takenHalfLeaves - halfLeavesQuotaUsed;
+    final double displayAbsent = absent + (extraHalfLeaves * 0.5);
+
     final double total = (currentData?['total'] ?? (attended + absent)).toDouble();
-    // Days effectively covered: actual attendance + leave-covered absences + half-day leaves
-    final double effectiveAttended = attended + leavesCoveredAbsent + (takenHalfLeaves * 0.5);
+    // Days effectively covered: actual attendance + leave-covered absences + valid half-day leaves
+    final double effectiveAttended = attended + leavesCoveredAbsent + (halfLeavesQuotaUsed * 0.5);
     
     final List<dynamic> rawLogs = currentData?['logs'] ?? [];
     
@@ -72,15 +79,15 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
         ),
         centerTitle: true,
       ),
-        body: isLoading
-            ? const Center(child: CircularProgressIndicator())
+        body: isLoading && stats == null
+            ? const Center(child: CustomLoader(color: AppTheme.primary))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // 1. Stats Card (Header)
-                  _buildStatsHeader(attended, absent, total, takenFullLeaves, approvedFullLeaves, allottedFullLeaves, takenHalfLeaves, allottedHalfLeaves, leavesQuotaUsed, leavesCoveredAbsent, effectiveAttended),
+                  _buildStatsHeader(attended, displayAbsent, total, takenFullLeaves, approvedFullLeaves, allottedFullLeaves, halfLeavesQuotaUsed, allottedHalfLeaves, leavesQuotaUsed, leavesCoveredAbsent, effectiveAttended),
                   const SizedBox(height: 32),
 
                   // 2. Range Toggle
@@ -108,7 +115,7 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
     );
   }
 
-  Widget _buildStatsHeader(double attended, double absent, double total, double takenFullLeaves, double approvedFullLeaves, int allottedFullLeaves, double takenHalfLeaves, int allottedHalfLeaves, double leavesQuotaUsed, double leavesCoveredAbsent, double effectiveAttended) {
+  Widget _buildStatsHeader(double attended, double absent, double total, double takenFullLeaves, double approvedFullLeaves, int allottedFullLeaves, double halfLeavesQuotaUsed, int allottedHalfLeaves, double leavesQuotaUsed, double leavesCoveredAbsent, double effectiveAttended) {
     return Container(
       padding: const EdgeInsets.all(24),
       decoration: BoxDecoration(
@@ -142,7 +149,7 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
                       ),
                       PieChartSectionData(
                         color: const Color(0xFFF59E0B), // Amber for Half Leaves
-                        value: takenHalfLeaves * 0.5,
+                        value: halfLeavesQuotaUsed * 0.5,
                         title: '',
                         radius: 20,
                       ),
@@ -179,7 +186,7 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
             children: [
               _buildStatInfo('Attended', attended.toStringAsFixed(attended == attended.toInt() ? 0 : 1), const Color(0xFF7C3AED)),
               _buildStatInfo('Full Leave', '${leavesQuotaUsed.toInt()}/$allottedFullLeaves', const Color(0xFF00D1FF)),
-              _buildStatInfo('Half Leave', '${takenHalfLeaves.toInt()}/$allottedHalfLeaves', const Color(0xFFF59E0B)),
+              _buildStatInfo('Half Leave', '${halfLeavesQuotaUsed.toInt()}/$allottedHalfLeaves', const Color(0xFFF59E0B)),
               _buildStatInfo('Absent', absent.toStringAsFixed(absent == absent.toInt() ? 0 : 1), const Color(0xFFEF4444)),
             ],
           ),

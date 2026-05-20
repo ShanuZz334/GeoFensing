@@ -528,7 +528,7 @@
       document.getElementById('next-btn').disabled = data.page >= data.pages;
 
       const tbody = document.getElementById('logs-tbody');
-      const validLogs = data.logs.filter(log => !log.reason || !log.reason.includes('Demo Mode'));
+      const validLogs = data.logs.filter(log => !log.reason || (!log.reason.includes('Demo Mode') && !log.reason.includes('Auto-marked absent')));
       if (!validLogs.length) {
         tbody.innerHTML = '<tr><td colspan="8" class="td-loading">No records found (or all were Demo Mode)</td></tr>';
         return;

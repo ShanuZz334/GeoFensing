@@ -42,7 +42,9 @@ class RemoteConfigService {
         if (url != null && url.isNotEmpty) {
           _baseUrl = url;
           // Cache on device so it works offline after first fetch
-          await _storage.write(key: _cacheKey, value: url);
+          try {
+            await _storage.write(key: _cacheKey, value: url);
+          } catch (_) {}
           return;
         }
       }
@@ -51,11 +53,14 @@ class RemoteConfigService {
     }
 
     // Try last cached URL
-    final cached = await _storage.read(key: _cacheKey);
-    if (cached != null && cached.isNotEmpty) {
-      _baseUrl = cached;
+    try {
+      final cached = await _storage.read(key: _cacheKey);
+      if (cached != null && cached.isNotEmpty) {
+        _baseUrl = cached;
+      }
+    } catch (_) {
+      // Fallback to hardcoded URL on storage error
     }
-    // else fall back to the hardcoded fallback above
   }
 
   /// The live base URL to use for all API calls.

@@ -1,3 +1,5 @@
+import 'dart:math' show sqrt;
+
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart' show Size, Rect;
@@ -27,46 +29,49 @@ class FaceScanStatus {
       'FaceScanStatus(detected=$faceDetected, lit=$goodLighting, centered=$faceCentered, hint=$hint)';
 }
 
-/// Strict pre-scan gate using Google ML Kit Face Detection.
+/// Robust multi-layer pre-scan gate using Google ML Kit Face Detection.
 ///
 /// Criteria that must ALL pass before capture is triggered:
-///   1. **Face detected** — a sufficiently large, forward-facing face
-///      (yaw ≤ ±25°, pitch ≤ ±20°, face area ≥ 8 % of frame)
-///   2. **Good lighting** — face-region average brightness 80–220 AND
-///      pixel standard-deviation ≥ 15 (ensures contrast, not a flat blob)
-///   3. **Face centered** — face center within 35–65 % H and 30–70 % V
 ///
-/// [stabilityRequired] consecutive passing frames are needed before
-/// [allGood] flips to true, preventing single-lucky-frame triggers.
+///  1. **Face detected**
+///     - ML Kit minFaceSize ≥ 0.35 (35 % of short axis)
+///     - Bounding-box area ≥ 14 % and ≤ 70 % of frame (not too far, not too close)
+///     - Face is not clipped at any edge (≥ 8 px margin on all sides)
+///     - Yaw ≤ ±15°, Pitch ≤ ±12°  (straight-on only)
+///     - Both eyes open probability ≥ 0.7
+///     - trackingId confirmed (stable real face)
+///
+///  2. **Good lighting**
+///     - Face region is split into 3 vertical zones (forehead / mid / chin).
+///       Each zone mean brightness must be 90–210.
+///     - Overall face-region stdDev ≥ 22 (real texture, not a flat printout).
+///     - Zone-to-zone brightness difference ≤ 60 (catches harsh side-lighting).
+///
+///  3. **Face centered**
+///     - Face centre within 40–60 % horizontal and 35–65 % vertical.
+///
+///  [stabilityRequired] consecutive passing frames are required before
+///  [allGood] flips true. Any single failing frame hard-resets the counter.
 class FaceScanService {
   FaceDetector? _detector;
   bool _isProcessing = false;
 
-  /// How many consecutive frames must pass all checks before reporting ready.
-  static const int stabilityRequired = 3;
+  /// Consecutive all-good frames needed before reporting ready.
+  static const int stabilityRequired = 5;
 
-  /// Running count of consecutive all-good frames.
   int _consecutivePassing = 0;
-
-  /// Last stable fully-passing status (for callers to inspect mid-stream).
   FaceScanStatus _lastStatus = const FaceScanStatus();
 
-  /// Expose the stability count so the UI can show "Hold steady (2/3)…"
   int get consecutivePassing => _consecutivePassing;
 
   void init() {
     if (kIsWeb) return;
     _detector = FaceDetector(
       options: FaceDetectorOptions(
-        // Use the accurate (CNN-based) model — slower but dramatically better
-        // at rejecting partial faces/foreheads.
         performanceMode: FaceDetectorMode.accurate,
-        enableClassification: true,
-        // Enable head-angle metadata.
+        enableClassification: true, // provides eye-open probability
         enableTracking: true,
-        // Minimum fraction of the shorter image dimension that the face must
-        // span — 0.25 = at least 25 % of the frame short-axis.
-        minFaceSize: 0.25,
+        minFaceSize: 0.35, // at least 35 % of shorter image dimension
       ),
     );
     _consecutivePassing = 0;
@@ -75,7 +80,6 @@ class FaceScanService {
   Future<FaceScanStatus> analyze(
       CameraImage image, CameraDescription cam) async {
     if (kIsWeb) {
-      // Web simulation — always green (used in browser testing only).
       return const FaceScanStatus(
           faceDetected: true, goodLighting: true, faceCentered: true);
     }
@@ -88,36 +92,28 @@ class FaceScanService {
 
       final faces = await _detector!.processImage(inputImage);
 
-      // ── Coordinate-space correction ────────────────────────────────────
-      // CameraImage.width/height are in the RAW sensor frame (typically
-      // landscape on Android). ML Kit, however, returns bounding boxes in
-      // the SCREEN-UPRIGHT frame because we pass the rotation metadata.
-      // When the sensor is rotated 90° or 270° (all normal Android phones)
-      // the width/height axes are transposed relative to what the user sees.
-      // We must swap them before computing any screen-space fractions.
       final imgW = image.width.toDouble();
       final imgH = image.height.toDouble();
       final bool sensorRotated =
           cam.sensorOrientation == 90 || cam.sensorOrientation == 270;
-      // effectiveW = screen-space horizontal extent
-      // effectiveH = screen-space vertical extent
       final double effectiveW = sensorRotated ? imgH : imgW;
       final double effectiveH = sensorRotated ? imgW : imgH;
 
       if (faces.isEmpty) {
         _consecutivePassing = 0;
-        final bright = _checkFrameLighting(image, null, imgW, imgH);
+        final brightResult = _checkLightingMultiZone(
+            image, null, imgW, imgH, sensorRotated);
         final status = FaceScanStatus(
           faceDetected: false,
-          goodLighting: bright,
+          goodLighting: brightResult.passed,
           faceCentered: false,
-          hint: 'No face found — position your full face in the circle',
+          hint: 'No face detected — position your full face in frame',
         );
         _lastStatus = status;
         return status;
       }
 
-      // Pick the largest face in the frame (in case multiple are detected).
+      // Use largest face
       final face = faces.reduce((a, b) =>
           (a.boundingBox.width * a.boundingBox.height) >
                   (b.boundingBox.width * b.boundingBox.height)
@@ -126,42 +122,52 @@ class FaceScanService {
 
       final box = face.boundingBox;
 
-      // ── 1. Face quality checks ──────────────────────────────────────────
-      final String? faceHint = _faceQualityHint(face, box, effectiveW, effectiveH);
+      // ── 1. Face quality ──────────────────────────────────────────────────
+      final String? faceHint =
+          _faceQualityHint(face, box, effectiveW, effectiveH);
       final bool faceGood = faceHint == null;
 
-      // ── 2. Lighting on face region ──────────────────────────────────────
-      // _checkFrameLighting works in raw sensor pixel space — pass raw dims.
-      final bool lit = _checkFrameLighting(image, box, imgW, imgH);
+      // ── 2. Multi-zone lighting ───────────────────────────────────────────
+      final LightingResult lighting =
+          _checkLightingMultiZone(image, box, imgW, imgH, sensorRotated);
+      final bool lit = lighting.passed;
 
-      // ── 3. Centering (screen-space) ────────────────────────────────────
-      final faceCx = box.left + box.width / 2;
-      final faceCy = box.top + box.height / 2;
-      final bool centered = (faceCx / effectiveW) >= 0.35 &&
-          (faceCx / effectiveW) <= 0.65 &&
-          (faceCy / effectiveH) >= 0.30 &&
-          (faceCy / effectiveH) <= 0.70;
+      // ── 3. Centering — tighter: 40-60% H, 35-65% V ──────────────────────
+      final faceCx = (box.left + box.width / 2) / effectiveW;
+      final faceCy = (box.top + box.height / 2) / effectiveH;
+      final bool centered =
+          faceCx >= 0.40 && faceCx <= 0.60 && faceCy >= 0.35 && faceCy <= 0.65;
 
-      // Build hint string for the worst failing check.
+      // ── Hint priority: face first, then lighting, then centering ─────────
       String? hint;
       if (!faceGood) {
         hint = faceHint;
       } else if (!lit) {
-        hint = 'Improve lighting — move to a brighter area';
+        hint = lighting.hint;
       } else if (!centered) {
-        hint = 'Centre your face in the circle';
+        final String h = faceCx < 0.40
+            ? 'move right'
+            : faceCx > 0.60
+                ? 'move left'
+                : '';
+        final String v = faceCy < 0.35
+            ? 'move down'
+            : faceCy > 0.65
+                ? 'move up'
+                : '';
+        final parts = [h, v].where((s) => s.isNotEmpty).join(' & ');
+        hint = 'Centre your face — $parts';
       }
 
       final allPass = faceGood && lit && centered;
 
-      // ── Stability gate ──────────────────────────────────────────────────
+      // Hard reset on any failure — no decay tolerance
       if (allPass) {
         _consecutivePassing++;
       } else {
         _consecutivePassing = 0;
       }
 
-      // Only report allGood after [stabilityRequired] consecutive passes.
       final stableGood = _consecutivePassing >= stabilityRequired;
 
       final status = FaceScanStatus(
@@ -180,124 +186,186 @@ class FaceScanService {
     }
   }
 
-  /// Returns null if the face passes all quality gates; otherwise a hint string.
+  // ── Face quality gate ────────────────────────────────────────────────────
+
   String? _faceQualityHint(
-      Face face, Rect box, double imgW, double imgH) {
-    // -- Minimum face area ------------------------------------------------
-    // Face bounding box must cover at least 8% of total frame area.
-    final frameArea = imgW * imgH;
+      Face face, Rect box, double frameW, double frameH) {
+    final frameArea = frameW * frameH;
     final faceArea = box.width * box.height;
-    if (faceArea / frameArea < 0.08) {
-      return 'Move closer — face is too small in frame';
+    final faceRatio = faceArea / frameArea;
+
+    // Too small — too far from camera
+    if (faceRatio < 0.14) {
+      return 'Move closer — face is too small';
     }
 
-    // -- Head pose (yaw / pitch) ------------------------------------------
-    // ML Kit provides Euler angles for detected faces.
-    // Yaw  (Y axis): left/right rotation — forehead tilts look like high yaw.
-    // Pitch (X axis): up/down tilt — looking up shows forehead.
-    final yaw = face.headEulerAngleY; // degrees, + = face right
-    final pitch = face.headEulerAngleX; // degrees, + = face up
+    // Too large — too close to camera (face fills > 70 % of frame)
+    if (faceRatio > 0.70) {
+      return 'Move back — face is too close';
+    }
 
-    if (yaw != null && yaw.abs() > 25.0) {
+    // Face clipped at any edge (must have ≥ 8 px margin on all sides)
+    const edge = 8.0;
+    if (box.left < edge ||
+        box.top < edge ||
+        box.right > frameW - edge ||
+        box.bottom > frameH - edge) {
+      return 'Face is clipped — centre fully in frame';
+    }
+
+    // Head pose — yaw ±15°, pitch ±12°
+    final yaw = face.headEulerAngleY;
+    final pitch = face.headEulerAngleX;
+
+    if (yaw != null && yaw.abs() > 15.0) {
       return 'Face the camera directly — too much side rotation';
     }
-    if (pitch != null && pitch.abs() > 20.0) {
+    if (pitch != null && pitch.abs() > 12.0) {
       return 'Hold phone level — too much up/down tilt';
     }
 
-    // -- Tracking stability -----------------------------------------------
-    // If tracking ID is null the detector is not confident it's a stable face.
+    // Eye openness — both eyes must be clearly open (≥ 0.70 probability)
+    final leftEye = face.leftEyeOpenProbability;
+    final rightEye = face.rightEyeOpenProbability;
+    if (leftEye != null && leftEye < 0.70) {
+      return 'Open both eyes fully';
+    }
+    if (rightEye != null && rightEye < 0.70) {
+      return 'Open both eyes fully';
+    }
+
+    // Tracking stability — trackingId null means detector isn't confident
     if (face.trackingId == null) {
       return 'Hold still — face not yet tracked';
     }
 
-    return null; // all good
+    return null;
   }
 
-  /// Checks brightness and contrast.
-  ///
-  /// When [faceBox] is provided the check is restricted to the face region
-  /// on the Y-plane, giving a much more relevant result than the whole frame.
-  static bool _checkFrameLighting(
-      CameraImage image, Rect? faceBox, double imgW, double imgH) {
+  // ── Multi-zone lighting check ────────────────────────────────────────────
+
+  LightingResult _checkLightingMultiZone(CameraImage image, Rect? faceBox,
+      double imgW, double imgH, bool sensorRotated) {
     try {
       final yPlane = image.planes.first;
       final bytes = yPlane.bytes;
       final stride = yPlane.bytesPerRow;
-      if (bytes.isEmpty) return true;
+      if (bytes.isEmpty) return LightingResult.pass();
 
-      int sum = 0;
-      int count = 0;
+      if (faceBox == null) {
+        // Full-frame check when no face — just do overall brightness
+        return _fullFrameLighting(bytes, stride);
+      }
 
-      if (faceBox != null) {
-        // Sample within the face bounding box on the Y-plane.
-        final x0 = (faceBox.left.clamp(0, imgW - 1)).toInt();
-        final y0 = (faceBox.top.clamp(0, imgH - 1)).toInt();
-        final x1 = (faceBox.right.clamp(0, imgW)).toInt();
-        final y1 = (faceBox.bottom.clamp(0, imgH)).toInt();
+      // Map the screen-space bounding box to raw sensor pixel coordinates
+      final Rect rawBox = sensorRotated
+          ? Rect.fromLTRB(
+              faceBox.top.clamp(0, imgH - 1),
+              (imgW - faceBox.right).clamp(0, imgW - 1),
+              faceBox.bottom.clamp(0, imgH),
+              (imgW - faceBox.left).clamp(0, imgW),
+            )
+          : faceBox;
 
-        // Sample every 4th pixel for performance.
-        for (int row = y0; row < y1; row += 4) {
-          for (int col = x0; col < x1; col += 4) {
+      final x0 = rawBox.left.toInt().clamp(0, imgW.toInt() - 1);
+      final y0 = rawBox.top.toInt().clamp(0, imgH.toInt() - 1);
+      final x1 = rawBox.right.toInt().clamp(0, imgW.toInt());
+      final y1 = rawBox.bottom.toInt().clamp(0, imgH.toInt());
+
+      if (x1 <= x0 || y1 <= y0) return LightingResult.pass();
+
+      // Split vertically into 3 equal zones: forehead / mid-face / chin
+      final zoneH = (y1 - y0) ~/ 3;
+      if (zoneH < 4) return LightingResult.pass();
+
+      final List<double> zoneMeans = [];
+      double totalSum = 0;
+      int totalCount = 0;
+
+      for (int z = 0; z < 3; z++) {
+        final zy0 = y0 + z * zoneH;
+        final zy1 = (z == 2) ? y1 : zy0 + zoneH;
+        int sum = 0;
+        int count = 0;
+        for (int row = zy0; row < zy1; row += 3) {
+          for (int col = x0; col < x1; col += 3) {
             final idx = row * stride + col;
             if (idx >= 0 && idx < bytes.length) {
-              sum += bytes[idx] & 0xFF;
+              final val = bytes[idx] & 0xFF;
+              sum += val;
               count++;
+              totalSum += val;
+              totalCount++;
             }
           }
         }
-      } else {
-        // Full-frame fallback (no face detected yet).
-        final step = (bytes.length / 300).floor().clamp(1, bytes.length);
-        for (int i = 0; i < bytes.length; i += step) {
-          sum += bytes[i] & 0xFF;
-          count++;
+        if (count == 0) return LightingResult.pass();
+        final mean = sum / count;
+        // Each zone must be 90–210
+        if (mean < 90) {
+          return LightingResult.fail(
+              'Too dark — move to a brighter area');
         }
+        if (mean > 210) {
+          return LightingResult.fail(
+              'Too bright / overexposed — reduce glare');
+        }
+        zoneMeans.add(mean);
       }
 
-      if (count == 0) return true;
-      final avg = sum / count;
+      // Zone uniformity: max difference ≤ 60 (catches harsh side-lighting)
+      final zoneMax = zoneMeans.reduce((a, b) => a > b ? a : b);
+      final zoneMin = zoneMeans.reduce((a, b) => a < b ? a : b);
+      if (zoneMax - zoneMin > 60) {
+        return LightingResult.fail(
+            'Uneven lighting — face a uniform light source');
+      }
 
-      // ── Brightness range ──────────────────────────────────────────────
-      // 80–220: reject very dark faces and blown-out / over-exposed scenes.
-      if (avg < 80 || avg > 220) return false;
-
-      // ── Contrast (standard deviation) ────────────────────────────────
-      // A low std-dev means the face region is a flat uniform blob —
-      // typical of a completely dark or completely white frame, or a
-      // printed photo held very close to the camera.
+      // Contrast: overall stdDev ≥ 22 (real skin texture vs. flat printout)
+      if (totalCount == 0) return LightingResult.pass();
+      final overallMean = totalSum / totalCount;
       double sqSum = 0;
-      if (faceBox != null) {
-        final x0 = (faceBox.left.clamp(0, imgW - 1)).toInt();
-        final y0 = (faceBox.top.clamp(0, imgH - 1)).toInt();
-        final x1 = (faceBox.right.clamp(0, imgW)).toInt();
-        final y1 = (faceBox.bottom.clamp(0, imgH)).toInt();
-        for (int row = y0; row < y1; row += 4) {
-          for (int col = x0; col < x1; col += 4) {
-            final idx = row * stride + col;
-            if (idx >= 0 && idx < bytes.length) {
-              final diff = (bytes[idx] & 0xFF) - avg;
-              sqSum += diff * diff;
-              // count is already computed above
-            }
+      for (int row = y0; row < y1; row += 3) {
+        for (int col = x0; col < x1; col += 3) {
+          final idx = row * stride + col;
+          if (idx >= 0 && idx < bytes.length) {
+            final diff = (bytes[idx] & 0xFF) - overallMean;
+            sqSum += diff * diff;
           }
         }
-      } else {
-        final step = (bytes.length / 300).floor().clamp(1, bytes.length);
-        for (int i = 0; i < bytes.length; i += step) {
-          final diff = (bytes[i] & 0xFF) - avg;
-          sqSum += diff * diff;
-        }
       }
-      final stdDev = (count > 0) ? (sqSum / count) : 0;
-      // Require stdDev >= 15² = 225 variance → stdDev(raw) ≥ 15
-      if (stdDev < 225) return false;
+      final stdDev = sqrt(sqSum / totalCount);
+      if (stdDev < 22) {
+        return LightingResult.fail(
+            'Low contrast — ensure your face is well-lit');
+      }
 
-      return true;
+      return LightingResult.pass();
     } catch (_) {
-      return true;
+      return LightingResult.pass();
     }
   }
+
+  LightingResult _fullFrameLighting(Uint8List bytes, int stride) {
+    try {
+      final step = (bytes.length / 500).floor().clamp(1, bytes.length);
+      int sum = 0;
+      int count = 0;
+      for (int i = 0; i < bytes.length; i += step) {
+        sum += bytes[i] & 0xFF;
+        count++;
+      }
+      if (count == 0) return LightingResult.pass();
+      final avg = sum / count;
+      if (avg < 70) return LightingResult.fail('Too dark — find better lighting');
+      if (avg > 220) return LightingResult.fail('Too bright / overexposed');
+      return LightingResult.pass();
+    } catch (_) {
+      return LightingResult.pass();
+    }
+  }
+
+  // ── Input image builder ──────────────────────────────────────────────────
 
   InputImage? _buildInputImage(CameraImage image, CameraDescription cam) {
     try {
@@ -312,22 +380,18 @@ class FaceScanService {
         format = InputImageFormat.nv21;
         final w = image.width;
         final h = image.height;
-
-        // Build a clean NV21 buffer: Y-plane then interleaved UV.
         final expectedLen = (w * h * 1.5).toInt();
         bytes = Uint8List(expectedLen);
 
-        // Copy Y plane row by row (handles stride != width).
+        // Copy Y plane row by row (handles stride != width)
         final yPlane = image.planes[0];
         for (int r = 0; r < h; r++) {
           final srcOff = r * yPlane.bytesPerRow;
           final dstOff = r * w;
-          bytes.setRange(
-              dstOff, dstOff + w, yPlane.bytes, srcOff);
+          bytes.setRange(dstOff, dstOff + w, yPlane.bytes, srcOff);
         }
 
-        // Copy UV plane (planes[1] = U, planes[2] = V for YUV420)
-        // NV21 expects interleaved V then U; swap appropriately.
+        // Copy UV — NV21 expects interleaved V, U
         if (image.planes.length >= 3) {
           final uPlane = image.planes[1];
           final vPlane = image.planes[2];
@@ -336,12 +400,14 @@ class FaceScanService {
           final uvCols = w ~/ 2;
           for (int r = 0; r < uvRows; r++) {
             for (int c = 0; c < uvCols; c++) {
-              final uIdx = r * uPlane.bytesPerRow + c * uPlane.bytesPerPixel!;
-              final vIdx = r * vPlane.bytesPerRow + c * vPlane.bytesPerPixel!;
+              final uIdx =
+                  r * uPlane.bytesPerRow + c * uPlane.bytesPerPixel!;
+              final vIdx =
+                  r * vPlane.bytesPerRow + c * vPlane.bytesPerPixel!;
               final dstIdx = uvStart + r * w + c * 2;
               if (dstIdx + 1 < expectedLen) {
-                bytes[dstIdx] = vPlane.bytes[vIdx] & 0xFF; // V
-                bytes[dstIdx + 1] = uPlane.bytes[uIdx] & 0xFF; // U
+                bytes[dstIdx] = vPlane.bytes[vIdx] & 0xFF;
+                bytes[dstIdx + 1] = uPlane.bytes[uIdx] & 0xFF;
               }
             }
           }
@@ -394,4 +460,15 @@ class FaceScanService {
     await _detector?.close();
     _detector = null;
   }
+}
+
+// ── Lightweight result wrapper for multi-zone lighting ───────────────────────
+
+class LightingResult {
+  final bool passed;
+  final String? hint;
+  const LightingResult._(this.passed, this.hint);
+  factory LightingResult.pass() => const LightingResult._(true, null);
+  factory LightingResult.fail(String hint) =>
+      LightingResult._(false, hint);
 }

@@ -468,12 +468,14 @@ async function loadRecentLogs() {
   const tbody = document.getElementById('recent-tbody');
   if (!tbody) return;
 
-  if (!data.logs.length) {
+  const validLogs = data.logs.filter(log => !log.reason || (!log.reason.includes('Demo Mode') && !log.reason.includes('Auto-marked absent')));
+
+  if (!validLogs.length) {
     tbody.innerHTML = '<tr><td colspan="4" class="td-loading">No recent activity detected</td></tr>';
     return;
   }
 
-  tbody.innerHTML = data.logs.map(log => {
+  tbody.innerHTML = validLogs.map(log => {
     // 1. Premium Avatar Layout with dynamic fallback initials
     const initials = (log.teacher_name || 'T').charAt(0).toUpperCase();
     const hasAvatar = !!log.profile_pic;

@@ -95,6 +95,8 @@ class AuthProvider extends ChangeNotifier {
     required String fullName,
     required String email,
     required String department,
+    required String role,
+    required String phoneNo,
     required String newPassword,
     required String profilePicBase64,
   }) async {
@@ -106,6 +108,8 @@ class AuthProvider extends ChangeNotifier {
       fullName: fullName,
       email: email,
       department: department,
+      role: role,
+      phoneNo: phoneNo,
       newPassword: newPassword,
       profilePicBase64: profilePicBase64,
     );
@@ -128,6 +132,43 @@ class AuthProvider extends ChangeNotifier {
     } else {
       _errorMessage = response.errorMessage ?? 'Setup failed';
       _status = AuthStatus.authenticated; // Keep authenticated, just show error
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// PATCH /profile/update — updates display picture, phone, password (NOT face encoding)
+  Future<bool> updateProfile({
+    String? email,
+    String? phoneNo,
+    String? password,
+    String? profilePicBase64,
+  }) async {
+    _errorMessage = null;
+    notifyListeners();
+
+    final response = await ApiService.instance.updateProfile(
+      email: email,
+      phoneNo: phoneNo,
+      password: password,
+      profilePicBase64: profilePicBase64,
+    );
+
+    if (response.success && response.data != null) {
+      final data = response.data!;
+      _currentUser = UserModel.fromJson(
+        data['teacher'] as Map<String, dynamic>,
+      );
+
+      await _storage.write(
+        key: ApiConstants.teacherKey,
+        value: jsonEncode(_currentUser!.toJson()),
+      );
+
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = response.errorMessage ?? 'Update failed';
       notifyListeners();
       return false;
     }

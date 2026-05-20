@@ -125,9 +125,27 @@ class VerificationProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Timer? _pollTimer;
+  void startPolling() {
+    _pollTimer?.cancel();
+    // Poll every 10 seconds for real-time updates from admin panel
+    _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (!isBusy) {
+        fetchSettings(silent: true);
+        fetchHistory(silent: true);
+        fetchStats(silent: true);
+      }
+    });
+  }
+
+  void stopPolling() {
+    _pollTimer?.cancel();
+    _pollTimer = null;
+  }
+
   // ── Settings ──────────────────────────────────────────────────────────────
 
-  Future<void> fetchSettings() async {
+  Future<void> fetchSettings({bool silent = false}) async {
     try {
       final response = await ApiService.instance.getSettings();
       if (response.success && response.data != null) {
@@ -135,7 +153,7 @@ class VerificationProvider extends ChangeNotifier {
         notifyListeners();
       }
     } catch (e) {
-      debugPrint("Failed to fetch settings: \$e");
+      debugPrint("Failed to fetch settings: $e");
     }
   }
 
@@ -153,9 +171,11 @@ class VerificationProvider extends ChangeNotifier {
     return timeStr.compareTo(absentLimit) > 0;
   }
 
-  Future<void> fetchHistory() async {
-    _isLoadingHistory = true;
-    notifyListeners();
+  Future<void> fetchHistory({bool silent = false}) async {
+    if (!silent) {
+      _isLoadingHistory = true;
+      notifyListeners();
+    }
 
     final response = await ApiService.instance.getAttendance();
     if (response.success && response.data != null) {
@@ -168,13 +188,18 @@ class VerificationProvider extends ChangeNotifier {
       }
     }
     
-    _isLoadingHistory = false;
+    if (!silent) {
+      _isLoadingHistory = false;
+    }
+    // Always notify so UI updates with new background data
     notifyListeners();
   }
 
-  Future<void> fetchStats() async {
-    _isLoadingStats = true;
-    notifyListeners();
+  Future<void> fetchStats({bool silent = false}) async {
+    if (!silent) {
+      _isLoadingStats = true;
+      notifyListeners();
+    }
 
     try {
       final response = await ApiService.instance.getAttendanceStats();
@@ -182,10 +207,12 @@ class VerificationProvider extends ChangeNotifier {
         _stats = response.data!;
       }
     } catch (e) {
-      debugPrint("Failed to fetch stats: \$e");
+      debugPrint("Failed to fetch stats: $e");
     }
-    
-    _isLoadingStats = false;
+
+    if (!silent) {
+      _isLoadingStats = false;
+    }
     notifyListeners();
   }
 

@@ -86,7 +86,16 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
 
     if (success && mounted) {
-      Navigator.pushReplacementNamed(context, '/home');
+      if (auth.currentUser?.department == 'Pending' || auth.currentUser?.email.endsWith('@geoface.local') == true) {
+        // They used the normal login card, but they are pending!
+        await auth.logout();
+        setState(() {
+          _isLoading = false;
+          _errorText = 'Account registration is pending. Please use the "Register Here" button below to activate your account.';
+        });
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } else if (mounted) {
       setState(() {
         _isLoading = false;

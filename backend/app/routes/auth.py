@@ -215,6 +215,16 @@ def complete_setup():
     
     return jsonify({"message": "Registration completed successfully", "teacher": teacher.to_dict()}), 200
 
+@auth_bp.route("/me", methods=["GET"])
+@jwt_required()
+def get_me():
+    """GET /me — returns the current authenticated teacher's latest profile data."""
+    teacher_id = get_jwt_identity()
+    teacher = Teacher.query.get(teacher_id)
+    if not teacher or not teacher.is_active:
+        return jsonify({"error": "Teacher not found or inactive"}), 404
+    return jsonify({"teacher": teacher.to_dict()}), 200
+
 @auth_bp.route("/profile/update", methods=["PATCH"])
 @jwt_required()
 def update_profile():

@@ -254,6 +254,26 @@ class ApiService {
   }
 
   /// GET /settings
+  /// GET /me — fetches the current teacher's latest profile from the server
+  Future<ApiResponse> fetchMe() async {
+    try {
+      final token = await _getToken();
+      final response = await http
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/me'),
+            headers: _baseHeaders(auth: true, token: token),
+          )
+          .timeout(ApiConstants.connectTimeout);
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
   Future<ApiResponse> getSettings() async {
     try {
       final response = await http

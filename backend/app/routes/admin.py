@@ -363,6 +363,16 @@ def update_teacher_leaves(teacher_id):
 # ── Teachers CRUD ────────────────────────────────────────────────────────────
 
 
+@admin_bp.route("/teachers/<teacher_id>", methods=["GET"])
+@jwt_required()
+def get_teacher(teacher_id: str):
+    """GET /admin/teachers/<id> — fetch a single teacher's latest data."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+    teacher = Teacher.query.get_or_404(teacher_id)
+    return jsonify({"teacher": teacher.to_dict()}), 200
+
+
 @admin_bp.route("/teachers/<teacher_id>", methods=["PATCH"])
 @jwt_required()
 def update_teacher(teacher_id: str):

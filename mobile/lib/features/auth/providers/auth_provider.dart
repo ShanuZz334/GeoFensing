@@ -174,6 +174,27 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  /// GET /me — fetches the latest profile data from the server and updates the local session
+  Future<bool> refreshProfile() async {
+    final response = await ApiService.instance.fetchMe();
+    
+    if (response.success && response.data != null) {
+      final data = response.data!;
+      _currentUser = UserModel.fromJson(
+        data['teacher'] as Map<String, dynamic>,
+      );
+
+      await _storage.write(
+        key: ApiConstants.teacherKey,
+        value: jsonEncode(_currentUser!.toJson()),
+      );
+
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
   /// POST /reset-password
   Future<bool> resetPassword(String regNo, String totp, String newPassword) async {
     _status = AuthStatus.loading;

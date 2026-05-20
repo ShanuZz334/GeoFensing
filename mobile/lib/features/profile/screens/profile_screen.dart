@@ -29,6 +29,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
   String? _pwSuccess;
 
   @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        context.read<AuthProvider>().refreshProfile();
+      }
+    });
+  }
+
+  @override
   void dispose() {
     _oldPasswordCtrl.dispose();
     _newPasswordCtrl.dispose();

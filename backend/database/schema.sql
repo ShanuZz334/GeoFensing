@@ -68,6 +68,7 @@ CREATE TABLE IF NOT EXISTS attendance_logs (
     action_type      VARCHAR(20),
     -- "present", "half_day", or "absent"
     attendance_mark  VARCHAR(20)   NOT NULL DEFAULT 'present',
+    is_alert_resolved BOOLEAN       NOT NULL DEFAULT FALSE,
     created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
 );
 

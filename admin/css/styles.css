@@ -1477,8 +1477,39 @@ align-items: center;
   display: none;
 }
 
+.uiverse-options input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px !important;
+  height: 14px !important;
+  min-width: 14px !important;
+  min-height: 14px !important;
+  max-width: 14px !important;
+  max-height: 14px !important;
+  border-radius: 50% !important;
+  border: 2px solid #8e8e93;
+  outline: none;
+  cursor: pointer;
+  margin-right: 8px;
+  vertical-align: middle;
+  background-color: transparent;
+  display: inline-block;
+  position: relative;
+  top: 3px;
+  flex-shrink: 0 !important;
+  flex-grow: 0 !important;
+  box-sizing: border-box !important;
+}
+
+.uiverse-options input[type="checkbox"]:checked {
+  background-color: #8b5cf6;
+  border-color: #8b5cf6;
+  box-shadow: inset 0 0 0 3px #1c1c1e;
+}
+
 .uiverse-options label {
-  display: block;
+  display: inline-block;
+  vertical-align: middle;
 }
 
 /* Hide the option label if it is checked (optional, but requested by Uiverse CSS originally) */
@@ -1629,3 +1660,108 @@ align-items: center;
   }
 }
 
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: none !important;
+  opacity: 0.8;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+}
+
+/* Multi-select item layout for map sub-polygon */
+.multi-select-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 5px;
+  transition: 300ms;
+}
+
+.multi-select-item:hover {
+  background-color: var(--surface-3);
+  color: white;
+}
+
+.multi-select-item label {
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
+}
+
+.multi-select-item:hover label {
+  color: white;
+}
+
+/* --- Dark Mode Leaflet Popups --- */
+.leaflet-popup-content-wrapper {
+  background: var(--surface) !important;
+  color: var(--text) !important;
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border: 1px solid var(--surface-2);
+}
+.leaflet-popup-tip {
+  background: var(--surface) !important;
+}
+.leaflet-popup-close-button {
+  color: var(--text-muted) !important;
+}
+.leaflet-popup-close-button:hover {
+  color: var(--text) !important;
+}
+.leaflet-popup-content {
+  margin: 16px;
+  line-height: 1.5;
+}
+
+/* --- Color Swatches --- */
+.color-swatch-container {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+.color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: transform 0.2s, border-color 0.2s;
+  position: relative;
+}
+.color-swatch:hover {
+  transform: scale(1.1);
+}
+.color-swatch.selected {
+  border-color: white;
+  box-shadow: 0 0 0 2px var(--surface);
+}
+.color-swatch.selected::after {
+  content: "\2713"; /* Checkmark */
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 14px;
+  text-shadow: 0px 1px 2px rgba(0,0,0,0.5);
+}
+
+/* --- Fix Oval Checkbox --- */
+.uiverse-options input[type="checkbox"] {
+  min-width: 16px !important;
+  min-height: 16px !important;
+  flex-shrink: 0;
+  flex-grow: 0;
+  box-sizing: border-box;
+}

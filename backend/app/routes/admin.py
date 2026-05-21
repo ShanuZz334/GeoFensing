@@ -25,7 +25,7 @@ from ..models import Teacher, AttendanceLog, Setting, Admin, AdminLog
 from ..services.face_service import add_face_to_collection
 import json
 from ..utils.validators import validate_teacher_register_payload
-from ..utils.geofence_store import get_polygon, save_polygon
+from ..utils.geofence_store import get_geofence_config, save_geofence_config
 
 admin_bp = Blueprint("admin", __name__)
 
@@ -222,7 +222,15 @@ def update_settings():
     
     db.session.commit()
     if changes:
-        log_admin_action(identity, "UPDATE_SETTINGS", json.dumps(changes))
+        # Check if geofence_config was changed to avoid dumping massive coordinate arrays
+        if "geofence_config" in changes:
+            changes["geofence_config"] = "Geofence Configuration Updated"
+            
+        details_str = json.dumps(changes)
+        if len(details_str) > 200:
+            details_str = details_str[:197] + "..."
+            
+        log_admin_action(identity, "UPDATE_SETTINGS", details_str)
     return jsonify({"message": "Settings updated successfully"}), 200
 
 # ── Teachers CRUD ────────────────────────────────────────────────────────────
@@ -553,6 +561,7 @@ def get_stats():
     today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
 
     total_teachers = Teacher.query.filter_by(is_active=True).count()
+    inactive_teachers = Teacher.query.filter_by(is_active=False).count()
     total_logs = AttendanceLog.query.count()
     today_success = AttendanceLog.query.filter(
         AttendanceLog.timestamp >= today_start,
@@ -597,9 +606,13 @@ def get_stats():
     yesterday_total = yesterday_success + yesterday_failure
     yesterday_rate = round(yesterday_success / yesterday_total * 100, 1) if yesterday_total > 0 else 0.0
     
-    # Last 7 days trend for sparklines
+    # Current month trend for sparklines and chart
     from sqlalchemy import cast, Date
-    trend_start = today_start - timedelta(days=6)
+    import calendar
+    
+    year, month = today_start.year, today_start.month
+    days_in_month = calendar.monthrange(year, month)[1]
+    trend_start = today_start.replace(day=1)
     
     trend_data_query = (
         db.session.query(
@@ -613,7 +626,7 @@ def get_stats():
     )
     
     trend = {}
-    for i in range(7):
+    for i in range(days_in_month):
         d = (trend_start + timedelta(days=i)).date()
         trend[str(d)] = {"success": 0, "failure": 0}
         
@@ -627,6 +640,7 @@ def get_stats():
 
     return jsonify({
         "total_teachers": total_teachers,
+        "inactive_teachers": inactive_teachers,
         "total_logs": total_logs,
         "today_success": today_success,
         "today_failure": today_failure,
@@ -636,6 +650,8 @@ def get_stats():
         "yesterday_rate": yesterday_rate,
         "success_trend": success_trend,
         "failure_trend": failure_trend,
+        "trend_month": trend_start.strftime("%B %Y"),
+        "trend_days": days_in_month,
         "failure_by_stage": {row.failure_stage or "unknown": row.count for row in stage_breakdown},
         "generated_at": datetime.now(timezone.utc).isoformat(),
     }), 200
@@ -646,29 +662,38 @@ def get_stats():
 @admin_bp.route("/geofence", methods=["GET"])
 @jwt_required()
 def get_geofence():
-    """GET /admin/geofence — return the current geofence polygon."""
+    """GET /admin/geofence — return the current geofence config."""
     if not _is_admin(get_jwt_identity()):
         return jsonify({"error": "Admin access required"}), 403
 
-    polygon = get_polygon()
-    return jsonify({"polygon": polygon}), 200
+    config = get_geofence_config()
+    return jsonify({"geofence_config": config, "polygon": config.get("main_polygon", [])}), 200
 
 
 @admin_bp.route("/geofence", methods=["PUT"])
 @jwt_required()
 def update_geofence():
-    """PUT /admin/geofence — update the geofence polygon."""
+    """PUT /admin/geofence — update the geofence configuration."""
     if not _is_admin(get_jwt_identity()):
         return jsonify({"error": "Admin access required"}), 403
 
     data = request.get_json(silent=True) or {}
-    polygon = data.get("polygon")
-    if not polygon or not isinstance(polygon, list):
-        return jsonify({"error": "Invalid polygon data"}), 400
-
-    if save_polygon(polygon):
-        return jsonify({"message": "Geofence updated successfully", "polygon": polygon}), 200
-    return jsonify({"error": "Failed to save geofence"}), 500
+    
+    # Check if this is a new config object or old polygon array
+    if data and "geofence_config" in data:
+        config = data["geofence_config"]
+    else:
+        # Fallback for old API payload format
+        polygon = data.get("polygon") if data else None
+        if not polygon or not isinstance(polygon, list):
+            raw = request.get_data(as_text=True)
+            return jsonify({"error": f"Invalid polygon data. Data keys: {list(data.keys()) if isinstance(data, dict) else type(data)}. Raw len: {len(raw)}"}), 400
+        config = get_geofence_config()
+        config["main_polygon"] = polygon
+        
+    if save_geofence_config(config):
+        return jsonify({"message": "Geofence updated successfully", "geofence_config": config}), 200
+    return jsonify({"error": "Failed to save geofence config"}), 500
 
 
 # ── Face Encoding Helper ──────────────────────────────────────────────────────
@@ -720,7 +745,7 @@ def get_alerts():
     twelve_hours_ago = datetime.now(timezone.utc) - timedelta(hours=12)
 
     # 1. Flagged Logs (Legacy)
-    flagged_logs = AttendanceLog.query.filter_by(attendance_mark='flagged', status='success').all()
+    flagged_logs = AttendanceLog.query.filter_by(attendance_mark='flagged', status='success', is_alert_resolved=False).all()
     for log in flagged_logs:
         alerts.append({
             "id": f"flagged_{log.id}",
@@ -741,7 +766,8 @@ def get_alerts():
         AttendanceLog.action_type == 'check_in',
         AttendanceLog.status == 'success',
         AttendanceLog.timestamp >= today_start,
-        AttendanceLog.timestamp < twelve_hours_ago
+        AttendanceLog.timestamp < twelve_hours_ago,
+        AttendanceLog.is_alert_resolved == False
     ).all()
     
     for ci in old_checkins:
@@ -769,7 +795,8 @@ def get_alerts():
         func.count(AttendanceLog.id).label('fail_count')
     ).filter(
         AttendanceLog.status == 'failure',
-        AttendanceLog.timestamp >= today_start
+        AttendanceLog.timestamp >= today_start,
+        AttendanceLog.is_alert_resolved == False
     ).group_by(AttendanceLog.teacher_id).having(func.count(AttendanceLog.id) > 5).all()
 
     for f in failures:
@@ -789,7 +816,8 @@ def get_alerts():
     spoofs = AttendanceLog.query.filter(
         AttendanceLog.status == 'failure',
         AttendanceLog.failure_stage == 'liveness',
-        AttendanceLog.timestamp >= today_start
+        AttendanceLog.timestamp >= today_start,
+        AttendanceLog.is_alert_resolved == False
     ).all()
 
     for s in spoofs:
@@ -826,6 +854,7 @@ def resolve_alert():
         log = AttendanceLog.query.get(log_id)
         if log:
             log.attendance_mark = action # 'present', 'absent', 'half_day'
+            log.is_alert_resolved = True
             
             # Find checkout log for the same day and cascade resolution
             from datetime import timezone, datetime
@@ -867,6 +896,7 @@ def resolve_alert():
         # For abandoned check-in, the admin might want to auto-checkout or mark absent
         log = AttendanceLog.query.get(log_id)
         if log:
+            log.is_alert_resolved = True
             if action == 'mark_absent':
                 log.attendance_mark = 'absent'
             elif action == 'mark_half_day':
@@ -890,11 +920,14 @@ def resolve_alert():
         if action == "dismiss":
             from datetime import timezone, datetime
             today_start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
-            AttendanceLog.query.filter(
+            logs = AttendanceLog.query.filter(
                 AttendanceLog.teacher_id == teacher_id,
                 AttendanceLog.status == 'failure',
-                AttendanceLog.timestamp >= today_start
-            ).delete()
+                AttendanceLog.timestamp >= today_start,
+                AttendanceLog.is_alert_resolved == False
+            ).all()
+            for fl in logs:
+                fl.is_alert_resolved = True
             db.session.commit()
             return jsonify({"message": "Unusual activity alerts dismissed (spam cleared)."}), 200
 
@@ -902,8 +935,7 @@ def resolve_alert():
         if action == "dismiss":
             log = AttendanceLog.query.get(log_id)
             if log:
-                # Optionally, change the failure_stage so it doesn't show up again
-                log.failure_stage = "liveness_dismissed"
+                log.is_alert_resolved = True
                 db.session.commit()
                 return jsonify({"message": "Spoof alert dismissed"}), 200
 

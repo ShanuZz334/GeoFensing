@@ -119,51 +119,103 @@ def is_within_geofence(
     center_lat: float,
     center_lon: float,
     radius_meters: float,
-    polygon: Optional[List[List[float]]] = None,
+    geofence_config: Optional[dict] = None,
     buffer_meters: float = 15,
+    action_type: str = "check_in",
+    teacher_dept: str = "",
 ) -> Tuple[bool, float, str]:
     """
-    Determine if a coordinate falls within the geofence.
-    Supports both circular (fallback) and polygon boundaries.
-
+    Determine if a coordinate falls within the geofence based on the active mode.
+    
+    Modes:
+    1: Main polygon only.
+    2: Main polygon + Department Sub-polygons (Check-in requires dept block, Check-out anywhere in main).
+    3: Checkpoints (Check-in and Check-out requires being inside ANY checkpoint radius).
+    
     Returns:
         Tuple of (is_authorized, distance_m, status_code)
-        status_code: "SUCCESS", "WARNING_NEAR_BOUNDARY", "FAILURE_OUTSIDE"
+        status_code: "SUCCESS", "WARNING_NEAR_BOUNDARY", "FAILURE_OUTSIDE", "FAILURE_OUTSIDE_DEPT"
     """
     teacher_point = GeoPoint(latitude=latitude, longitude=longitude)
     
-    # Use Polygon if provided
-    if polygon and len(polygon) >= 3:
-        inside = is_inside_polygon(latitude, longitude, polygon)
-        
-        # Calculate distance to the nearest wall (polygon segment)
-        min_dist_to_wall = float('inf')
-        for i in range(len(polygon)):
-            p1 = polygon[i]
-            p2 = polygon[(i + 1) % len(polygon)]
-            dist = point_to_segment_distance(latitude, longitude, p1, p2)
-            if dist < min_dist_to_wall:
-                min_dist_to_wall = dist
-        
-        # Determine authorization based on polygon containment OR buffer zone
-        if inside:
-            if min_dist_to_wall < buffer_meters:
-                return True, round(min_dist_to_wall, 2), "WARNING_NEAR_BOUNDARY"
-            return True, round(min_dist_to_wall, 2), "SUCCESS"
-        else:
-            # Outside mathematical polygon, but check if within buffer leeway
-            if min_dist_to_wall <= buffer_meters:
-                return True, round(min_dist_to_wall, 2), "WARNING_NEAR_BOUNDARY"
+    if not geofence_config:
+        # Fallback to circular geofence
+        college_point = GeoPoint(latitude=center_lat, longitude=center_lon)
+        distance = haversine_distance(teacher_point, college_point)
+        inside = distance <= radius_meters
+        status = "SUCCESS" if inside else "FAILURE_OUTSIDE"
+        return inside, round(distance, 2), status
+
+    mode = geofence_config.get("mode", 1)
+    
+    # ── MODE 3: Checkpoints ──
+    if mode == 3:
+        checkpoints = geofence_config.get("checkpoints", [])
+        if not checkpoints:
+            return False, 999.0, "FAILURE_OUTSIDE"
             
-            # Completely outside, calculate distance to center for logging
-            college_point = GeoPoint(latitude=center_lat, longitude=center_lon)
-            distance = haversine_distance(teacher_point, college_point)
-            return False, round(distance, 2), "FAILURE_OUTSIDE"
+        min_dist = float('inf')
+        for cp in checkpoints:
+            cp_point = GeoPoint(latitude=float(cp["lat"]), longitude=float(cp["lng"]))
+            dist = haversine_distance(teacher_point, cp_point)
+            if dist < min_dist:
+                min_dist = dist
+            if dist <= float(cp["radius"]):
+                return True, round(dist, 2), "SUCCESS"
+        
+        return False, round(min_dist, 2), "FAILURE_OUTSIDE"
 
-    # Fallback to circular geofence
-    college_point = GeoPoint(latitude=center_lat, longitude=center_lon)
-    distance = haversine_distance(teacher_point, college_point)
-    inside = distance <= radius_meters
+    # ── MODE 1 & 2: Main Polygon ──
+    main_polygon = geofence_config.get("main_polygon", [])
+    if not main_polygon or len(main_polygon) < 3:
+        # Fallback to circular geofence
+        college_point = GeoPoint(latitude=center_lat, longitude=center_lon)
+        distance = haversine_distance(teacher_point, college_point)
+        inside = distance <= radius_meters
+        status = "SUCCESS" if inside else "FAILURE_OUTSIDE"
+        return inside, round(distance, 2), status
 
-    status = "SUCCESS" if inside else "FAILURE_OUTSIDE"
-    return inside, round(distance, 2), status
+    # Verify inside main polygon
+    inside_main = is_inside_polygon(latitude, longitude, main_polygon)
+    
+    # Calculate distance to the nearest wall of main polygon
+    min_dist_to_main_wall = float('inf')
+    for i in range(len(main_polygon)):
+        p1 = main_polygon[i]
+        p2 = main_polygon[(i + 1) % len(main_polygon)]
+        dist = point_to_segment_distance(latitude, longitude, p1, p2)
+        if dist < min_dist_to_main_wall:
+            min_dist_to_main_wall = dist
+            
+    in_main_or_buffer = inside_main or min_dist_to_main_wall <= buffer_meters
+    main_status = "SUCCESS"
+    if in_main_or_buffer and not inside_main:
+        main_status = "WARNING_NEAR_BOUNDARY"
+        
+    if not in_main_or_buffer:
+        # Completely outside main
+        college_point = GeoPoint(latitude=center_lat, longitude=center_lon)
+        distance_to_center = haversine_distance(teacher_point, college_point)
+        return False, round(distance_to_center, 2), "FAILURE_OUTSIDE"
+
+    # ── MODE 2 Check-in specific logic (Department Blocks) ──
+    if mode == 2 and action_type == "check_in":
+        sub_polygons = geofence_config.get("sub_polygons", [])
+        dept_polygons = [sp for sp in sub_polygons if teacher_dept and teacher_dept in sp.get("departments", [])]
+        
+        # If the department has mapped polygons, strictly enforce them
+        if dept_polygons:
+            inside_any_dept = False
+            for sp in dept_polygons:
+                sp_coords = sp.get("polygon", [])
+                if sp_coords and len(sp_coords) >= 3:
+                    if is_inside_polygon(latitude, longitude, sp_coords):
+                        inside_any_dept = True
+                        break
+            
+            if not inside_any_dept:
+                # Inside main but outside department block
+                return False, round(min_dist_to_main_wall, 2), "FAILURE_OUTSIDE_DEPT"
+                
+    # Success for Mode 1, Mode 2 check-out, or Mode 2 check-in (inside dept block or no dept block mapped)
+    return True, round(min_dist_to_main_wall, 2), main_status

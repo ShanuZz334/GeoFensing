@@ -25,7 +25,7 @@ from ..services.face_service import process_frames, compare_encodings
 from ..services.liveness_service import run_liveness_checks
 from ..services.jwt_service import verify_timestamp_freshness
 from ..utils.validators import validate_verify_payload
-from ..utils.geofence_store import get_polygon
+from ..utils.geofence_store import get_geofence_config
 
 logger = logging.getLogger(__name__)
 verify_bp = Blueprint("verify", __name__)
@@ -739,23 +739,19 @@ def verify():
     demo_lng = data.get("demo_lng")
     demo_radius = data.get("demo_radius")
 
+    college_lat = teacher.college_latitude or cfg["COLLEGE_LATITUDE"]
+    college_lon = teacher.college_longitude or cfg["COLLEGE_LONGITUDE"]
+    radius = cfg["GEOFENCE_RADIUS_METERS"]
+    geofence_config = get_geofence_config()
+    buffer_m = cfg.get("GEOFENCE_BUFFER_METERS", 15)
+
     if demo_lat is not None and demo_lng is not None:
-        college_lat = float(demo_lat)
-        college_lon = float(demo_lng)
-        radius = float(demo_radius or cfg["GEOFENCE_RADIUS_METERS"])
-        polygon = None  # Disable polygon in demo mode for simple radius check
-        buffer_m = 0
-        logger.info("DEMO MODE: Using geofence center (%s, %s) with radius %sm", 
-                    college_lat, college_lon, radius)
-    else:
-        college_lat = teacher.college_latitude or cfg["COLLEGE_LATITUDE"]
-        college_lon = teacher.college_longitude or cfg["COLLEGE_LONGITUDE"]
-        radius = cfg["GEOFENCE_RADIUS_METERS"]
-        polygon = get_polygon()
-        buffer_m = cfg.get("GEOFENCE_BUFFER_METERS", 15)
+        logger.info("DEMO MODE: Evaluating spoofed coordinates (%s, %s) against real geofences.", latitude, longitude)
 
     authorized, distance, status_code = is_within_geofence(
-        latitude, longitude, college_lat, college_lon, radius, polygon, buffer_m
+        latitude, longitude, college_lat, college_lon, radius, 
+        geofence_config=geofence_config, buffer_meters=buffer_m, 
+        action_type=action_type, teacher_dept=teacher.department
     )
 
     # ── Buffer Zone Check ────────────────────────────────────────────────────
@@ -775,6 +771,8 @@ def verify():
 
     if not authorized:
         reason = f"Outside college premises (Geofence: ACCESS DENIED)"
+        if status_code == "FAILURE_OUTSIDE_DEPT":
+            reason = "You are inside the college but outside your assigned department block. Please move inside your department block to check in."
         if demo_lat is not None:
             reason = f"Demo Mode: Outside range ({distance}m > {radius}m)"
             

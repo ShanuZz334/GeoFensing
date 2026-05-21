@@ -138,6 +138,15 @@ class _FaceScanScreenState extends State<FaceScanScreen>
       return;
     }
 
+    if (provider.isTooEarly()) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+        content: Text("Too early to check in. Please wait until 20 mins before class."),
+        backgroundColor: Colors.redAccent,
+      ));
+      return;
+    }
+
     setState(() {
       _isAnalyzing = true;
       _scanStatus = const FaceScanStatus();
@@ -248,15 +257,23 @@ class _FaceScanScreenState extends State<FaceScanScreen>
         provider.isTooLate() &&
         provider.nextAction != 'check_out' &&
         provider.nextAction != 'completed';
+    final isEarlyLocked = !provider.bypassLimits &&
+        provider.isTooEarly() &&
+        provider.nextAction != 'check_out' &&
+        provider.nextAction != 'completed';
 
     final modeLabel = isCompleted
         ? 'Completed Today'
-        : (provider.nextAction == 'check_in' ? 'Check In Mode' : 'Check Out Mode');
+        : isEarlyLocked 
+            ? 'Check In Locked' 
+            : (provider.nextAction == 'check_in' ? 'Check In Mode' : 'Check Out Mode');
     final modeColor = isCompleted
         ? const Color(0xFF10B981)
-        : (provider.nextAction == 'check_in'
-            ? const Color(0xFF7C3AED)
-            : const Color(0xFFEF4444));
+        : isEarlyLocked
+            ? const Color(0xFF9CA3AF)
+            : (provider.nextAction == 'check_in'
+                ? const Color(0xFF7C3AED)
+                : const Color(0xFFEF4444));
 
     final lastScan = provider.history.isNotEmpty
         ? 'Today, ' + DateFormat('hh:mm a').format(provider.history.first.timestamp.toLocal())
@@ -330,7 +347,7 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: _buildScanButton(
-                        provider, isRecording, isUploading, isAbsentLocked, isCompleted),
+                        provider, isRecording, isUploading, isAbsentLocked, isEarlyLocked, isCompleted),
                   ),
                   const SizedBox(height: 14),
                   _buildFooter(lastScan),
@@ -713,14 +730,18 @@ class _FaceScanScreenState extends State<FaceScanScreen>
 
   // ── Scan Button ───────────────────────────────────────────────────────────
   Widget _buildScanButton(VerificationProvider provider, bool isRecording,
-      bool isUploading, bool isAbsentLocked, bool isCompleted) {
-    final canTap = !isRecording && !isUploading && !isAbsentLocked && !isCompleted && !_isAnalyzing;
+      bool isUploading, bool isAbsentLocked, bool isEarlyLocked, bool isCompleted) {
+    final canTap = !isRecording && !isUploading && !isAbsentLocked && !isEarlyLocked && !isCompleted && !_isAnalyzing;
     Color btnColor; String btnText; IconData btnIcon;
 
     if (isAbsentLocked) {
       btnColor = const Color(0xFFEF4444);
       btnText = 'Absent - Limit Passed';
       btnIcon = Icons.block_rounded;
+    } else if (isEarlyLocked) {
+      btnColor = const Color(0xFF6B7280);
+      btnText = 'Too Early to Scan';
+      btnIcon = Icons.lock_clock;
     } else if (isCompleted) {
       btnColor = const Color(0xFF10B981);
       btnText = 'Completed for Today';

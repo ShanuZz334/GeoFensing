@@ -48,6 +48,8 @@ class AttendanceLog(db.Model):
     action_type = db.Column(db.String(20), nullable=True)
     # "present", "half_day", "absent", or "flagged" (late check-in pending admin review)
     attendance_mark = db.Column(db.String(20), nullable=False, default="present")
+    # Indicates if an admin has resolved the alert triggered by this log
+    is_alert_resolved = db.Column(db.Boolean, nullable=False, default=False)
 
     def to_dict(self) -> dict:
         """Serialize attendance log to dictionary."""

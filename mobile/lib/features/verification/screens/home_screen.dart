@@ -152,6 +152,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         provider.isTooLate() &&
         provider.nextAction != 'check_out' &&
         provider.nextAction != 'completed';
+    final isEarlyLocked = !provider.bypassLimits &&
+        provider.isTooEarly() &&
+        provider.nextAction != 'check_out' &&
+        provider.nextAction != 'completed';
     final isCompleted =
         !provider.bypassLimits && provider.nextAction == 'completed';
 
@@ -163,6 +167,10 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       btnColor = const Color(0xFFEF4444);
       btnText = 'Absent - Limit Passed';
       btnIcon = Icons.block_rounded;
+    } else if (isEarlyLocked) {
+      btnColor = const Color(0xFF6B7280);
+      btnText = 'Too Early to Scan';
+      btnIcon = Icons.lock_clock;
     } else if (isCompleted) {
       btnColor = const Color(0xFF10B981);
       btnText = 'Completed for Today';
@@ -178,7 +186,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
     }
 
     return ElevatedButton.icon(
-      onPressed: (isAbsentLocked || isCompleted) ? null : _onStartPressed,
+      onPressed: (isAbsentLocked || isEarlyLocked || isCompleted) ? null : _onStartPressed,
       icon: Icon(btnIcon, color: Colors.white, size: 20),
       label: Text(btnText,
           style: const TextStyle(
@@ -217,21 +225,29 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
         provider.isTooLate() &&
         provider.nextAction != 'check_out' &&
         provider.nextAction != 'completed';
+    final isEarlyLocked = !provider.bypassLimits &&
+        provider.isTooEarly() &&
+        provider.nextAction != 'check_out' &&
+        provider.nextAction != 'completed';
 
     final modeText = isCompleted
         ? 'Completed Today'
         : isAbsentLocked
             ? 'Marked Absent'
-            : provider.nextAction == 'check_in'
-                ? 'Check In Mode'
-                : 'Check Out Mode';
+            : isEarlyLocked
+                ? 'Check In Locked'
+                : provider.nextAction == 'check_in'
+                    ? 'Check In Mode'
+                    : 'Check Out Mode';
     final modeColor = isCompleted
         ? const Color(0xFF10B981)
         : isAbsentLocked
             ? const Color(0xFFEF4444)
-            : provider.nextAction == 'check_in'
-                ? const Color(0xFF7C3AED)
-                : const Color(0xFFEF4444);
+            : isEarlyLocked
+                ? const Color(0xFF9CA3AF)
+                : provider.nextAction == 'check_in'
+                    ? const Color(0xFF7C3AED)
+                    : const Color(0xFFEF4444);
 
     return _cardShell(
       child: Column(
@@ -267,7 +283,9 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         ? Icons.check_circle_outline_rounded
                         : isAbsentLocked
                             ? Icons.block_rounded
-                            : Icons.face_retouching_natural_outlined,
+                            : isEarlyLocked
+                                ? Icons.lock_clock_rounded
+                                : Icons.face_retouching_natural_outlined,
                     color: modeColor,
                     size: 64,
                   ),

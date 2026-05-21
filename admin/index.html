@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>GeoFace Admin  Dashboard</title>
   <meta name="description" content="GeoFace Faculty Authentication System Admin Panel  View attendance statistics and manage teachers." />
-  <link rel="stylesheet" href="css/styles.css?v=1028" />
+  <link rel="stylesheet" href="css/styles.css?v=9" />
   <!-- Chart.js -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
   <!-- Google Fonts -->
@@ -241,7 +241,9 @@
             <span class="stat-change" id="change-teachers"></span>
           </div>
         </div>
-        <div class="stat-sparkline" id="spark-teachers"></div>
+        <div class="stat-chart-small" style="width: 48px; height: 48px; position: relative;">
+          <canvas id="chart-teachers"></canvas>
+        </div>
       </div>
       <div class="stat-card" id="stat-success">
         <div class="stat-left">
@@ -283,11 +285,12 @@
           <div class="stat-info">
             <span class="stat-value" id="val-rate"></span>
             <span class="stat-label">Overall Success Rate</span>
-            <span class="stat-change" id="change-rate" style="margin-top: 4px;"></span>
             <span id="rate-lifetime-sub" style="font-size: 10px; color: var(--text-muted); margin-top: 6px; font-weight: 500; white-space: nowrap;">Lifetime Scans: —</span>
           </div>
         </div>
-        <div class="stat-sparkline" id="spark-rate"></div>
+        <div class="stat-chart-small" style="width: 48px; height: 48px; position: relative;">
+          <canvas id="chart-rate-gauge"></canvas>
+        </div>
       </div>
     </section>
 
@@ -298,8 +301,8 @@
       <div class="chart-card" style="display: flex; flex-direction: column; justify-content: space-between; min-height: 380px; grid-column: span 2;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 12px;">
           <div>
-            <h2 class="chart-title" style="margin: 0; font-size: 16px;">Authentication Trend (Last 7 Days)</h2>
-            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Daily count of successful vs failed face scans.</p>
+            <h2 class="chart-title" style="margin: 0; font-size: 16px;">Authentication Trend <span id="trend-month-label" style="font-weight: 500; color: #8b5cf6;"></span></h2>
+            <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Daily count of successful vs failed face scans for the month.</p>
           </div>
           <!-- Legend markers -->
           <div style="display: flex; gap: 16px; font-size: 12px;">

@@ -171,6 +171,30 @@ class VerificationProvider extends ChangeNotifier {
     return timeStr.compareTo(absentLimit) > 0;
   }
 
+  bool isTooEarly() {
+    if (_bypassLimits) return false;
+    if (_settings['demo_mode'] == true || _settings['demo_mode'] == 'true') return false;
+    if (_nextAction != 'check_in') return false;
+    final rules = _settings['attendance_rules'] as Map<String, dynamic>?;
+    if (rules == null) return false;
+    final classStart = rules['class_start'] as String?;
+    if (classStart == null || classStart.isEmpty) return false;
+    
+    try {
+      final parts = classStart.split(':');
+      final h = int.parse(parts[0]);
+      final m = int.parse(parts[1]);
+      
+      final now = DateTime.now();
+      final startDt = DateTime(now.year, now.month, now.day, h, m);
+      final allowedStart = startDt.subtract(const Duration(minutes: 20));
+      
+      return now.isBefore(allowedStart);
+    } catch (_) {
+      return false;
+    }
+  }
+
   Future<void> fetchHistory({bool silent = false}) async {
     if (!silent) {
       _isLoadingHistory = true;

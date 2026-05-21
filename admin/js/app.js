@@ -5,6 +5,8 @@
 let todayChart = null;
 let failureChart = null;
 let trendChart = null;
+let teachersChart = null;
+let rateGaugeChart = null;
 
 
 
@@ -210,25 +212,17 @@ async function loadDashboard() {
     }
     renderStatChange('change-success', data.today_success, data.yesterday_success);
     renderStatChange('change-failure', data.today_failure, data.yesterday_failure);
-    renderStatChange('change-rate', data.overall_success_rate, data.yesterday_rate, true);
     
-    // Sparklines (using success_trend or failure_trend for others if they exist, or dummy for teachers)
-    renderSparkline('spark-teachers', [4, 4, 4, 4, 4, 4, 4], '#8b5cf6');
+    // Sparklines (using success_trend or failure_trend for others if they exist)
     renderSparkline('spark-success', data.success_trend, '#10b981');
     renderSparkline('spark-failure', data.failure_trend, '#ef4444');
     
-    // Compute precise daily success rates for overall rate sparkline
-    const successTrend = data.success_trend || [];
-    const failureTrend = data.failure_trend || [];
-    const rateTrend = successTrend.map((succ, i) => {
-      const fail = failureTrend[i] || 0;
-      const tot = succ + fail;
-      return tot > 0 ? (succ / tot) * 100 : 0;
-    });
-    renderSparkline('spark-rate', rateTrend, '#8b5cf6');
+    // Render small doughnut charts
+    renderTeachersChart(data.total_teachers || 0, data.inactive_teachers || 0);
+    renderRateGauge(data.overall_success_rate || 0);
 
-    // Render 7-Day Authentication Trend Area-Line Chart
-    renderTrendChart(successTrend, failureTrend);
+    // Render Month Authentication Trend Area-Line Chart
+    renderTrendChart(data.success_trend || [], data.failure_trend || [], data.trend_month, data.trend_days);
   }
 
   // Today's attendance chart
@@ -242,20 +236,23 @@ async function loadDashboard() {
   loadRecentLogs();
 }
 
-function renderTrendChart(successTrend, failureTrend) {
+function renderTrendChart(successTrend, failureTrend, monthStr, daysCount) {
   const canvas = document.getElementById('trendChart');
   if (!canvas) return;
   if (trendChart) trendChart.destroy();
+  
+  const monthLabel = document.getElementById('trend-month-label');
+  if (monthLabel && monthStr) {
+    monthLabel.textContent = '- ' + monthStr;
+  }
 
   const ctx = canvas.getContext('2d');
 
-  // Dynamic past 7 days labels
+  // Labels for days 1 to daysCount
   const labels = [];
-  const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    labels.push(i === 0 ? 'Today' : (i === 1 ? 'Yesterday' : days[d.getDay()]));
+  const daysInMonth = daysCount || successTrend.length;
+  for (let i = 1; i <= daysInMonth; i++) {
+    labels.push(i.toString());
   }
 
   // Linear Area Gradients
@@ -321,6 +318,13 @@ function renderTrendChart(successTrend, failureTrend) {
           cornerRadius: 8,
           titleFont: { family: 'Inter', size: 12, weight: 'bold' },
           bodyFont: { family: 'Inter', size: 12 },
+          callbacks: {
+            title: function(context) {
+              const day = context[0].label;
+              const month = monthStr ? monthStr.split(' ')[0] : '';
+              return month ? `${month} - ${day}` : day;
+            }
+          }
         }
       },
       scales: {
@@ -385,6 +389,78 @@ function renderTodayChart(success, failure) {
             label: (c) => ` ${c.label}: ${c.parsed}`
           }
         },
+      },
+    },
+  });
+}
+
+function renderTeachersChart(active, inactive) {
+  const ctx = document.getElementById('chart-teachers');
+  if (!ctx) return;
+  if (teachersChart) teachersChart.destroy();
+  
+  const hasData = active > 0 || inactive > 0;
+  
+  teachersChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: hasData ? ['Active', 'Inactive'] : ['No Data'],
+      datasets: [{
+        data: hasData ? [active, inactive] : [1],
+        backgroundColor: hasData ? ['#8b5cf6', 'rgba(255,255,255,0.05)'] : ['rgba(255,255,255,0.05)'],
+        borderWidth: 0,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '70%',
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          enabled: hasData,
+          backgroundColor: '#111118',
+          titleColor: '#e2e8f0',
+          bodyColor: '#94a3b8',
+          borderColor: 'rgba(255,255,255,0.08)',
+          borderWidth: 1,
+          padding: 8,
+          cornerRadius: 6,
+          bodyFont: { family: 'Inter', size: 10 },
+          callbacks: {
+            label: (c) => ` ${c.label}: ${c.parsed}`
+          }
+        },
+      },
+    },
+  });
+}
+
+function renderRateGauge(rate) {
+  const ctx = document.getElementById('chart-rate-gauge');
+  if (!ctx) return;
+  if (rateGaugeChart) rateGaugeChart.destroy();
+  
+  const remaining = Math.max(0, 100 - rate);
+  
+  rateGaugeChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels: ['Success', 'Failed'],
+      datasets: [{
+        data: [rate, remaining],
+        backgroundColor: ['#8b5cf6', 'rgba(255,255,255,0.05)'],
+        borderWidth: 0,
+        borderRadius: 2,
+      }],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '75%',
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
       },
     },
   });
@@ -663,19 +739,13 @@ function initUiverseSelects() {
 
     const selectedTextSpan = selectEl.querySelector('.uiverse-selected-text');
     const radios = selectEl.querySelectorAll('input[type="radio"]');
-
-    // On load, set the text to the checked radio (if any)
-    const checkedRadio = selectEl.querySelector('input[type="radio"]:checked');
-    if (checkedRadio && checkedRadio.id) {
-      const label = selectEl.querySelector(`label[for="${checkedRadio.id}"]`);
-      if (label) selectedTextSpan.textContent = label.getAttribute('data-txt') || label.textContent;
-    }
+    const checkboxes = selectEl.querySelectorAll('input[type="checkbox"]');
+    const isMulti = checkboxes.length > 0;
 
     const selectedDiv = selectEl.querySelector('.uiverse-selected');
     if (selectedDiv) {
       selectedDiv.addEventListener('click', (e) => {
         e.stopPropagation();
-        // Close other open selects
         document.querySelectorAll('.uiverse-select').forEach(el => {
           if (el !== selectEl) el.classList.remove('open');
         });
@@ -683,24 +753,57 @@ function initUiverseSelects() {
       });
     }
 
-    radios.forEach(radio => {
-      radio.addEventListener('change', (e) => {
-        if (e.target.checked && e.target.id) {
-          const label = selectEl.querySelector(`label[for="${e.target.id}"]`);
-          if (label) {
-            selectedTextSpan.textContent = label.getAttribute('data-txt') || label.textContent;
-          }
-          selectEl.classList.remove('open');
-          // Dispatch a custom change event on the main select container for external listeners
+    // Helper to update text for multi-select
+    const updateMultiText = () => {
+      const checkedBoxes = Array.from(checkboxes).filter(cb => cb.checked);
+      if (checkedBoxes.length === 0) {
+        selectedTextSpan.textContent = "Select School / Department";
+      } else if (checkedBoxes.length === 1) {
+        const label = selectEl.querySelector(`label[for="${checkedBoxes[0].id}"]`);
+        selectedTextSpan.textContent = label ? (label.getAttribute('data-txt') || label.textContent) : "1 selected";
+      } else {
+        selectedTextSpan.textContent = `${checkedBoxes.length} departments selected`;
+      }
+    };
+
+    if (isMulti) {
+      updateMultiText();
+      checkboxes.forEach(cb => {
+        cb.addEventListener('change', (e) => {
+          updateMultiText();
           selectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
+        });
       });
-    });
+    } else {
+      // On load, set the text to the checked radio (if any)
+      const checkedRadio = selectEl.querySelector('input[type="radio"]:checked');
+      if (checkedRadio && checkedRadio.id) {
+        const label = selectEl.querySelector(`label[for="${checkedRadio.id}"]`);
+        if (label) selectedTextSpan.textContent = label.getAttribute('data-txt') || label.textContent;
+      }
+
+      radios.forEach(radio => {
+        radio.addEventListener('change', (e) => {
+          if (e.target.checked && e.target.id) {
+            const label = selectEl.querySelector(`label[for="${e.target.id}"]`);
+            if (label) {
+              selectedTextSpan.textContent = label.getAttribute('data-txt') || label.textContent;
+            }
+            selectEl.classList.remove('open');
+            selectEl.dispatchEvent(new Event('change', { bubbles: true }));
+          }
+        });
+      });
+    }
   });
 
   // Close selects when clicking outside
-  document.addEventListener('click', () => {
-    document.querySelectorAll('.uiverse-select.open').forEach(el => el.classList.remove('open'));
+  document.addEventListener('click', (e) => {
+    document.querySelectorAll('.uiverse-select.open').forEach(el => {
+      if (!el.contains(e.target)) {
+        el.classList.remove('open');
+      }
+    });
   });
 }
 

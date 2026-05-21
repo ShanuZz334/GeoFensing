@@ -7,19 +7,32 @@ logger = logging.getLogger(__name__)
 
 GEOFENCE_FILE = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), 'geofence.json')
 
-def get_polygon():
+def get_geofence_config():
     """
-    Get the geofence polygon from DB settings.
-    Falls back to current_app.config['GEOFENCE_POLYGON'].
+    Get the geofence configuration from DB settings.
+    Falls back to legacy geofence_polygon or current_app.config.
     """
     from ..models.setting import Setting
     
     try:
+        db_config = Setting.get("geofence_config")
+        if db_config and isinstance(db_config, dict):
+            return db_config
+    except Exception as e:
+        logger.error(f"Failed to read geofence_config from DB: {e}")
+        
+    # Fallback to legacy geofence_polygon if config doesn't exist
+    try:
         db_polygon = Setting.get("geofence_polygon")
         if db_polygon and isinstance(db_polygon, list):
-            return db_polygon
+            return {
+                "mode": 1,
+                "main_polygon": db_polygon,
+                "sub_polygons": [],
+                "checkpoints": []
+            }
     except Exception as e:
-        logger.error(f"Failed to read geofence from DB: {e}")
+        pass
         
     # Fallback to geofence.json if not in DB
     if os.path.exists(GEOFENCE_FILE):
@@ -27,40 +40,43 @@ def get_polygon():
             with open(GEOFENCE_FILE, 'r') as f:
                 data = json.load(f)
                 if 'polygon' in data and isinstance(data['polygon'], list):
-                    # Migrate to DB in background
-                    from ..extensions import db
-                    try:
-                        setting = Setting(key="geofence_polygon", value=data['polygon'])
-                        db.session.add(setting)
-                        db.session.commit()
-                        logger.info("Migrated geofence from JSON to DB.")
-                    except:
-                        db.session.rollback()
-                    return data['polygon']
+                    return {
+                        "mode": 1,
+                        "main_polygon": data['polygon'],
+                        "sub_polygons": [],
+                        "checkpoints": []
+                    }
         except Exception as e:
             logger.error(f"Failed to read {GEOFENCE_FILE}: {e}")
             
-    return current_app.config.get("GEOFENCE_POLYGON")
+    # Final fallback to app config
+    fallback_poly = current_app.config.get("GEOFENCE_POLYGON", [])
+    return {
+        "mode": 1,
+        "main_polygon": fallback_poly,
+        "sub_polygons": [],
+        "checkpoints": []
+    }
 
-def save_polygon(polygon):
+def save_geofence_config(config):
     """
-    Save the geofence polygon to DB settings.
+    Save the complete geofence configuration to DB settings.
     """
-    if not isinstance(polygon, list):
-        raise ValueError("Polygon must be a list of coordinates")
+    if not isinstance(config, dict):
+        raise ValueError("Config must be a dictionary")
         
     from ..models.setting import Setting
     from ..extensions import db
     try:
-        setting = Setting.query.get("geofence_polygon")
+        setting = Setting.query.get("geofence_config")
         if setting:
-            setting.value = polygon
+            setting.value = config
         else:
-            setting = Setting(key="geofence_polygon", value=polygon)
+            setting = Setting(key="geofence_config", value=config)
             db.session.add(setting)
         db.session.commit()
         return True
     except Exception as e:
-        logger.error(f"Failed to write geofence to DB: {e}")
+        logger.error(f"Failed to write geofence_config to DB: {e}")
         db.session.rollback()
         return False

@@ -137,7 +137,7 @@
       </div>
       <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
         <div class="header-actions" style="margin: 0; display: flex; gap: 8px; align-items: center;">
-          <div style="display:flex; align-items:center; gap:8px; margin-right: 12px; background: rgba(124, 58, 237, 0.1); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.3);">
+          <div id="demo-mode-container" style="display:flex; align-items:center; gap:8px; margin-right: 12px; background: rgba(124, 58, 237, 0.1); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.3);">
             <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; box-shadow: 0 0 6px #7c3aed;"></span>
             <span style="font-size: 13px; font-weight: 600; color: #a78bfa;">Demo Mode</span>
             <label class="uiverse-switch" style="transform: scale(0.8); margin: 0; display: flex; align-items: center;">
@@ -451,6 +451,12 @@
           resetBtn.style.pointerEvents = 'none';
           resetBtn.style.opacity = '0.6';
         }
+        const demoBtn = document.getElementById('demo-mode-container');
+        if (demoBtn) {
+          demoBtn.style.filter = 'blur(4px)';
+          demoBtn.style.pointerEvents = 'none';
+          demoBtn.style.opacity = '0.6';
+        }
         return; // Prevent API call and error toast
       } else {
         const resetBtn = document.getElementById('btn-reset-all-devices');
@@ -458,6 +464,12 @@
           resetBtn.style.filter = 'none';
           resetBtn.style.pointerEvents = 'auto';
           resetBtn.style.opacity = '1';
+        }
+        const demoBtn = document.getElementById('demo-mode-container');
+        if (demoBtn) {
+          demoBtn.style.filter = 'none';
+          demoBtn.style.pointerEvents = 'auto';
+          demoBtn.style.opacity = '1';
         }
       }
 

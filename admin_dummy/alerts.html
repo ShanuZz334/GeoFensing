@@ -398,7 +398,7 @@
         const avatarHtml = avatarSrc 
           ? `<img src="${avatarSrc}" alt="${escHtml(name)}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; background:var(--surface-2); border:1.5px solid rgba(192, 132, 252, 0.35);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />` 
           : '';
-        const fallbackAvatarHtml = `<div class="avatar-fallback" style="display: ${a.profile_pic ? 'none' : 'flex'}; width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #c084fc 0%, #6366f1 100%); color:#fff; align-items:center; justify-content:center; font-weight:700; font-size:14px; border:1.5px solid rgba(192, 132, 252, 0.35); text-shadow: 0 1px 2px rgba(0,0,0,0.15);">${initial}</div>`;
+        const fallbackAvatarHtml = `<div class="avatar-fallback" style="display: ${avatarSrc ? 'none' : 'flex'}; width:36px; height:36px; border-radius:50%; background:linear-gradient(135deg, #c084fc 0%, #6366f1 100%); color:#fff; align-items:center; justify-content:center; font-weight:700; font-size:14px; border:1.5px solid rgba(192, 132, 252, 0.35); text-shadow: 0 1px 2px rgba(0,0,0,0.15);">${initial}</div>`;
 
         // 4. Bordered Description Callout
         let borderLeftColor = '#3b82f6';

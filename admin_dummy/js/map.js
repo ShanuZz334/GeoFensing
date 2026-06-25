@@ -2,7 +2,7 @@
 // GeoFace Admin Panel — Map Logic
 // ============================================================
 
-const COLLEGE_CENTER = [31.2536, 75.7037];
+const COLLEGE_CENTER = [31.2536, 75.7037]; // NIT Jalandhar Main Campus
 
 let map = null;
 let currentConfig = {

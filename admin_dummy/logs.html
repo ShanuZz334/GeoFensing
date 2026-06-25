@@ -539,7 +539,7 @@
         const rowStyle = 'cursor: pointer;';
         
         // Premium avatar displays with fallback
-        const avatarUrl = log.profile_pic ? (log.profile_pic.startsWith('data:') ? log.profile_pic : 'data:image/jpeg;base64,' + log.profile_pic) : 'images/default-avatar.svg';
+        const avatarUrl = log.profile_pic_url || (log.profile_pic ? (log.profile_pic.startsWith('data:') ? log.profile_pic : 'data:image/jpeg;base64,' + log.profile_pic) : 'images/default-avatar.svg');
         const nameDisplay = `
           <div style="display:flex; align-items:center; gap:10px;">
             <img src="${avatarUrl}" alt="${escHtml(log.teacher_name || 'Teacher')}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; background:var(--surface-2); border:1px solid rgba(124, 58, 237, 0.2);" onerror="this.src='images/default-avatar.svg'" />

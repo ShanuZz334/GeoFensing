@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoFace Admin  Geofence Map</title>
+  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <!-- Leaflet -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Turf.js -->
+  <script src="https://cdn.jsdelivr.net/npm/@turf/turf@7/turf.min.js"></script>
+  <style>
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
+    }
+
+    #map {
+      height: calc(100vh - 160px);
+      width: 100%;
+      border-radius: 16px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      z-index: 1;
+    }
+
+    /* Dark mode for Leaflet Layer Control */
+    .leaflet-control-layers {
+      background: rgba(26, 26, 46, 0.85) !important;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 12px !important;
+      color: var(--text-muted) !important;
+      box-shadow: 0 10px 40px rgba(0,0,0,0.5) !important;
+    }
+    .leaflet-control-layers-expanded {
+      padding: 12px 16px !important;
+    }
+    .leaflet-control-layers label {
+      color: var(--text) !important;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+    .leaflet-control-layers-separator {
+      border-top: 1px solid rgba(255,255,255,0.1) !important;
+    }
+  </style>
+</head>
+<body>
+  <!-- -- Sidebar ------------------------------------------------------- -->
+    <!-- -- Navbar ------------------------------------------------------- -->
+  <nav class="navbar" id="navbar">
+    <div class="navbar-left">
+      <div class="navbar-logo">
+        <div class="logo-icon">
+          <img src="images/logo.png?v=6" alt="GeoFace Logo">
+        </div>
+        <span>Geo<span class="face-text">Face</span></span>
+      </div>
+      <div class="navbar-nav">
+        <a href="index.html" class="nav-item" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+          Dashboard
+        </a>
+        <a href="teachers.html" class="nav-item" id="nav-teachers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          Teachers
+        </a>
+        <a href="logs.html" class="nav-item" id="nav-logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+          Scans
+        </a>
+        <a href="audit.html" class="nav-item" id="nav-audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          Reports
+        </a>
+        <a href="map.html" class="nav-item active" id="nav-map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/></svg>
+          Map
+        </a>
+        <a href="settings.html" class="nav-item" id="nav-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </a>
+      </div>
+    </div>
+    
+    <div class="navbar-right">
+      <div class="nav-bell" onclick="window.location.href='alerts.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+        <span class="nav-bell-badge" id="navbar-alert-badge" style="display:none;">0</span>
+      </div>
+      
+      <div class="nav-profile">
+        <img src="images/default-avatar.svg" alt="Admin" class="nav-profile-pic" id="nav-profile-pic" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'12\' cy=\'7\' r=\'4\'/%3E%3C/svg%3E'">
+        <div class="nav-profile-info">
+          <span class="nav-profile-name" id="nav-profile-name">Admin</span>
+          <span class="nav-profile-role" id="nav-profile-role">Administrator</span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        
+        <div class="nav-dropdown">
+          <a href="admins.html" class="nav-dropdown-item" id="nav-manage-admins" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M17.5 16.5c-1.5-2-3-3-5.5-3s-4 1-5.5 3"/></svg>
+            Manage Admins
+          </a>
+          <div class="nav-dropdown-divider" id="nav-manage-admins-divider" style="display:none;"></div>
+          <a href="#" class="nav-dropdown-item" onclick="adminSignOut()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+            Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- -- Main Content ------------------------------------------------- -->
+  <main class="main-content">
+    <header class="page-header" style="margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 class="page-title" style="font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #c084fc 0%, #6366f1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">Geofence Control Map</h1>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Define and modify institutional boundaries, scan radii, and active coordinate corridors.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div class="header-actions" style="margin: 0; display: flex; gap: 8px;">
+          <button class="btn-primary" id="btn-edit-geofence" onclick="toggleEditMode()" style="margin: 0;">
+            Edit Geofence
+          </button>
+          
+          <!-- Editor Mode Selection (Visible only in Edit Mode) -->
+          <div id="editor-tools" style="display:none; gap: 6px; border: 1px solid rgba(124, 58, 237, 0.4); background: rgba(124, 58, 237, 0.05); padding: 4px; border-radius: 8px;">
+            <button class="btn-secondary" id="tool-main" onclick="setEditorTool('main')" style="margin:0; white-space: nowrap;">Main Polygon</button>
+            <button class="btn-secondary" id="tool-sub" onclick="setEditorTool('sub')" style="margin:0; white-space: nowrap;">Dept Block</button>
+            <button class="btn-secondary" id="tool-cp" onclick="setEditorTool('cp')" style="margin:0; white-space: nowrap;">Checkpoint</button>
+          </div>
+          <button class="btn-secondary" id="btn-clear-geofence" onclick="clearGeofence()" style="display:none; color: #ef4444; border-color: #ef4444; margin: 0;">
+            Clear All Points
+          </button>
+          <button class="btn-secondary" id="btn-cancel-edit" onclick="cancelEditMode()" style="display:none; margin: 0;">
+            Cancel
+          </button>
+          <button class="btn-primary" id="btn-save-geofence" onclick="saveGeofence()" style="display:none; margin: 0;">
+            Save Polygon
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- Edit instructions removed as per request -->
+
+    <div style="position: relative;">
+      
+      <!-- Sub-Polygon Modal Overlay -->
+      <div id="sub-polygon-modal" style="display:none; position:absolute; inset:0; z-index:2000; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="background:var(--surface); padding:24px; border-radius:12px; width:340px; border:1px solid var(--border); box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+          <h3 style="margin-top:0; margin-bottom:16px;">Save Sub-Polygon</h3>
+          <div class="form-group" style="margin-bottom:16px;">
+            <label>Department</label>
+            <div class="uiverse-select form-control" id="sub-dept-select"
+              style="padding:0; border:none; background:transparent; width:100%">
+              <div class="uiverse-selected" style="height:42px;">
+                <span class="uiverse-selected-text">Select School / Department</span>
+                <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+                  <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+                </svg>
+              </div>
+              <div class="uiverse-options">
+                <div class="multi-select-item" title="Select School / Department"><input id="sd-none" value="" name="sub-dept-checkbox" type="checkbox" style="display:none;"><label for="sd-none">Select School / Department</label></div>
+                <div class="multi-select-item" title="School of Computer Science &amp; Engineering (CSE)"><input id="sd-cse" value="School of Computer Science &amp; Engineering (CSE)" data-txt="CSE" name="sub-dept-checkbox" type="checkbox"><label for="sd-cse">CSE</label></div>
+                <div class="multi-select-item" title="School of Engineering"><input id="sd-eng" value="School of Engineering" data-txt="Engineering" name="sub-dept-checkbox" type="checkbox"><label for="sd-eng">Engineering</label></div>
+                <div class="multi-select-item" title="Mittal School of Business / Management &amp; Commerce"><input id="sd-biz" value="Mittal School of Business / Management &amp; Commerce" data-txt="Business" name="sub-dept-checkbox" type="checkbox"><label for="sd-biz">Business</label></div>
+                <div class="multi-select-item" title="School of Agriculture"><input id="sd-agr" value="School of Agriculture" data-txt="Agriculture" name="sub-dept-checkbox" type="checkbox"><label for="sd-agr">Agriculture</label></div>
+                <div class="multi-select-item" title="School of Pharmacy / Pharmaceutical Sciences"><input id="sd-phm" value="School of Pharmacy / Pharmaceutical Sciences" data-txt="Pharmacy" name="sub-dept-checkbox" type="checkbox"><label for="sd-phm">Pharmacy</label></div>
+                <div class="multi-select-item" title="School of Law"><input id="sd-law" value="School of Law" data-txt="Law" name="sub-dept-checkbox" type="checkbox"><label for="sd-law">Law</label></div>
+                <div class="multi-select-item" title="School of Architecture &amp; Design"><input id="sd-arc" value="School of Architecture &amp; Design" data-txt="Architecture" name="sub-dept-checkbox" type="checkbox"><label for="sd-arc">Architecture</label></div>
+                <div class="multi-select-item" title="School of Hotel Management &amp; Tourism"><input id="sd-hot" value="School of Hotel Management &amp; Tourism" data-txt="Hotel Management" name="sub-dept-checkbox" type="checkbox"><label for="sd-hot">Hotel Management</label></div>
+                <div class="multi-select-item" title="School of Humanities &amp; Social Sciences"><input id="sd-hum" value="School of Humanities &amp; Social Sciences" data-txt="Humanities" name="sub-dept-checkbox" type="checkbox"><label for="sd-hum">Humanities</label></div>
+                <div class="multi-select-item" title="School of Sciences"><input id="sd-sci" value="School of Sciences" data-txt="Sciences" name="sub-dept-checkbox" type="checkbox"><label for="sd-sci">Sciences</label></div>
+                <div class="multi-select-item" title="School of Media, Animation &amp; Multimedia"><input id="sd-med" value="School of Media, Animation &amp; Multimedia" data-txt="Media" name="sub-dept-checkbox" type="checkbox"><label for="sd-med">Media</label></div>
+                <div class="multi-select-item" title="School of Education &amp; Physical Education"><input id="sd-edu" value="School of Education &amp; Physical Education" data-txt="Education" name="sub-dept-checkbox" type="checkbox"><label for="sd-edu">Education</label></div>
+                <div class="multi-select-item" title="School of Allied Medical Sciences / Physiotherapy"><input id="sd-meds" value="School of Allied Medical Sciences / Physiotherapy" data-txt="Medical Sciences" name="sub-dept-checkbox" type="checkbox"><label for="sd-meds">Medical Sciences</label></div>
+                <div class="multi-select-item" title="School of Computer Applications &amp; IT"><input id="sd-it" value="School of Computer Applications &amp; IT" data-txt="IT" name="sub-dept-checkbox" type="checkbox"><label for="sd-it">IT</label></div>
+              </div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Color</label>
+            <input type="hidden" id="sub-color" value="#ff4d4d" />
+            <div class="color-swatch-container">
+              <div class="color-swatch selected" style="background-color: #ff4d4d;" data-color="#ff4d4d" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #ff9f43;" data-color="#ff9f43" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #feca57;" data-color="#feca57" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #1dd1a1;" data-color="#1dd1a1" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #54a0ff;" data-color="#54a0ff" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #5f27cd;" data-color="#5f27cd" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #ff9ff3;" data-color="#ff9ff3" onclick="selectColor(this)"></div>
+              <div class="color-swatch" style="background-color: #c8d6e5;" data-color="#c8d6e5" onclick="selectColor(this)"></div>
+            </div>
+          </div>
+          <div style="display:flex; gap:12px; margin-top:20px;">
+            <button class="btn-primary" onclick="commitSubPolygon()" style="flex:1">Save</button>
+            <button class="btn-secondary" onclick="cancelSubPolygon()">Cancel</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Checkpoint Modal Overlay -->
+      <div id="checkpoint-modal" style="display:none; position:absolute; inset:0; z-index:2000; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); align-items:center; justify-content:center;">
+        <div style="background:var(--surface); padding:24px; border-radius:12px; width:340px; border:1px solid var(--border); box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+          <h3 style="margin-top:0; margin-bottom:16px;">Save Checkpoint</h3>
+          <div class="form-group">
+            <label>Radius (meters)</label>
+            <input type="number" id="cp-radius" class="form-control" value="50" min="5" max="500" />
+          </div>
+          <div style="display:flex; gap:12px; margin-top:20px;">
+            <button class="btn-primary" onclick="commitCheckpoint()" style="flex:1">Save</button>
+            <button class="btn-secondary" onclick="cancelCheckpoint()">Cancel</button>
+          </div>
+        </div>
+      </div>
+      <!-- Toggle button for manual panel (visible when panel is hidden in edit mode) -->
+      <button id="btn-show-manual" onclick="toggleManualPanel(true)" style="display:none; position: absolute; top: 16px; right: 16px; z-index: 1000; background:rgba(26, 26, 46, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:10px 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.5); color: var(--text); font-size:13px; font-weight:600; cursor:pointer; align-items:center; gap:8px;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--primary);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+        Add Point Manually
+      </button>
+
+      <!-- Manual coordinate input (visible in edit mode only) -->
+      <div id="manual-coord-panel" style="display:none; position: absolute; top: 16px; right: 16px; z-index: 1000; background:rgba(26, 26, 46, 0.85); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); border:1px solid rgba(255,255,255,0.1); border-radius:12px; padding:16px 20px; box-shadow: 0 10px 40px rgba(0,0,0,0.5); width: 340px;">
+        <div style="font-size:13px; font-weight:600; color:var(--text-muted); margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="color:var(--primary);"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+            Add Point Manually
+          </div>
+          <button onclick="toggleManualPanel(false)" style="background:transparent; border:none; color:var(--text-muted); cursor:pointer; padding:4px; display:flex; align-items:center; justify-content:center; border-radius:4px;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+          </button>
+        </div>
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; align-items:flex-end;">
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size: 11px; margin-bottom: 4px;">Latitude</label>
+            <input type="number" id="manual-lat" class="form-control" step="0.000001" placeholder="31.2536" style="height: 38px; font-size: 13px;" />
+          </div>
+          <div class="form-group" style="margin-bottom:0">
+            <label style="font-size: 11px; margin-bottom: 4px;">Longitude</label>
+            <input type="number" id="manual-lng" class="form-control" step="0.000001" placeholder="75.7037" style="height: 38px; font-size: 13px;" />
+          </div>
+          <div style="grid-column: span 2;">
+            <button class="btn-primary" onclick="addManualPoint()" style="width: 100%; height:38px; font-size: 13px; margin: 0; justify-content: center;">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right: 6px;"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Add Coordinate
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div id="map"></div>
+    </div>
+  </main>
+
+  <script src="js/api.js?v=1028"></script>
+  <script src="js/app.js?v=1028"></script>
+  <script src="js/map.js?v=1030"></script>
+</body>
+</html>
+

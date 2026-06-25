@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/png" href="favicon.png" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoFace Admin — Teachers</title>
+  <link rel="stylesheet" href="css/styles.css?v=9" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
+    }
+
+    /* Premium Filter Bar alignment & consistency */
+    .filter-bar .filter-input,
+    .filter-bar .uiverse-selected,
+    .filter-bar .btn-secondary {
+      height: 38px !important;
+      box-sizing: border-box;
+    }
+    .filter-bar .uiverse-select {
+      min-width: auto !important;
+    }
+    .filter-bar .uiverse-selected {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 12px;
+    }
+
+    /* Cohesive premium translucent design system */
+    .filter-bar .filter-input,
+    .filter-bar .uiverse-selected {
+      border: 1px solid rgba(124, 58, 237, 0.25) !important;
+      background: rgba(124, 58, 237, 0.04) !important;
+      color: var(--text) !important;
+      border-radius: var(--radius-sm) !important;
+      transition: border-color var(--transition), box-shadow var(--transition), background var(--transition) !important;
+    }
+    .filter-bar .filter-input:hover,
+    .filter-bar .uiverse-selected:hover {
+      border-color: rgba(124, 58, 237, 0.55) !important;
+      background: rgba(124, 58, 237, 0.06) !important;
+    }
+    .filter-bar .filter-input:focus,
+    .filter-bar .uiverse-select.open > .uiverse-selected {
+      border-color: var(--primary) !important;
+      box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.15) !important;
+      background: rgba(124, 58, 237, 0.08) !important;
+      outline: none;
+    }
+
+    /* Magnifying Glass Search SVG input wrapping */
+    .search-wrapper {
+      position: relative;
+      display: inline-block;
+      width: 220px;
+    }
+    .search-wrapper svg {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 14px;
+      height: 14px;
+      color: var(--text-muted);
+      pointer-events: none;
+      transition: color var(--transition);
+    }
+    .search-wrapper:focus-within svg {
+      color: var(--primary);
+    }
+    .search-wrapper .filter-input {
+      width: 100%;
+      padding-left: 34px !important;
+    }
+
+    /* Clear button soft-red glow */
+    .filter-bar .btn-secondary {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0 16px;
+      font-weight: 600;
+      font-size: 13px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+    .filter-bar .btn-secondary:hover {
+      background: rgba(239, 68, 68, 0.08);
+      border-color: rgba(239, 68, 68, 0.4);
+      color: #ef4444;
+      box-shadow: 0 0 10px rgba(239, 68, 68, 0.1);
+    }
+
+    /* Set proportional column widths to balance the table grid perfectly */
+    .data-table th:nth-child(1), .data-table td:nth-child(1) { width: 12%; } /* Reg ID */
+    .data-table th:nth-child(2), .data-table td:nth-child(2) { width: 22%; } /* Name */
+    .data-table th:nth-child(3), .data-table td:nth-child(3) { width: 20%; } /* Email */
+    .data-table th:nth-child(4), .data-table td:nth-child(4) { width: 14%; } /* Department */
+    .data-table th:nth-child(5), .data-table td:nth-child(5) { width: 12%; } /* Face Encoded */
+    .data-table th:nth-child(6), .data-table td:nth-child(6) { width: 10%; } /* Status */
+    .data-table th:nth-child(7), .data-table td:nth-child(7) { width: 12%; } /* Registered */
+    .data-table th:nth-child(8), .data-table td:nth-child(8) { width: 6%; } /* Actions */
+
+    /* Premium Capsule Pill Badges */
+    .data-table .badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 11px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 100px; /* Pill style */
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+    .data-table .badge--success {
+      background: rgba(16, 185, 129, 0.08) !important;
+      border: 1px solid rgba(16, 185, 129, 0.15) !important;
+      color: #10b981 !important;
+    }
+    .data-table .badge--warning {
+      background: rgba(245, 158, 11, 0.08) !important;
+      border: 1px solid rgba(245, 158, 11, 0.15) !important;
+      color: #f59e0b !important;
+    }
+    .data-table .badge--neutral {
+      background: rgba(100, 116, 139, 0.08) !important;
+      border: 1px solid rgba(100, 116, 139, 0.15) !important;
+      color: #94a3b8 !important;
+    }
+
+    /* Monospace Reg ID style */
+    .reg-id-code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      padding: 3px 6px;
+      border-radius: 4px;
+    }
+
+    /* Row Hover Interaction */
+    .data-table tr {
+      transition: background-color 0.2s ease;
+    }
+  </style>
+</head>
+
+<body>
+    <!-- -- Navbar ------------------------------------------------------- -->
+  <nav class="navbar" id="navbar">
+    <div class="navbar-left">
+      <div class="navbar-logo">
+        <div class="logo-icon">
+          <img src="images/logo.png?v=6" alt="GeoFace Logo">
+        </div>
+        <span>Geo<span class="face-text">Face</span></span>
+      </div>
+      <div class="navbar-nav">
+        <a href="index.html" class="nav-item" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+          Dashboard
+        </a>
+        <a href="teachers.html" class="nav-item active" id="nav-teachers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          Teachers
+        </a>
+        <a href="logs.html" class="nav-item" id="nav-logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+          Scans
+        </a>
+        <a href="audit.html" class="nav-item" id="nav-audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          Reports
+        </a>
+        <a href="map.html" class="nav-item" id="nav-map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/></svg>
+          Map
+        </a>
+        <a href="settings.html" class="nav-item" id="nav-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </a>
+      </div>
+    </div>
+    
+    <div class="navbar-right">
+      <div class="nav-bell" onclick="window.location.href='alerts.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+        <span class="nav-bell-badge" id="navbar-alert-badge" style="display:none;">0</span>
+      </div>
+      
+      <div class="nav-profile">
+        <img src="images/default-avatar.svg" alt="Admin" class="nav-profile-pic" id="nav-profile-pic" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'12\' cy=\'7\' r=\'4\'/%3E%3C/svg%3E'">
+        <div class="nav-profile-info">
+          <span class="nav-profile-name" id="nav-profile-name">Admin</span>
+          <span class="nav-profile-role" id="nav-profile-role">Administrator</span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        
+        <div class="nav-dropdown">
+          <a href="admins.html" class="nav-dropdown-item" id="nav-manage-admins" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M17.5 16.5c-1.5-2-3-3-5.5-3s-4 1-5.5 3"/></svg>
+            Manage Admins
+          </a>
+          <div class="nav-dropdown-divider" id="nav-manage-admins-divider" style="display:none;"></div>
+          <a href="#" class="nav-dropdown-item" onclick="adminSignOut()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+            Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="main-content">
+    <!-- Prevent Chrome/Edge Autofill on Search Inputs -->
+    <input type="text" name="chrome_prevent_autofill_username" style="position: absolute; top: -9999px; left: -9999px; opacity: 0; width: 0; height: 0;" tabindex="-1" aria-hidden="true" />
+    <input type="password" name="chrome_prevent_autofill_password" style="position: absolute; top: -9999px; left: -9999px; opacity: 0; width: 0; height: 0;" tabindex="-1" aria-hidden="true" />
+
+    <header class="page-header" style="margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 class="page-title" style="font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #c084fc 0%, #6366f1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">Faculty Register</h1>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Manage active teacher profiles, registered faces, device locks, and status metrics.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <!-- TOTP Display -->
+        <div id="totp-container" style="display:none; align-items:center; gap:12px; background:var(--surface-2); border:1px solid var(--border); padding:6px 16px; border-radius:8px;">
+           <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; min-width: 45px;">
+             <span id="totp-timer" style="font-size:14px; color:var(--purple); font-weight:600; font-variant-numeric:tabular-nums; font-family:monospace;">05:00</span>
+           </div>
+           <div style="width:1px; height:24px; background:var(--border);"></div>
+           <div style="display:flex; justify-content:center; align-items:center; min-width: 90px;">
+             <code id="totp-code" onclick="copyAdminTOTP()" style="font-size:18px; font-weight:700; color:var(--text); letter-spacing:2px; cursor:pointer; transition:color 0.2s; font-variant-numeric:tabular-nums; font-family:monospace;" title="Click to copy" onmouseover="this.style.color='var(--primary)'" onmouseout="this.style.color='var(--text)'">------</code>
+           </div>
+        </div>
+        <button class="btn-primary" onclick="showRegisterModal()" style="margin: 0;">+ Register Teacher</button>
+      </div>
+    </header>
+
+    <!-- Filters -->
+    <div class="filter-bar" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:16px;">
+      <div class="search-wrapper">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <input type="text" id="filter-teacher-search" class="filter-input" placeholder="Search Name / Reg ID..." oninput="displayTeachers()" autocomplete="off" readonly onfocus="this.removeAttribute('readonly');" onblur="this.setAttribute('readonly', 'readonly');" />
+      </div>
+      <div class="uiverse-select filter-select-custom" id="filter-teacher-dept" style="width:220px">
+        <div class="uiverse-selected">
+          <span class="uiverse-selected-text">All Departments</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="uiverse-options">
+          <div title="All Departments"><input id="ftd-all" value="" name="filter-teacher-dept" type="radio" checked onchange="displayTeachers()"><label class="uiverse-option" for="ftd-all" data-txt="All Departments">All Departments</label></div>
+          <div title="CSE"><input id="ftd-cse" value="CSE" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-cse" data-txt="CSE">CSE</label></div>
+          <div title="Engineering"><input id="ftd-eng" value="Engineering" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-eng" data-txt="Engineering">Engineering</label></div>
+          <div title="Business / Management"><input id="ftd-biz" value="Business" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-biz" data-txt="Business / Management">Business / Management</label></div>
+          <div title="Agriculture"><input id="ftd-agr" value="Agriculture" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-agr" data-txt="Agriculture">Agriculture</label></div>
+          <div title="Pharmacy"><input id="ftd-phm" value="Pharmacy" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-phm" data-txt="Pharmacy">Pharmacy</label></div>
+          <div title="Law"><input id="ftd-law" value="Law" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-law" data-txt="Law">Law</label></div>
+          <div title="Architecture & Design"><input id="ftd-arc" value="Architecture" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-arc" data-txt="Architecture & Design">Architecture & Design</label></div>
+          <div title="Hotel Management"><input id="ftd-hot" value="Hotel" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-hot" data-txt="Hotel Management">Hotel Management</label></div>
+          <div title="Humanities"><input id="ftd-hum" value="Humanities" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-hum" data-txt="Humanities">Humanities</label></div>
+          <div title="Sciences"><input id="ftd-sci" value="Sciences" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-sci" data-txt="Sciences">Sciences</label></div>
+          <div title="Media / Animation"><input id="ftd-med" value="Media" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-med" data-txt="Media / Animation">Media / Animation</label></div>
+          <div title="Education"><input id="ftd-edu" value="Education" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-edu" data-txt="Education">Education</label></div>
+          <div title="Allied Medical"><input id="ftd-meds" value="Allied" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-meds" data-txt="Allied Medical">Allied Medical</label></div>
+          <div title="Computer Applications / IT"><input id="ftd-it" value="Applications" name="filter-teacher-dept" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftd-it" data-txt="Computer Applications / IT">Computer Applications / IT</label></div>
+        </div>
+      </div>
+      <div class="uiverse-select filter-select-custom" id="filter-teacher-face" style="width:170px">
+        <div class="uiverse-selected">
+          <span class="uiverse-selected-text">Face: All</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="uiverse-options">
+          <div title="Face: All"><input id="ftf-all" value="" name="filter-teacher-face" type="radio" checked onchange="displayTeachers()"><label class="uiverse-option" for="ftf-all" data-txt="Face: All">Face: All</label></div>
+          <div title="Face Encoded"><input id="ftf-yes" value="yes" name="filter-teacher-face" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftf-yes" data-txt="Face Encoded">Face Encoded</label></div>
+          <div title="No Face Data"><input id="ftf-no" value="no" name="filter-teacher-face" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="ftf-no" data-txt="No Face Data">No Face Data</label></div>
+        </div>
+      </div>
+      <div class="uiverse-select filter-select-custom" id="filter-teacher-status" style="width:160px">
+        <div class="uiverse-selected">
+          <span class="uiverse-selected-text">Status: All</span>
+          <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+        </div>
+        <div class="uiverse-options">
+          <div title="Status: All"><input id="fts-all" value="" name="filter-teacher-status" type="radio" checked onchange="displayTeachers()"><label class="uiverse-option" for="fts-all" data-txt="Status: All">Status: All</label></div>
+          <div title="Active"><input id="fts-act" value="active" name="filter-teacher-status" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="fts-act" data-txt="Active">Active</label></div>
+          <div title="Inactive"><input id="fts-ina" value="inactive" name="filter-teacher-status" type="radio" onchange="displayTeachers()"><label class="uiverse-option" for="fts-ina" data-txt="Inactive">Inactive</label></div>
+        </div>
+      </div>
+      <button class="btn-secondary" onclick="resetTeachersFilters()">Reset Filters</button>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>Reg ID</th>
+            <th>Name</th>
+            <th>Email</th>
+            <th>Department</th>
+            <th>Face Encoded</th>
+            <th>Status</th>
+            <th>Registered</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="teachers-tbody">
+          <tr>
+            <td colspan="8" class="td-loading"><div class="gear-loader"></div></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- Register Teacher Modal -->
+  <div class="modal-overlay" id="register-modal" style="display:none;">
+    <div class="modal-card" style="max-width:680px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 class="modal-title" style="margin:0">Register New Teacher</h2>
+        <button class="btn-icon" onclick="hideRegisterModal()">✕</button>
+      </div>
+      <div id="register-error" class="error-banner" style="display:none;"></div>
+      <div id="register-success" class="success-banner" style="display:none;"></div>
+
+      <!-- Temporary Registration Toggle -->
+      <div
+        style="background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:10px 16px; margin-bottom:12px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-weight:600; font-size:14px;">Temporary Registration</div>
+          <div style="font-size:12px; color:var(--text-muted); margin-top:2px;">Teacher completes face scan via app</div>
+        </div>
+        <label class="uiverse-switch" style="flex-shrink:0; margin-left:16px;">
+          <input type="checkbox" id="reg-is-temp" onchange="toggleTempMode()" />
+          <span class="uiverse-slider"></span>
+        </label>
+      </div>
+
+      <!-- Webcam face capture (Moved to Top) -->
+      <div class="form-group" id="reg-face-section" style="text-align:center;">
+        <div class="webcam-box" style="display:inline-flex; flex-direction:column; align-items:center;">
+          <video id="reg-webcam" autoplay muted playsinline
+            style="display:none; width:120px; height:120px; object-fit:cover; border-radius:50%; border:3px solid var(--primary-color); box-shadow: 0 4px 12px rgba(0,0,0,0.15); margin-bottom: 8px;"></video>
+          <canvas id="reg-canvas" style="display:none;"></canvas>
+          <div id="webcam-placeholder" class="webcam-placeholder" onclick="startWebcam()"
+            style="width:120px; height:120px; border-radius:50%; margin-bottom: 8px; cursor:pointer; background: var(--surface-2); display:flex; flex-direction:column; align-items:center; justify-content:center; border: 2px dashed var(--border);">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"
+              style="width:28px;height:28px;color:var(--text-muted)">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M6.827 6.175A2.31 2.31 0 015.186 7.23c-.38.054-.757.112-1.134.175C2.999 7.58 2.25 8.507 2.25 9.574V18a2.25 2.25 0 002.25 2.25h15A2.25 2.25 0 0021.75 18V9.574c0-1.067-.75-1.994-1.802-2.169a47.865 47.865 0 00-1.134-.175 2.31 2.31 0 01-1.64-1.055l-.822-1.316a2.192 2.192 0 00-1.736-1.039 48.774 48.774 0 00-5.232 0 2.192 2.192 0 00-1.736 1.039l-.821 1.316z" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M16.5 12.75a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zM18.75 10.5h.008v.008h-.008V10.5z" />
+            </svg>
+          </div>
+          <div id="encoding-badge" class="badge badge--success" style="display:none;margin-top:8px;">✓ Face Captured
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
+            <button class="btn-secondary btn-sm" id="btn-start-cam" onclick="startWebcam()">Open Camera</button>
+            <button class="btn-primary btn-sm" id="btn-capture" onclick="captureFace()" style="display:none;">Capture
+              Face</button>
+            <button class="btn-secondary btn-sm" id="btn-stop-cam" onclick="stopWebcam()"
+              style="display:none;">Stop</button>
+          </div>
+        </div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
+      <div class="form-group" id="reg-name-section">
+        <label>Full Name</label>
+        <input type="text" id="reg-name" placeholder="Dr. John Smith" />
+      </div>
+      <div class="form-group">
+        <label>Registration Number (Reg ID)</label>
+        <input type="text" id="reg-no" placeholder="REG12345" />
+      </div>
+      <div class="form-group" id="reg-dept-section" style="grid-column: 1 / -1;">
+        <label>Department</label>
+        <div class="uiverse-select form-control" id="reg-department"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select School / Department</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path
+                d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z">
+              </path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select School / Department"><input id="rd-none" value="" name="reg-department" type="radio"
+                checked><label class="uiverse-option" for="rd-none" data-txt="Select School / Department">Select School
+                / Department</label></div>
+            <div title="School of Computer Science &amp; Engineering (CSE)"><input id="rd-cse"
+                value="School of Computer Science &amp; Engineering (CSE)" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-cse" data-txt="School of Computer Science &amp; Engineering (CSE)">School
+                of Computer Science &amp; Engineering (CSE)</label></div>
+            <div title="School of Engineering"><input id="rd-eng" value="School of Engineering" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-eng" data-txt="School of Engineering">School of
+                Engineering</label></div>
+            <div title="Mittal School of Business / Management &amp; Commerce"><input id="rd-biz"
+                value="Mittal School of Business / Management &amp; Commerce" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-biz"
+                data-txt="Mittal School of Business / Management &amp; Commerce">Mittal School of Business / Management
+                &amp; Commerce</label></div>
+            <div title="School of Agriculture"><input id="rd-agr" value="School of Agriculture" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-agr" data-txt="School of Agriculture">School of
+                Agriculture</label></div>
+            <div title="School of Pharmacy / Pharmaceutical Sciences"><input id="rd-phm"
+                value="School of Pharmacy / Pharmaceutical Sciences" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-phm" data-txt="School of Pharmacy / Pharmaceutical Sciences">School of
+                Pharmacy / Pharmaceutical Sciences</label></div>
+            <div title="School of Law"><input id="rd-law" value="School of Law" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-law" data-txt="School of Law">School of Law</label>
+            </div>
+            <div title="School of Architecture &amp; Design"><input id="rd-arc"
+                value="School of Architecture &amp; Design" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-arc" data-txt="School of Architecture &amp; Design">School of
+                Architecture &amp; Design</label></div>
+            <div title="School of Hotel Management &amp; Tourism"><input id="rd-hot"
+                value="School of Hotel Management &amp; Tourism" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-hot" data-txt="School of Hotel Management &amp; Tourism">School of Hotel
+                Management &amp; Tourism</label></div>
+            <div title="School of Humanities &amp; Social Sciences"><input id="rd-hum"
+                value="School of Humanities &amp; Social Sciences" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-hum" data-txt="School of Humanities &amp; Social Sciences">School of
+                Humanities &amp; Social Sciences</label></div>
+            <div title="School of Sciences"><input id="rd-sci" value="School of Sciences" name="reg-department"
+                type="radio"><label class="uiverse-option" for="rd-sci" data-txt="School of Sciences">School of
+                Sciences</label></div>
+            <div title="School of Media, Animation &amp; Multimedia"><input id="rd-med"
+                value="School of Media, Animation &amp; Multimedia" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-med" data-txt="School of Media, Animation &amp; Multimedia">School of
+                Media, Animation &amp; Multimedia</label></div>
+            <div title="School of Education &amp; Physical Education"><input id="rd-edu"
+                value="School of Education &amp; Physical Education" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-edu" data-txt="School of Education &amp; Physical Education">School of
+                Education &amp; Physical Education</label></div>
+            <div title="School of Allied Medical Sciences / Physiotherapy"><input id="rd-meds"
+                value="School of Allied Medical Sciences / Physiotherapy" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-meds" data-txt="School of Allied Medical Sciences / Physiotherapy">School
+                of Allied Medical Sciences / Physiotherapy</label></div>
+            <div title="School of Computer Applications &amp; IT"><input id="rd-it"
+                value="School of Computer Applications &amp; IT" name="reg-department" type="radio"><label
+                class="uiverse-option" for="rd-it" data-txt="School of Computer Applications &amp; IT">School of
+                Computer Applications &amp; IT</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" id="reg-role-section">
+        <label>Role</label>
+        <div class="uiverse-select form-control" id="reg-role"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select Role</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path
+                d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z">
+              </path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select Role"><input id="rr-none" value="" name="reg-role" type="radio" checked><label class="uiverse-option" for="rr-none" data-txt="Select Role">Select Role</label></div>
+            <div title="Teaching Assistant (TA)"><input id="rr-ta" value="Teaching Assistant (TA)" name="reg-role" type="radio"><label class="uiverse-option" for="rr-ta" data-txt="Teaching Assistant (TA)">Teaching Assistant (TA)</label></div>
+            <div title="Assistant Professor"><input id="rr-ap" value="Assistant Professor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-ap" data-txt="Assistant Professor">Assistant Professor</label></div>
+            <div title="Associate Professor"><input id="rr-asp" value="Associate Professor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-asp" data-txt="Associate Professor">Associate Professor</label></div>
+            <div title="Professor"><input id="rr-p" value="Professor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-p" data-txt="Professor">Professor</label></div>
+            <div title="Head of Department (HOD)"><input id="rr-hod" value="Head of Department (HOD)" name="reg-role" type="radio"><label class="uiverse-option" for="rr-hod" data-txt="Head of Department (HOD)">Head of Department (HOD)</label></div>
+            <div title="Dean"><input id="rr-dean" value="Dean" name="reg-role" type="radio"><label class="uiverse-option" for="rr-dean" data-txt="Dean">Dean</label></div>
+            <div title="Director / Pro-Chancellor / Chancellor"><input id="rr-dir" value="Director / Pro-Chancellor / Chancellor" name="reg-role" type="radio"><label class="uiverse-option" for="rr-dir" data-txt="Director / Pro-Chancellor / Chancellor">Director / Pro-Chancellor / Chancellor</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" id="reg-phone-section">
+        <label>Phone Number</label>
+        <input type="tel" id="reg-phone" placeholder="+1234567890" />
+      </div>
+      <div class="form-group" id="reg-email-section">
+        <label>Email</label>
+        <input type="email" id="reg-email" placeholder="teacher@college.edu" />
+      </div>
+      <div class="form-group">
+        <label>Password (min 8 chars)</label>
+        <input type="password" id="reg-password" placeholder="••••••••" />
+      </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:16px;">
+        <button class="btn-secondary btn-full" onclick="hideRegisterModal()">Cancel</button>
+        <button class="btn-primary btn-full" id="btn-register-submit" onclick="submitRegister()">Register</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Credential Share Modal (appears after temp registration) -->
+  <div class="modal-overlay" id="share-modal" style="display:none;">
+    <div class="modal-card" style="max-width:400px; text-align:center;">
+      <!-- Success icon -->
+      <div
+        style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.15);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"
+          stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+          <polyline points="22 4 12 14.01 9 11.01" />
+        </svg>
+      </div>
+      <h2 style="font-size:17px;font-weight:700;margin-bottom:3px;">Teacher Registered!</h2>
+      <p style="font-size:12px;color:var(--text-muted);margin-bottom:16px;">Share these credentials so they can set up the GeoFace app.</p>
+
+      <!-- Compact credential card -->
+      <div id="cred-card"
+        style="background:var(--surface-2);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:left;margin-bottom:16px;">
+      </div>
+
+      <!-- Share buttons -->
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;">
+        <!-- WhatsApp -->
+        <button onclick="shareViaWhatsApp()"
+          style="display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:#25D366;color:#fff;transition:opacity .2s;"
+          onmouseover="this.style.opacity=.85" onmouseout="this.style.opacity=1">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z" />
+          </svg>
+          Share via WhatsApp
+        </button>
+        <div style="display:flex;gap:8px;">
+          <!-- Copy -->
+          <button id="btn-copy-cred" onclick="copyCredentials()"
+            style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
+            onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2" />
+              <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+            </svg>
+            Copy
+          </button>
+          <!-- Email -->
+          <button onclick="shareViaEmail()"
+            style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:10px;border-radius:8px;border:1px solid var(--border);cursor:pointer;font-size:13px;font-weight:600;background:var(--surface-2);color:var(--text);transition:background .2s;"
+            onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background='var(--surface-2)'">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+              stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+              <polyline points="22,6 12,13 2,6" />
+            </svg>
+            Email
+          </button>
+        </div>
+      </div>
+
+      <button class="btn-secondary btn-full" onclick="closeShareModal()">Done</button>
+    </div>
+  </div>
+
+
+  <div class="modal-overlay" id="edit-modal" style="display:none;">
+    <div class="modal-card" style="max-width:680px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+        <h2 class="modal-title" style="margin:0">Edit Teacher Details</h2>
+        <button class="btn-icon" onclick="hideEditModal()">✕</button>
+      </div>
+      <div id="edit-error" class="error-banner" style="display:none;"></div>
+      <div id="edit-success" class="success-banner" style="display:none;"></div>
+
+      <input type="hidden" id="edit-id" />
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0 16px;">
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" id="edit-name" />
+      </div>
+      <div class="form-group">
+        <label>Registration Number (Reg ID)</label>
+        <input type="text" id="edit-no" />
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label>Department</label>
+        <div class="uiverse-select form-control" id="edit-department"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select School / Department</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path
+                d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z">
+              </path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select School / Department"><input id="ed-none" value="" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-none" data-txt="Select School / Department">Select
+                School / Department</label></div>
+            <div title="School of Computer Science &amp; Engineering (CSE)"><input id="ed-cse"
+                value="School of Computer Science &amp; Engineering (CSE)" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-cse" data-txt="School of Computer Science &amp; Engineering (CSE)">School
+                of Computer Science &amp; Engineering (CSE)</label></div>
+            <div title="School of Engineering"><input id="ed-eng" value="School of Engineering" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-eng" data-txt="School of Engineering">School of
+                Engineering</label></div>
+            <div title="Mittal School of Business / Management &amp; Commerce"><input id="ed-biz"
+                value="Mittal School of Business / Management &amp; Commerce" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-biz"
+                data-txt="Mittal School of Business / Management &amp; Commerce">Mittal School of Business / Management
+                &amp; Commerce</label></div>
+            <div title="School of Agriculture"><input id="ed-agr" value="School of Agriculture" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-agr" data-txt="School of Agriculture">School of
+                Agriculture</label></div>
+            <div title="School of Pharmacy / Pharmaceutical Sciences"><input id="ed-phm"
+                value="School of Pharmacy / Pharmaceutical Sciences" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-phm" data-txt="School of Pharmacy / Pharmaceutical Sciences">School of
+                Pharmacy / Pharmaceutical Sciences</label></div>
+            <div title="School of Law"><input id="ed-law" value="School of Law" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-law" data-txt="School of Law">School of Law</label>
+            </div>
+            <div title="School of Architecture &amp; Design"><input id="ed-arc"
+                value="School of Architecture &amp; Design" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-arc" data-txt="School of Architecture &amp; Design">School of
+                Architecture &amp; Design</label></div>
+            <div title="School of Hotel Management &amp; Tourism"><input id="ed-hot"
+                value="School of Hotel Management &amp; Tourism" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-hot" data-txt="School of Hotel Management &amp; Tourism">School of Hotel
+                Management &amp; Tourism</label></div>
+            <div title="School of Humanities &amp; Social Sciences"><input id="ed-hum"
+                value="School of Humanities &amp; Social Sciences" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-hum" data-txt="School of Humanities &amp; Social Sciences">School of
+                Humanities &amp; Social Sciences</label></div>
+            <div title="School of Sciences"><input id="ed-sci" value="School of Sciences" name="edit-department"
+                type="radio"><label class="uiverse-option" for="ed-sci" data-txt="School of Sciences">School of
+                Sciences</label></div>
+            <div title="School of Media, Animation &amp; Multimedia"><input id="ed-med"
+                value="School of Media, Animation &amp; Multimedia" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-med" data-txt="School of Media, Animation &amp; Multimedia">School of
+                Media, Animation &amp; Multimedia</label></div>
+            <div title="School of Education &amp; Physical Education"><input id="ed-edu"
+                value="School of Education &amp; Physical Education" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-edu" data-txt="School of Education &amp; Physical Education">School of
+                Education &amp; Physical Education</label></div>
+            <div title="School of Allied Medical Sciences / Physiotherapy"><input id="ed-meds"
+                value="School of Allied Medical Sciences / Physiotherapy" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-meds" data-txt="School of Allied Medical Sciences / Physiotherapy">School
+                of Allied Medical Sciences / Physiotherapy</label></div>
+            <div title="School of Computer Applications &amp; IT"><input id="ed-it"
+                value="School of Computer Applications &amp; IT" name="edit-department" type="radio"><label
+                class="uiverse-option" for="ed-it" data-txt="School of Computer Applications &amp; IT">School of
+                Computer Applications &amp; IT</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Email</label>
+        <input type="email" id="edit-email" />
+      </div>
+      <div class="form-group">
+        <label>Phone Number</label>
+        <input type="tel" id="edit-phone" placeholder="e.g. 9876543210" />
+      </div>
+      <div class="form-group" style="grid-column: 1 / -1;">
+        <label>Role / Designation</label>
+        <div class="uiverse-select form-control" id="edit-role"
+          style="padding:0; border:none; background:transparent; width:100%">
+          <div class="uiverse-selected" style="height:42px;">
+            <span class="uiverse-selected-text">Select Role</span>
+            <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow">
+              <path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path>
+            </svg>
+          </div>
+          <div class="uiverse-options">
+            <div title="Select Role"><input id="er-none" value="" name="edit-role" type="radio" checked><label class="uiverse-option" for="er-none" data-txt="Select Role">Select Role</label></div>
+            <div title="Teaching Assistant (TA)"><input id="er-ta" value="Teaching Assistant (TA)" name="edit-role" type="radio"><label class="uiverse-option" for="er-ta" data-txt="Teaching Assistant (TA)">Teaching Assistant (TA)</label></div>
+            <div title="Assistant Professor"><input id="er-ap" value="Assistant Professor" name="edit-role" type="radio"><label class="uiverse-option" for="er-ap" data-txt="Assistant Professor">Assistant Professor</label></div>
+            <div title="Associate Professor"><input id="er-asp" value="Associate Professor" name="edit-role" type="radio"><label class="uiverse-option" for="er-asp" data-txt="Associate Professor">Associate Professor</label></div>
+            <div title="Professor"><input id="er-p" value="Professor" name="edit-role" type="radio"><label class="uiverse-option" for="er-p" data-txt="Professor">Professor</label></div>
+            <div title="Head of Department (HOD)"><input id="er-hod" value="Head of Department (HOD)" name="edit-role" type="radio"><label class="uiverse-option" for="er-hod" data-txt="Head of Department (HOD)">Head of Department (HOD)</label></div>
+            <div title="Dean"><input id="er-dean" value="Dean" name="edit-role" type="radio"><label class="uiverse-option" for="er-dean" data-txt="Dean">Dean</label></div>
+            <div title="Director / Pro-Chancellor / Chancellor"><input id="er-dir" value="Director / Pro-Chancellor / Chancellor" name="edit-role" type="radio"><label class="uiverse-option" for="er-dir" data-txt="Director / Pro-Chancellor / Chancellor">Director / Pro-Chancellor / Chancellor</label></div>
+          </div>
+        </div>
+      </div>
+      <div class="form-group" style="display:none;">
+        <input type="hidden" id="edit-password" />
+      </div>
+      </div>
+
+      <div style="display:flex;gap:12px;margin-top:16px;">
+        <button class="btn-secondary btn-full" onclick="hideEditModal()">Cancel</button>
+        <button class="btn-primary btn-full" id="btn-edit-submit" onclick="submitEdit()">Save Changes</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="login-modal">
+    <div class="new-login-container">
+      <div class="new-login-form">
+        <div class="new-login-form_details">Login</div>
+        <div id="login-error" class="error-banner" style="display:none; width: 100%; margin: 0;"></div>
+        <input type="text" id="admin-reg-no" class="new-login-input" placeholder="Reg No" required>
+        <input type="password" id="admin-password" class="new-login-input" placeholder="Password" required>
+        <button id="btn-login" class="new-login-btn" onclick="adminLogin()">Login</button>
+      </div>
+    </div>
+  </div>
+
+
+
+  <script src="js/api.js?v=1028"></script>
+  <script src="js/app.js?v=1028"></script>
+  <script>
+    let webcamStream = null;
+    let capturedEncoding = null;
+    let capturedProfilePic = null;
+
+    const deptNicknames = {
+      "Computer Science": "CSE",
+      "Electronics & Electrical": "EEE/ECE",
+      "Civil Engineering": "CE",
+      "Mechanical Engineering": "ME",
+      "School of Engineering": "ENG",
+      "Mittal School of Business": "MSB",
+      "Business / Management & Commerce": "MSB",
+      "School of Law": "LAW",
+      "Law": "LAW",
+      "Hotel Management & Tourism": "HM",
+      "Architecture & Design": "ARCH",
+      "Architecture": "ARCH",
+      "Agriculture": "AGRI",
+      "Pharmacy / Pharmaceutical Sciences": "PHARMA",
+      "Pharmacy": "PHARMA",
+      "Bioengineering & Biosciences": "BIO",
+      "Physical Education": "PE",
+      "Education & Physical Education": "EDU",
+      "Fashion Design": "FD",
+      "Media & Communication": "MEDIA",
+      "Media, Animation & Multimedia": "MEDIA",
+      "Allied Medical Sciences / Physiotherapy": "PHYSIO",
+      "Allied Medical Sciences": "PHYSIO",
+      "Computer Applications & IT": "IT",
+      "Computer Applications": "IT",
+      "Humanities & Social Sciences": "SHSS",
+      "School of Sciences": "SCI",
+      "Sciences": "SCI"
+    };
+
+    function formatDept(deptStr) {
+      if (!deptStr) return '—';
+      for (const [key, nickname] of Object.entries(deptNicknames)) {
+        if (deptStr.includes(key)) return nickname;
+      }
+      
+      // Fallback
+      const match = deptStr.match(/\((.*?)\)/);
+      if (match) return match[1];
+      return deptStr;
+    }
+
+    let allTeachers = [];
+
+    async function loadTeachers() {
+      const data = await api('/admin/teachers');
+      if (!data) return;
+      allTeachers = data.teachers || [];
+      displayTeachers();
+    }
+
+    function displayTeachers() {
+      const tbody = document.getElementById('teachers-tbody');
+      if (!tbody) return;
+
+      const searchQuery = (document.getElementById('filter-teacher-search')?.value || '').toLowerCase().trim();
+      const selectedDept = getUiverseSelectValue('filter-teacher-dept') || '';
+      const selectedFace = getUiverseSelectValue('filter-teacher-face') || '';
+      const selectedStatus = getUiverseSelectValue('filter-teacher-status') || '';
+
+      const filtered = allTeachers.filter(t => {
+        if (searchQuery) {
+          const nameMatch = (t.full_name || '').toLowerCase().includes(searchQuery);
+          const emailMatch = (t.email || '').toLowerCase().includes(searchQuery);
+          const regNoMatch = (t.reg_no || '').toLowerCase().includes(searchQuery);
+          if (!nameMatch && !emailMatch && !regNoMatch) return false;
+        }
+
+        if (selectedDept) {
+          const nickname = formatDept(t.department);
+          if (nickname !== selectedDept && !(t.department || '').toLowerCase().includes(selectedDept.toLowerCase())) {
+            return false;
+          }
+        }
+
+        if (selectedFace) {
+          if (selectedFace === 'yes' && !t.has_face_encoding) return false;
+          if (selectedFace === 'no' && t.has_face_encoding) return false;
+        }
+
+        if (selectedStatus) {
+          if (selectedStatus === 'active' && !t.is_active) return false;
+          if (selectedStatus === 'inactive' && t.is_active) return false;
+        }
+
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="8" class="td-loading" style="color:var(--text-muted)">No matching teachers found.</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(t => {
+        const isHead = isCurrentAdminHeadAdmin();
+        const nickname = formatDept(t.department);
+        return `
+          <tr>
+            <td><code class="reg-id-code">${escHtml(t.reg_no || '—')}</code></td>
+            <td>
+              <div style="display:flex; align-items:center; gap:12px;">
+                <img src="${t.profile_pic ? (t.profile_pic.startsWith('data:') ? t.profile_pic : 'data:image/jpeg;base64,' + t.profile_pic) : 'images/default-avatar.svg'}" alt="${escHtml(t.full_name)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; background:var(--surface-2); border:1.5px solid rgba(124, 58, 237, 0.2);" onerror="this.src='images/default-avatar.svg'" />
+                <strong>${escHtml(t.full_name)}</strong>
+              </div>
+            </td>
+            <td>${escHtml(t.email)}</td>
+            <td>${escHtml(nickname)}</td>
+            <td><span class="badge badge--${t.has_face_encoding ? 'success' : 'warning'}">${t.has_face_encoding ? '✓ Yes' : '✗ No'}</span></td>
+            <td><span class="badge badge--${t.is_active ? 'success' : 'neutral'}">${t.is_active ? 'Active' : 'Inactive'}</span></td>
+            <td style="font-size:12px;color:var(--text-muted)">${formatDt(t.created_at)}</td>
+            <td>
+              <div style="display:flex; gap:6px;">
+                <button class="btn-icon" title="Alter Details" onclick="showEditModal('${t.teacher_id}')">  
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path></svg>
+                </button>
+                <button class="btn-icon" title="${t.is_active ? 'Deactivate' : 'Activate'}" onclick="toggleActive('${t.teacher_id}', ${t.is_active})">
+                  ${t.is_active ?
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m4.9 4.9 14.2 14.2"></path></svg>' :
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path></svg>'}
+                </button>
+                <button class="btn-icon" title="Delete Teacher" onclick="deleteTeacher('${t.teacher_id}')" style="color:#ef4444">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path><line x1="10" x2="10" y1="11" y2="17"></line><line x1="14" x2="14" y1="11" y2="17"></line></svg>
+                </button>
+                ${isHead ? `
+                <button class="btn-icon" title="Reset Device Lock" onclick="resetDeviceLock('${t.teacher_id}')" style="color:var(--primary);">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line><path d="M12 11h.01"></path></svg>
+                </button>
+                ` : ''}
+              </div>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function resetTeachersFilters() {
+      const searchInput = document.getElementById('filter-teacher-search');
+      if (searchInput) searchInput.value = '';
+
+      setUiverseSelectValue('filter-teacher-dept', '');
+      setUiverseSelectValue('filter-teacher-face', '');
+      setUiverseSelectValue('filter-teacher-status', '');
+
+      displayTeachers();
+    }
+
+    function showRegisterModal() {
+      document.getElementById('reg-name').value = '';
+      document.getElementById('reg-no').value = '';
+      document.getElementById('reg-email').value = '';
+      setUiverseSelectValue('reg-department', '');
+      document.getElementById('reg-password').value = '';
+      document.getElementById('reg-is-temp').checked = false;
+      document.getElementById('register-error').style.display = 'none';
+      document.getElementById('register-success').style.display = 'none';
+      // reset temp mode
+      ['reg-face-section', 'reg-name-section', 'reg-email-section', 'reg-dept-section'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = '';
+      });
+      document.getElementById('register-modal').style.display = 'flex';
+    }
+    function hideRegisterModal() {
+      document.getElementById('register-modal').style.display = 'none';
+      stopWebcam();
+      capturedEncoding = null;
+      capturedProfilePic = null;
+      document.getElementById('encoding-badge').style.display = 'none';
+    }
+
+    function toggleTempMode() {
+      const isTemp = document.getElementById('reg-is-temp').checked;
+      const hide = isTemp ? 'none' : '';
+      ['reg-face-section', 'reg-name-section', 'reg-email-section', 'reg-dept-section'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.style.display = hide;
+      });
+      if (isTemp) stopWebcam();
+    }
+
+    async function startWebcam() {
+      webcamStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      const video = document.getElementById('reg-webcam');
+      video.srcObject = webcamStream;
+      video.style.display = 'block';
+      document.getElementById('webcam-placeholder').style.display = 'none';
+      document.getElementById('btn-start-cam').style.display = 'none';
+      document.getElementById('btn-capture').style.display = 'inline-flex';
+      document.getElementById('btn-stop-cam').style.display = 'inline-flex';
+    }
+
+    function stopWebcam() {
+      if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
+      document.getElementById('reg-webcam').style.display = 'none';
+      document.getElementById('webcam-placeholder').style.display = 'flex';
+      document.getElementById('btn-start-cam').style.display = 'inline-flex';
+      document.getElementById('btn-capture').style.display = 'none';
+      document.getElementById('btn-stop-cam').style.display = 'none';
+    }
+
+    async function captureFace() {
+      const video = document.getElementById('reg-webcam');
+      const canvas = document.getElementById('reg-canvas');
+
+      // Crop to a center square
+      const size = Math.min(video.videoWidth, video.videoHeight);
+      const startX = (video.videoWidth - size) / 2;
+      const startY = (video.videoHeight - size) / 2;
+
+      canvas.width = size;
+      canvas.height = size;
+      canvas.getContext('2d').drawImage(
+        video,
+        startX, startY, size, size,
+        0, 0, size, size
+      );
+
+      const b64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+
+      const data = await api('/admin/encode-face', 'POST', { image: b64 });
+      if (data && data.encoding) {
+        capturedEncoding = data.encoding;
+        capturedProfilePic = b64;
+        document.getElementById('encoding-badge').style.display = 'inline-flex';
+        stopWebcam();
+      }
+    }
+
+    async function submitRegister() {
+      const isTemp = document.getElementById('reg-is-temp').checked;
+      const regNo = document.getElementById('reg-no').value.trim();
+      const password = document.getElementById('reg-password').value;
+      const errEl = document.getElementById('register-error');
+      const okEl = document.getElementById('register-success');
+      errEl.style.display = 'none'; okEl.style.display = 'none';
+
+      if (isTemp) {
+        // Quick registration — only reg_no + password needed
+        if (!regNo || !password) {
+          errEl.textContent = 'Registration Number and Password are required'; errEl.style.display = 'block'; return;
+        }
+        const payload = { is_temporary: true, reg_no: regNo, password };
+        const data = await api('/admin/teachers', 'POST', payload);
+        if (data) {
+          hideRegisterModal();
+          loadTeachers();
+          showCredentialShare(regNo, password);
+        }
+        return;
+      }
+
+      const name = document.getElementById('reg-name').value.trim();
+      const email = document.getElementById('reg-email').value.trim();
+      const department = (getUiverseSelectValue('reg-department') || '').trim();
+      const role = (getUiverseSelectValue('reg-role') || '').trim();
+      const phoneNo = document.getElementById('reg-phone').value.trim();
+
+      if (!name || !regNo || !email || !password || !department || !role || !phoneNo) {
+        errEl.textContent = 'All fields are required'; errEl.style.display = 'block'; return;
+      }
+
+      const payload = { full_name: name, reg_no: regNo, email, department, role: role, phone_no: phoneNo, password };
+      if (capturedEncoding) payload.face_encoding = capturedEncoding;
+      if (capturedProfilePic) payload.profile_pic = capturedProfilePic;
+
+      const data = await api('/admin/teachers', 'POST', payload);
+      if (data) {
+        okEl.textContent = `Teacher "${name}" registered successfully!`;
+        okEl.style.display = 'block';
+        setTimeout(() => { hideRegisterModal(); loadTeachers(); }, 1500);
+      }
+    }
+
+    async function showEditModal(id) {
+      const res = await api('/admin/teachers/' + id);
+      if (!res || !res.teacher) return;
+      const t = res.teacher;
+
+      document.getElementById('edit-id').value = t.teacher_id;
+      document.getElementById('edit-name').value = t.full_name;
+      document.getElementById('edit-no').value = t.reg_no || '';
+      document.getElementById('edit-email').value = t.email;
+      document.getElementById('edit-phone').value = t.phone_no || '';
+      // Pre-select role in the dropdown
+      setUiverseSelectValue('edit-role', t.role || '');
+      // Pre-select the department in the dropdown
+      setUiverseSelectValue('edit-department', t.department || '');
+      document.getElementById('edit-password').value = '';
+      document.getElementById('edit-modal').style.display = 'flex';
+      document.getElementById('edit-error').style.display = 'none';
+      document.getElementById('edit-success').style.display = 'none';
+    }
+
+    function hideEditModal() {
+      document.getElementById('edit-modal').style.display = 'none';
+    }
+
+    async function submitEdit() {
+      const id = document.getElementById('edit-id').value;
+      const name = document.getElementById('edit-name').value.trim();
+      const regNo = document.getElementById('edit-no').value.trim();
+      const email = document.getElementById('edit-email').value.trim();
+      const department = (getUiverseSelectValue('edit-department') || '').trim();
+      const phoneNo = document.getElementById('edit-phone').value.trim();
+      const role = (getUiverseSelectValue('edit-role') || '').trim();
+      const errEl = document.getElementById('edit-error');
+      const okEl = document.getElementById('edit-success');
+
+      errEl.style.display = 'none';
+      okEl.style.display = 'none';
+
+      if (!name || !regNo || !email || !department) {
+        errEl.textContent = 'Name, Reg ID, Email, and Department are required';
+        errEl.style.display = 'block';
+        return;
+      }
+
+      const payload = {
+        full_name: name,
+        reg_no: regNo,
+        email: email,
+        department: department,
+        phone_no: phoneNo,
+        role: role
+      };
+
+      const data = await api('/admin/teachers/' + id, 'PATCH', payload);
+      if (data) {
+        okEl.textContent = 'Teacher updated successfully!';
+        okEl.style.display = 'block';
+        setTimeout(() => { hideEditModal(); loadTeachers(); }, 1500);
+      }
+    }
+
+    async function toggleActive(id, currentStatus) {
+      if (!await uiConfirm(`Are you sure you want to ${currentStatus ? 'deactivate' : 'activate'} this teacher?`, { danger: currentStatus })) return;
+      const data = await api('/admin/teachers/' + id, 'PATCH', { is_active: !currentStatus });
+      if (data) {
+        showToast('Teacher status updated');
+        loadTeachers();
+      }
+    }
+
+    async function deleteTeacher(id) {
+      if (!await uiConfirm('Are you sure you want to permanently delete this teacher? This cannot be undone.', { danger: true })) return;
+      const data = await api('/admin/teachers/' + id, 'DELETE');
+      if (data) {
+        showToast('Teacher deleted');
+        loadTeachers();
+      }
+    }
+
+    async function resetDeviceLock(id) {
+      if (!await uiConfirm('Are you sure you want to clear the device lock for this teacher? This allows them to log in on a new device.', { danger: true })) return;
+      const data = await api('/admin/teachers/' + id + '/reset-device', 'POST');
+      if (data) {
+        showToast('Device lock cleared successfully');
+      }
+    }
+
+    // Share Modal Functions
+    let currentShareCreds = null;
+
+    function showCredentialShare(regNo, password) {
+      currentShareCreds = { regNo, password };
+
+      // Compact structured card (display only)
+      document.getElementById('cred-card').innerHTML = `
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px;font-family:inherit;">Temporary credentials for the GeoFace Teacher App</div>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-3,rgba(255,255,255,0.05));border-radius:6px;padding:8px 12px;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:inherit;text-transform:uppercase;letter-spacing:.5px;">Reg ID</span>
+            <code style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(regNo)}</code>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:var(--surface-3,rgba(255,255,255,0.05));border-radius:6px;padding:8px 12px;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:inherit;text-transform:uppercase;letter-spacing:.5px;">Password</span>
+            <code style="font-size:13px;font-weight:700;color:var(--text);">${escHtml(password)}</code>
+          </div>
+          <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:6px;padding:8px 12px;gap:8px;">
+            <span style="font-size:11px;color:var(--text-muted);font-family:inherit;text-transform:uppercase;letter-spacing:.5px;white-space:nowrap;">App</span>
+            <a href="https://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk" target="_blank" style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;word-break:break-all;">Download GeoFace.apk ↗</a>
+          </div>
+        </div>
+        <div style="margin-top:10px;font-size:11px;color:var(--text-muted);font-family:inherit;line-height:1.6;">⚠ Change password on first login &nbsp;·&nbsp; Keep credentials confidential</div>
+      `;
+      document.getElementById('share-modal').style.display = 'flex';
+    }
+
+    function closeShareModal() {
+      document.getElementById('share-modal').style.display = 'none';
+      currentShareCreds = null;
+    }
+
+    function shareViaWhatsApp() {
+      if (!currentShareCreds) return;
+      const msg = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration has been successfully completed.\n\nPlease use the credentials below to log in to the GeoFace Teacher App and complete your facial verification setup.\n\n*Registration ID:* ${currentShareCreds.regNo}\n*Temporary Password:* ${currentShareCreds.password}\n\n*Download the App:*\nhttps://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk\n\n*Important:*\n• Please change your password after your first login.\n• Do not share your credentials with anyone.\n• Keep this information secure and confidential.\n\nIf you experience any issues during login or registration, please contact the administrator.\n\nThank you,\nGeoFace Team`);
+      window.open(`https://wa.me/?text=${msg}`, '_blank');
+    }
+
+    function shareViaEmail() {
+      if (!currentShareCreds) return;
+      const subject = encodeURIComponent('Your GeoFace Teacher App Credentials');
+      const body = encodeURIComponent(`Welcome to GeoFace!\n\nYour temporary registration has been successfully completed.\n\nPlease use the credentials below to log in to the GeoFace Teacher App and complete your facial verification setup.\n\nRegistration ID: ${currentShareCreds.regNo}\nTemporary Password: ${currentShareCreds.password}\n\nDownload the App:\nhttps://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk\n\nImportant:\n• Please change your password after your first login.\n• Do not share your credentials with anyone.\n• Keep this information secure and confidential.\n\nIf you experience any issues during login or registration, please contact the administrator.\n\nThank you,\nGeoFace Team`);
+      window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+
+    async function copyCredentials() {
+      if (!currentShareCreds) return;
+      const msg = `Welcome to GeoFace!\n\nYour temporary registration has been successfully completed.\n\nPlease use the credentials below to log in to the GeoFace Teacher App and complete your facial verification setup.\n\nRegistration ID: ${currentShareCreds.regNo}\nTemporary Password: ${currentShareCreds.password}\n\nDownload the App:\nhttps://github.com/ShanuZz334/GeoFensing/releases/download/v1.0.0/GeoFace.apk\n\nImportant:\n• Please change your password after your first login.\n• Do not share your credentials with anyone.\n• Keep this information secure and confidential.\n\nIf you experience any issues during login or registration, please contact the administrator.\n\nThank you,\nGeoFace Team`;
+      try {
+        await navigator.clipboard.writeText(msg);
+        const btn = document.getElementById('btn-copy-cred');
+        const origHtml = btn.innerHTML;
+        btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg> Copied!`;
+        btn.style.color = '#10b981'; // success color
+        btn.style.borderColor = '#10b981';
+        setTimeout(() => {
+          btn.innerHTML = origHtml;
+          btn.style.color = '';
+          btn.style.borderColor = '';
+        }, 2000);
+      } catch (err) {
+        console.error('Failed to copy', err);
+        showToast('Failed to copy to clipboard');
+      }
+    }
+
+    // TOTP Auto-Refresh Logic
+    let totpInterval = null;
+    let currentTotpCode = '';
+
+    async function fetchNewTOTP() {
+      const res = await api('/admin/generate-totp', 'POST');
+      if (res && res.totp) {
+        document.getElementById('totp-container').style.display = 'flex';
+        currentTotpCode = res.totp;
+        document.getElementById('totp-code').textContent = res.totp;
+        
+        let expiresAt = Date.now() + (res.expires_in || 300) * 1000;
+        const timerEl = document.getElementById('totp-timer');
+        
+        const updateTimerDisplay = (sec) => {
+          const m = Math.floor(sec / 60).toString().padStart(2, '0');
+          const s = (sec % 60).toString().padStart(2, '0');
+          timerEl.textContent = `${m}:${s}`;
+        };
+        
+        updateTimerDisplay(res.expires_in || 300);
+        
+        if (totpInterval) clearInterval(totpInterval);
+        
+        totpInterval = setInterval(() => {
+          let timeLeft = Math.ceil((expiresAt - Date.now()) / 1000);
+          if (timeLeft <= 0) {
+            clearInterval(totpInterval);
+            timerEl.textContent = '00:00';
+            document.getElementById('totp-code').style.opacity = '0.5';
+            fetchNewTOTP();
+          } else {
+            document.getElementById('totp-code').style.opacity = '1';
+            updateTimerDisplay(timeLeft);
+          }
+        }, 1000);
+      }
+    }
+
+    async function copyAdminTOTP() {
+      if (!currentTotpCode) return;
+      try {
+        await navigator.clipboard.writeText(currentTotpCode);
+        const codeEl = document.getElementById('totp-code');
+        const origColor = codeEl.style.color;
+        codeEl.style.color = '#10b981'; // green for success
+        showToast('TOTP Copied');
+        setTimeout(() => {
+          codeEl.style.color = origColor;
+        }, 1500);
+      } catch (err) {
+        console.error('Failed to copy', err);
+      }
+    }
+
+    initApp('teachers', () => {
+      loadTeachers();
+      fetchNewTOTP(); // start auto-refreshing TOTP on load
+    });
+  </script>
+</body>
+
+</html>

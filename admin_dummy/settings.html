@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoFace Admin — Settings</title>
+  <meta name="description" content="GeoFace Settings - Configure time-based attendance and limits." />
+  <link rel="stylesheet" href="css/styles.css?v=1028" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    @keyframes pulse {
+      0% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+      }
+      70% {
+        transform: scale(1);
+        box-shadow: 0 0 0 5px rgba(16, 185, 129, 0);
+      }
+      100% {
+        transform: scale(0.95);
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+      }
+    }
+
+    .info-icon {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 13px; height: 13px; border-radius: 50%; background: transparent;
+      color: var(--text-muted); font-size: 9px; margin-left: 5px; cursor: help;
+      border: 1px solid var(--border); font-weight: 700;
+      position: relative; vertical-align: middle; flex-shrink: 0;
+      line-height: 1; font-style: normal;
+    }
+    .info-icon:hover { color: var(--primary, #7c3aed); border-color: var(--primary, #7c3aed); }
+    .info-icon::after {
+      content: attr(data-tip);
+      position: absolute;
+      top: calc(100% + 6px);
+      left: 0;
+      transform: none;
+      background: #1e1e2e;
+      border: 1px solid #3a3a50;
+      color: #c9d1d9;
+      padding: 6px 12px;
+      border-radius: 7px;
+      font-size: 11px;
+      font-weight: 400;
+      white-space: nowrap;
+      z-index: 9999;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity 0.15s ease;
+      line-height: 1.4;
+    }
+    .info-icon:hover::after { opacity: 1; }
+  </style>
+</head>
+<body>
+  <!-- ── Sidebar ─────────────────────────────────────────────────────── -->
+    <!-- -- Navbar ------------------------------------------------------- -->
+  <nav class="navbar" id="navbar">
+    <div class="navbar-left">
+      <div class="navbar-logo">
+        <div class="logo-icon">
+          <img src="images/logo.png?v=6" alt="GeoFace Logo">
+        </div>
+        <span>Geo<span class="face-text">Face</span></span>
+      </div>
+      <div class="navbar-nav">
+        <a href="index.html" class="nav-item" id="nav-dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6A2.25 2.25 0 016 3.75h2.25A2.25 2.25 0 0110.5 6v2.25a2.25 2.25 0 01-2.25 2.25H6a2.25 2.25 0 01-2.25-2.25V6zM3.75 15.75A2.25 2.25 0 016 13.5h2.25a2.25 2.25 0 012.25 2.25V18a2.25 2.25 0 01-2.25 2.25H6A2.25 2.25 0 013.75 18v-2.25zM13.5 6a2.25 2.25 0 012.25-2.25H18A2.25 2.25 0 0120.25 6v2.25A2.25 2.25 0 0118 10.5h-2.25a2.25 2.25 0 01-2.25-2.25V6zM13.5 15.75a2.25 2.25 0 012.25-2.25H18a2.25 2.25 0 012.25 2.25V18A2.25 2.25 0 0118 20.25h-2.25A2.25 2.25 0 0113.5 18v-2.25z"/></svg>
+          Dashboard
+        </a>
+        <a href="teachers.html" class="nav-item" id="nav-teachers">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z"/></svg>
+          Teachers
+        </a>
+        <a href="logs.html" class="nav-item" id="nav-logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/></svg>
+          Scans
+        </a>
+        <a href="audit.html" class="nav-item" id="nav-audit">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>
+          Reports
+        </a>
+        <a href="map.html" class="nav-item" id="nav-map">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 6.75V15m6-6v8.25m.503-3.46c.453-.172.806-.5 1.026-.915a2.25 2.25 0 00-.834-2.923c-.426-.258-.87-.492-1.32-.7l-.156-.07a2.25 2.25 0 01-1.055-1.94V4.5c0-.621-.504-1.125-1.125-1.125h-3c-.621 0-1.125.504-1.125 1.125v1.233c0 .822-.443 1.577-1.157 1.986l-.117.067a2.25 2.25 0 01-1.2 2.01c-.266.136-.534.275-.802.417a2.25 2.25 0 00-.81 3.01c.25.438.613.79 1.06 1.02a2.25 2.25 0 011.023 1.94V19.5c0 .621.504 1.125 1.125 1.125h3c.621 0 1.125-.504 1.125-1.125v-1.233c0-.822.443-1.577 1.157-1.986l.117-.067a2.25 2.25 0 011.2-2.01z"/></svg>
+          Map
+        </a>
+        <a href="settings.html" class="nav-item active" id="nav-settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+          Settings
+        </a>
+      </div>
+    </div>
+    
+    <div class="navbar-right">
+      <div class="nav-bell" onclick="window.location.href='alerts.html'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
+        </svg>
+        <span class="nav-bell-badge" id="navbar-alert-badge" style="display:none;">0</span>
+      </div>
+      
+      <div class="nav-profile">
+        <img src="images/default-avatar.svg" alt="Admin" class="nav-profile-pic" id="nav-profile-pic" onerror="this.src='data:image/svg+xml;charset=UTF-8,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 24 24\' fill=\'none\' stroke=\'currentColor\' stroke-width=\'2\' stroke-linecap=\'round\' stroke-linejoin=\'round\'%3E%3Cpath d=\'M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2\'/%3E%3Ccircle cx=\'12\' cy=\'7\' r=\'4\'/%3E%3C/svg%3E'">
+        <div class="nav-profile-info">
+          <span class="nav-profile-name" id="nav-profile-name">Admin</span>
+          <span class="nav-profile-role" id="nav-profile-role">Administrator</span>
+        </div>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+        
+        <div class="nav-dropdown">
+          <a href="admins.html" class="nav-dropdown-item" id="nav-manage-admins" style="display:none;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M17.5 16.5c-1.5-2-3-3-5.5-3s-4 1-5.5 3"/></svg>
+            Manage Admins
+          </a>
+          <div class="nav-dropdown-divider" id="nav-manage-admins-divider" style="display:none;"></div>
+          <a href="#" class="nav-dropdown-item" onclick="adminSignOut()">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+            Sign Out
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ── Main Content ───────────────────────────────────────────────── -->
+  <main class="main-content">
+    <header class="page-header" style="margin-bottom: 28px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+      <div>
+        <h1 class="page-title" style="font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #c084fc 0%, #6366f1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin: 0;">System Configuration</h1>
+        <p style="font-size: 13px; color: var(--text-muted); margin-top: 4px; margin-bottom: 0;">Manage operational thresholds, facial verification strictness, shift timings, and server settings.</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div class="header-actions" style="margin: 0; display: flex; gap: 8px; align-items: center;">
+          <div id="demo-mode-container" style="display:flex; align-items:center; gap:8px; margin-right: 12px; background: rgba(124, 58, 237, 0.1); padding: 4px 12px; border-radius: 8px; border: 1px solid rgba(124, 58, 237, 0.3);">
+            <span style="display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #7c3aed; box-shadow: 0 0 6px #7c3aed;"></span>
+            <span style="font-size: 13px; font-weight: 600; color: #a78bfa;">Demo Mode</span>
+            <label class="uiverse-switch" style="transform: scale(0.8); margin: 0; display: flex; align-items: center;">
+              <input type="checkbox" id="set-demo-mode" />
+              <span class="uiverse-slider"></span>
+            </label>
+          </div>
+          <button id="btn-reset-all-devices" onclick="resetAllDeviceLocks()" style="
+            display:inline-flex; align-items:center; gap:8px;
+            padding:8px 16px; border-radius:8px; font-size:13px; font-weight:600;
+            background:transparent; color:var(--warning,#f59e0b);
+            border:1px solid var(--warning,#f59e0b); cursor:pointer;
+            transition:background 0.2s, color 0.2s;
+          " onmouseover="this.style.background='rgba(245,158,11,0.12)'" onmouseout="this.style.background='transparent'">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+            Reset All Device Locks
+          </button>
+          <button class="btn-primary" id="btn-save-settings" onclick="saveSettings()" style="margin: 0;">
+            Save Changes
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <div id="settings-wrapper" class="settings-wrapper">
+      <!-- Lock Overlay -->
+      <div id="settings-lock-overlay" style="display:none; position:absolute; inset:-12px; z-index:10; flex-direction:column; align-items:center; justify-content:flex-start; background:rgba(15, 15, 15, 0.4); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border-radius: var(--radius-md);">
+        <div style="background:var(--surface); padding:24px 32px; border-radius:12px; border:1px solid var(--border); box-shadow:0 8px 32px rgba(0,0,0,0.5); text-align:center; position:sticky; top:50vh; transform:translateY(-50%); margin-left:120px;">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--purple)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom:16px;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+          <h2 style="font-size:18px; font-weight:600; margin-bottom:8px;">Access Restricted</h2>
+          <p style="color:var(--text-muted); font-size:14px; margin:0;">Only Head Admins can view and modify system settings.</p>
+        </div>
+      </div>
+
+      <div class="settings-grid" id="settings-grid">
+      
+        
+
+        <!-- Attendance Time Rules -->
+        <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Attendance Time Rules</h2>
+          
+          <div class="form-group">
+            <label>Class Start Time <span class="info-icon" data-tip="Official start time of the class.">i</span></label>
+            <input type="time" id="set-class-start" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label>Class End Time <span class="info-icon" data-tip="Official end time of the class.">i</span></label>
+            <input type="time" id="set-class-end" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label>Half-Day Limit Time <span class="info-icon" data-tip="Scanning after this time marks as Half Day.">i</span></label>
+            <input type="time" id="set-halfday-limit" class="form-control" />
+          </div>
+
+          <div class="form-group">
+            <label>Absent Limit Time <span class="info-icon" data-tip="Scanning after this time is blocked and marked Absent.">i</span></label>
+            <input type="time" id="set-absent-limit" class="form-control" />
+          </div>
+        </div>
+
+        <!-- Check Out Rules -->
+        <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Check Out Rules</h2>
+          
+          <div class="form-group" style="display:flex; align-items:center; gap:12px; margin-bottom: 16px;">
+            <label class="uiverse-switch" style="flex-shrink:0;">
+              <input type="checkbox" id="set-anytime-checkout" />
+              <span class="uiverse-slider"></span>
+            </label>
+            <span style="cursor:pointer;color:var(--text);font-weight:500" onclick="document.getElementById('set-anytime-checkout').click()">Anytime Checkout as Full Day <span class="info-icon" data-tip="If checked, teachers get full day regardless of when they check out.">i</span></span>
+          </div>
+
+          <div class="form-group">
+            <label>Half-Day Checkout Limit <span class="info-icon" data-tip="Checking out before this time marks the day as Half Day. (Ignored if Anytime Checkout is enabled).">i</span></label>
+            <input type="time" id="set-halfday-checkout-limit" class="form-control" />
+          </div>
+          
+          <div class="form-group">
+            <label>Minimum Working Hours <span class="info-icon" data-tip="Minimum hours required between check-in and check-out to avoid an automatic Absent status.">i</span></label>
+            <input type="number" id="set-min-working-hours" class="form-control" step="0.5" min="0" max="24" />
+          </div>
+        </div>
+
+        <!-- Verification Limits -->
+        <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Verification Limits</h2>
+          <div class="form-group">
+            <label>Max Check-In Attempts <span class="info-icon" data-tip="Failed scans before marking absent.">i</span></label>
+            <input type="number" id="set-max-checkin" class="form-control" min="1" max="100" />
+          </div>
+          <div class="form-group">
+            <label>Max Check-Out Attempts <span class="info-icon" data-tip="Failed scans before prompting support.">i</span></label>
+            <input type="number" id="set-max-checkout" class="form-control" min="1" max="100" />
+          </div>
+          <div class="form-group">
+            <label>Admin TOTP Duration (Seconds) <span class="info-icon" data-tip="Lifespan of the TOTP code for teacher password resets.">i</span></label>
+            <input type="number" id="set-totp-duration" class="form-control" min="30" max="3600" />
+          </div>
+        </div>
+
+        <!-- Leave Quotas -->
+        <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Leave Quotas</h2>
+          <div class="form-group">
+            <label>Monthly Full-Day Leaves <span class="info-icon" data-tip="Full-day leaves allotted per month.">i</span></label>
+            <input type="number" id="set-monthly-leaves" class="form-control" min="0" max="31" />
+          </div>
+          <div class="form-group">
+            <label>Monthly Half-Day Leaves <span class="info-icon" data-tip="Half-day leaves allotted per month.">i</span></label>
+            <input type="number" id="set-monthly-half-leaves" class="form-control" min="0" max="31" />
+          </div>
+        </div>
+
+        <!-- Semester Period -->
+        <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Semester Period</h2>
+          <div class="form-group">
+            <label>Semester Start Date <span class="info-icon" data-tip="First day of the current semester.">i</span></label>
+            <input type="date" id="set-semester-start" class="form-control" />
+          </div>
+          <div class="form-group">
+            <label>Semester End Date <span class="info-icon" data-tip="Last day of the current semester.">i</span></label>
+            <input type="date" id="set-semester-end" class="form-control" />
+          </div>
+        </div>
+
+        <!-- Support Contact -->
+        <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+          <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 16px;">Support Contact</h2>
+          <div class="form-group">
+            <label>Support Email <span class="info-icon" data-tip="Shown to teachers on failed verification.">i</span></label>
+            <input type="email" id="set-support-email" class="form-control" placeholder="admin@college.edu" />
+          </div>
+          <div class="form-group">
+            <label>Support Phone <span class="info-icon" data-tip="Phone shown on failed verification.">i</span></label>
+            <input type="text" id="set-support-phone" class="form-control" placeholder="+91 98765 43210" />
+          </div>
+        </div>
+
+            <!-- Attendance Geofence Mode Toggle -->
+      <div class="card" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 8px;">Attendance Geofence Mode</h2>
+        <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.4;">
+          Select the active geofencing mode for the campus. This determines where teachers are allowed to check in and check out.
+        </p>
+        
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <label style="cursor: pointer;">
+            <input type="radio" name="geofence_mode" value="1" id="mode-1" style="display: none;" checked>
+            <div class="mode-toggle-btn" style="padding: 16px; text-align: center; border-radius: 12px; font-size: 15px; font-weight: 600; transition: all 0.2s; background: var(--surface-2); border: 1px solid var(--border);">
+              <div style="color: var(--text); margin-bottom: 4px;">Global Campus</div>
+              <div style="font-size: 12px; color: var(--text-muted); font-weight: 400;">Single Polygon (Teachers can check-in anywhere inside the main campus)</div>
+            </div>
+          </label>
+          <div style="display: flex; gap: 8px;">
+            <label style="flex: 1; cursor: pointer;">
+              <input type="radio" name="geofence_mode" value="2" id="mode-2" style="display: none;">
+              <div class="mode-toggle-btn" style="padding: 12px; text-align: center; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s; background: var(--surface-2); border: 1px solid var(--border);">
+                Department Blocks
+              </div>
+            </label>
+            <label style="flex: 1; cursor: pointer;">
+              <input type="radio" name="geofence_mode" value="3" id="mode-3" style="display: none;">
+              <div class="mode-toggle-btn" style="padding: 12px; text-align: center; border-radius: 8px; font-size: 14px; font-weight: 500; transition: all 0.2s; background: var(--surface-2); border: 1px solid var(--border);">
+                Special Checkpoints
+              </div>
+            </label>
+          </div>
+        </div>
+        
+        <style>
+          input[name="geofence_mode"]:checked + .mode-toggle-btn {
+            background: var(--primary) !important;
+            border-color: var(--primary) !important;
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
+          }
+          input[name="geofence_mode"]:checked + .mode-toggle-btn div {
+            color: white !important;
+          }
+          .mode-toggle-btn:hover {
+            border-color: rgba(124, 58, 237, 0.5) !important;
+          }
+        </style>
+      </div>
+
+<!-- Per-Teacher Extra Leaves -->
+      <div class="card settings-span-3" style="padding: 24px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);">
+        <h2 style="font-size: 16px; font-weight: 600; margin-bottom: 4px;">Extra Leaves — Per Teacher</h2>
+        <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Grant additional leave quota to a specific teacher by their Registration Number.</p>
+
+        <div style="display:grid; grid-template-columns:1fr auto; gap:12px; align-items:flex-end; margin-bottom:16px;">
+          <div class="form-group" style="margin-bottom:0">
+            <label>Search by Registration Number</label>
+            <input type="text" id="leave-reg-no" class="form-control" placeholder="12416087" oninput="clearTeacherResult()" />
+          </div>
+          <button class="btn-primary" onclick="searchTeacherForLeave()" style="height:42px; padding:0 20px;">Search</button>
+        </div>
+
+        <!-- Teacher result card -->
+        <div id="leave-teacher-card" style="display:none; background:var(--surface-2); border:1px solid var(--border); border-radius:10px; padding:20px; margin-bottom:16px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <div>
+              <div style="font-weight:700; font-size:16px;" id="leave-teacher-name">—</div>
+              <div style="font-size:13px; color:var(--text-muted);" id="leave-teacher-dept">—</div>
+            </div>
+            <code style="font-size:13px; color:var(--purple);" id="leave-teacher-reg">—</code>
+          </div>
+
+          <div style=" margin-bottom:16px;">
+            <div>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Total Monthly Full-Day Quota</div>
+              <div style="font-size:28px; font-weight:700; color:var(--text);" id="leave-current-full">—</div>
+              <div style="font-size:12px; color:var(--purple); margin-top:2px;" id="leave-extra-full"></div>
+            </div>
+            <div>
+              <div style="font-size:12px; color:var(--text-muted); margin-bottom:4px;">Total Monthly Half-Day Quota</div>
+              <div style="font-size:28px; font-weight:700; color:var(--text);" id="leave-current-half">—</div>
+              <div style="font-size:12px; color:var(--purple); margin-top:2px;" id="leave-extra-half"></div>
+            </div>
+          </div>
+
+          <hr style="border:0; border-top:1px solid var(--border); margin:16px 0;">
+
+          <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:12px; align-items:flex-end;">
+            <div class="form-group" style="margin-bottom:0">
+              <label>Leave Type</label>
+              <div class="uiverse-select form-control" id="leave-type" style="padding:0; border:none; background:transparent; width:100%">
+                <div class="uiverse-selected" style="height:42px;">
+                  <span class="uiverse-selected-text">Full Day</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                </div>
+                <div class="uiverse-options">
+                  <div title="Full Day"><input id="lt-full" value="full" name="leave-type" type="radio" checked><label class="uiverse-option" for="lt-full" data-txt="Full Day">Full Day</label></div>
+                  <div title="Half Day"><input id="lt-half" value="half" name="leave-type" type="radio"><label class="uiverse-option" for="lt-half" data-txt="Half Day">Half Day</label></div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Quota Period</label>
+              <div class="uiverse-select form-control" id="leave-quota-type" style="padding:0; border:none; background:transparent; width:100%">
+                <div class="uiverse-selected" style="height:42px;">
+                  <span class="uiverse-selected-text">Monthly</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                </div>
+                <div class="uiverse-options">
+                  <div title="Monthly"><input id="lqt-month" value="monthly" name="leave-quota-type" type="radio" checked><label class="uiverse-option" for="lqt-month" data-txt="Monthly">Monthly</label></div>
+                  <div title="Semester"><input id="lqt-sem" value="semester" name="leave-quota-type" type="radio"><label class="uiverse-option" for="lqt-sem" data-txt="Semester">Semester</label></div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label>Action</label>
+              <div class="uiverse-select form-control" id="leave-action" style="padding:0; border:none; background:transparent; width:100%">
+                <div class="uiverse-selected" style="height:42px;">
+                  <span class="uiverse-selected-text">Add to Existing</span>
+                  <svg xmlns="http://www.w3.org/2000/svg" height="1em" viewBox="0 0 512 512" class="uiverse-arrow"><path d="M233.4 406.6c12.5 12.5 32.8 12.5 45.3 0l192-192c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L256 338.7 86.6 169.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3l192 192z"></path></svg>
+                </div>
+                <div class="uiverse-options">
+                  <div title="Add to Existing"><input id="la-add" value="add" name="leave-action" type="radio" checked onchange="document.getElementById('leave-count-label').textContent = this.value === 'add' ? 'Leaves to Add' : 'New Exact Quota'"><label class="uiverse-option" for="la-add" data-txt="Add to Existing">Add to Existing</label></div>
+                  <div title="Set Exact Quota"><input id="la-set" value="set" name="leave-action" type="radio" onchange="document.getElementById('leave-count-label').textContent = this.value === 'add' ? 'Leaves to Add' : 'New Exact Quota'"><label class="uiverse-option" for="la-set" data-txt="Set Exact Quota">Set Exact Quota</label></div>
+                </div>
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom:0">
+              <label id="leave-count-label">Leaves to Add</label>
+              <input type="number" id="leave-new-count" class="form-control" min="-60" max="60" placeholder="5" />
+            </div>
+          </div>
+
+          <div style="margin-top:16px;">
+            <div class="form-group" style="margin-bottom:12px;">
+              <label style="color:var(--purple)">Your Admin Password (required to apply)</label>
+              <input type="password" id="leave-admin-password" class="form-control" placeholder="Enter your password" style="border-color:var(--purple)" />
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn-primary" id="btn-apply-leave" onclick="applyTeacherLeave()" style="flex:1;">Apply Extra Leaves</button>
+              <button class="btn-secondary" onclick="clearTeacherResult()">Clear</button>
+            </div>
+          </div>
+        </div>
+
+        <div id="leave-error" class="error-banner" style="display:none;"></div>
+      </div>
+
+    </div>
+    </div>
+  </main>
+
+  <script src="js/api.js?v=1028"></script>
+  <script src="js/app.js?v=1028"></script>
+  <script>
+    initApp('settings', loadSettings);
+
+    async function loadSettings() {
+      const adminData = getAdminData();
+      if (!adminData || !adminData.is_head_admin) {
+        document.getElementById('settings-lock-overlay').style.display = 'flex';
+        document.getElementById('settings-grid').style.pointerEvents = 'none';
+        document.getElementById('settings-grid').style.userSelect = 'none';
+        const saveBtn = document.getElementById('btn-save-settings');
+        if (saveBtn) saveBtn.style.display = 'none';
+        const resetBtn = document.getElementById('btn-reset-all-devices');
+        if (resetBtn) {
+          resetBtn.style.filter = 'blur(4px)';
+          resetBtn.style.pointerEvents = 'none';
+          resetBtn.style.opacity = '0.6';
+        }
+        const demoBtn = document.getElementById('demo-mode-container');
+        if (demoBtn) {
+          demoBtn.style.filter = 'blur(4px)';
+          demoBtn.style.pointerEvents = 'none';
+          demoBtn.style.opacity = '0.6';
+        }
+        return; // Prevent API call and error toast
+      } else {
+        const resetBtn = document.getElementById('btn-reset-all-devices');
+        if (resetBtn) {
+          resetBtn.style.filter = 'none';
+          resetBtn.style.pointerEvents = 'auto';
+          resetBtn.style.opacity = '1';
+        }
+        const demoBtn = document.getElementById('demo-mode-container');
+        if (demoBtn) {
+          demoBtn.style.filter = 'none';
+          demoBtn.style.pointerEvents = 'auto';
+          demoBtn.style.opacity = '1';
+        }
+      }
+
+      const data = await api('/admin/settings');
+      if (data) {
+        if (data.attendance_rules) {
+          document.getElementById('set-class-start').value = data.attendance_rules.class_start || '';
+          document.getElementById('set-class-end').value = data.attendance_rules.class_end || '';
+          document.getElementById('set-halfday-limit').value = data.attendance_rules.half_day_limit || '';
+          document.getElementById('set-absent-limit').value = data.attendance_rules.absent_limit || '';
+          document.getElementById('set-halfday-checkout-limit').value = data.attendance_rules.half_day_checkout_limit || '';
+          document.getElementById('set-anytime-checkout').checked = data.attendance_rules.anytime_checkout_full_day === true;
+          document.getElementById('set-min-working-hours').value = data.attendance_rules.min_working_hours !== undefined ? data.attendance_rules.min_working_hours : 3;
+        }
+        if (data.verification_limits) {
+          document.getElementById('set-max-checkin').value = data.verification_limits.max_checkin_attempts || 4;
+          document.getElementById('set-max-checkout').value = data.verification_limits.max_checkout_attempts || 10;
+          document.getElementById('set-totp-duration').value = data.verification_limits.totp_duration || 300;
+        }
+        if (data.monthly_allotted_leaves !== undefined) {
+          document.getElementById('set-monthly-leaves').value = data.monthly_allotted_leaves;
+        }
+        if (data.monthly_allotted_half_leaves !== undefined) {
+          document.getElementById('set-monthly-half-leaves').value = data.monthly_allotted_half_leaves;
+        }
+        if (data.semester_start_date) {
+          document.getElementById('set-semester-start').value = data.semester_start_date;
+        }
+        if (data.semester_end_date) {
+          document.getElementById('set-semester-end').value = data.semester_end_date;
+        }
+        if (data.support_contact) {
+          document.getElementById('set-support-email').value = data.support_contact.email || '';
+          document.getElementById('set-support-phone').value = data.support_contact.phone || '';
+        }
+        if (data.demo_mode !== undefined) {
+          document.getElementById('set-demo-mode').checked = data.demo_mode === true;
+        }
+        if (data.geofence_config) {
+          window._currentGeofenceConfig = data.geofence_config || { mode: 1 };
+          const mode = window._currentGeofenceConfig.mode || 1;
+          const modeRadio = document.getElementById(`mode-${mode}`);
+          if (modeRadio) modeRadio.checked = true;
+        } else {
+          window._currentGeofenceConfig = { mode: 1 };
+        }
+      }
+    }
+
+    async function saveSettings() {
+      const btn = document.getElementById('btn-save-settings');
+      btn.textContent = 'Saving...';
+      btn.disabled = true;
+
+      const payload = {
+        attendance_rules: {
+          class_start: document.getElementById('set-class-start').value,
+          class_end: document.getElementById('set-class-end').value,
+          half_day_limit: document.getElementById('set-halfday-limit').value,
+          absent_limit: document.getElementById('set-absent-limit').value,
+          half_day_checkout_limit: document.getElementById('set-halfday-checkout-limit').value,
+          anytime_checkout_full_day: document.getElementById('set-anytime-checkout').checked,
+          min_working_hours: parseFloat(document.getElementById('set-min-working-hours').value) || 0
+        },
+        verification_limits: {
+          max_checkin_attempts: parseInt(document.getElementById('set-max-checkin').value) || 4,
+          max_checkout_attempts: parseInt(document.getElementById('set-max-checkout').value) || 10,
+          totp_duration: parseInt(document.getElementById('set-totp-duration').value) || 300
+        },
+        monthly_allotted_leaves: parseInt(document.getElementById('set-monthly-leaves').value) || 0,
+        monthly_allotted_half_leaves: parseInt(document.getElementById('set-monthly-half-leaves').value) || 0,
+        semester_start_date: document.getElementById('set-semester-start').value,
+        semester_end_date: document.getElementById('set-semester-end').value,
+        support_contact: {
+          email: document.getElementById('set-support-email').value.trim(),
+          phone: document.getElementById('set-support-phone').value.trim()
+        },
+        demo_mode: document.getElementById('set-demo-mode').checked
+      };
+      const modeRadio = document.querySelector('input[name="geofence_mode"]:checked');
+      if (modeRadio) {
+        const selectedMode = parseInt(modeRadio.value);
+        if (window._currentGeofenceConfig) {
+          window._currentGeofenceConfig.mode = selectedMode;
+          payload.geofence_config = window._currentGeofenceConfig;
+        } else {
+          payload.geofence_config = { mode: selectedMode };
+        }
+      }
+
+      const res = await api('/admin/settings', 'PATCH', payload);
+
+      if (res && res.message) {
+        showToast('Settings saved successfully!');
+      } else {
+        showToast('Error saving settings', 'error');
+      }
+      
+      btn.textContent = 'Save Changes';
+      btn.disabled = false;
+    }
+
+    // ── Per-Teacher Leave Management ─────────────────────────────────────────
+
+    let foundTeacher = null;
+    let currentSettings = null;
+
+    async function searchTeacherForLeave() {
+      const regNo = document.getElementById('leave-reg-no').value.trim();
+      const errEl = document.getElementById('leave-error');
+      errEl.style.display = 'none';
+
+      if (!regNo) {
+        errEl.textContent = 'Please enter a Registration Number.';
+        errEl.style.display = 'block'; return;
+      }
+
+      const data = await api(`/admin/teachers/search?reg_no=${encodeURIComponent(regNo)}`);
+      if (!data || data.error) {
+        errEl.textContent = data?.error || 'Teacher not found.';
+        errEl.style.display = 'block';
+        document.getElementById('leave-teacher-card').style.display = 'none';
+        return;
+      }
+
+      foundTeacher = data;
+      document.getElementById('leave-teacher-name').textContent = data.full_name;
+      document.getElementById('leave-teacher-dept').textContent = data.department || '—';
+      document.getElementById('leave-teacher-reg').textContent = data.reg_no;
+
+      // Fetch global settings to compute effective quota
+      currentSettings = await api('/admin/settings');
+      const globalFull = currentSettings?.monthly_allotted_leaves ?? 0;
+      const globalHalf = currentSettings?.monthly_allotted_half_leaves ?? 0;
+      const extraFull = data.extra_monthly_leaves ?? 0;
+      const extraHalf = data.extra_half_monthly_leaves ?? 0;
+
+      document.getElementById('leave-current-full').textContent = globalFull + extraFull;
+      document.getElementById('leave-current-half').textContent = globalHalf + extraHalf;
+      document.getElementById('leave-extra-full').textContent = `${extraFull} extra`;
+      document.getElementById('leave-extra-half').textContent = `${extraHalf} extra`;
+      document.getElementById('leave-teacher-card').style.display = 'block';
+    }
+
+    async function applyTeacherLeave() {
+      if (!foundTeacher) return;
+      const leaveType = getUiverseSelectValue('leave-type');
+      const quotaType = getUiverseSelectValue('leave-quota-type');
+      const actionType = getUiverseSelectValue('leave-action');
+      let count = parseInt(document.getElementById('leave-new-count').value);
+      const adminPassword = document.getElementById('leave-admin-password').value;
+      const errEl = document.getElementById('leave-error');
+      errEl.style.display = 'none';
+
+      if (isNaN(count)) {
+        errEl.textContent = 'Please enter a valid leave count.';
+        errEl.style.display = 'block'; return;
+      }
+      if (!adminPassword) {
+        errEl.textContent = 'Your admin password is required to apply leaves.';
+        errEl.style.display = 'block'; return;
+      }
+      
+      let globalBase = 0;
+      if (currentSettings) {
+          if (leaveType === 'half' && quotaType === 'monthly') {
+              globalBase = currentSettings.monthly_allotted_half_leaves || 0;
+          } else if (leaveType === 'full' && quotaType === 'monthly') {
+              globalBase = currentSettings.monthly_allotted_leaves || 0;
+          }
+      }
+
+      if (actionType === 'add') {
+          let base = 0;
+          if (leaveType === 'half') {
+              base = quotaType === 'monthly' ? (foundTeacher.extra_half_monthly_leaves || 0) : (foundTeacher.extra_half_leaves || 0);
+          } else {
+              base = quotaType === 'monthly' ? (foundTeacher.extra_monthly_leaves || 0) : (foundTeacher.extra_leaves || 0);
+          }
+          count = base + count;
+      } else if (actionType === 'set') {
+          // count is the INTENDED TOTAL. We must subtract globalBase to get the required EXTRA amount.
+          count = count - globalBase;
+      }
+
+      // Prevent the TOTAL leaves from being negative, not just the extra leaves.
+      // Extra leaves CAN be negative to reduce a teacher's quota below the global default!
+      if (globalBase + count < 0) {
+          count = -globalBase; 
+      }
+
+      const btn = document.getElementById('btn-apply-leave');
+      btn.textContent = 'Applying...';
+      btn.disabled = true;
+
+      const payload = { leave_type: leaveType, quota_type: quotaType, admin_password: adminPassword };
+      if (leaveType === 'half') payload.extra_half_leaves = count;
+      else payload.extra_leaves = count;
+
+      const res = await api(`/admin/teachers/${foundTeacher.teacher_id}/leaves`, 'PATCH', payload);
+      
+      btn.textContent = 'Apply Extra Leaves';
+      btn.disabled = false;
+
+      if (res) {
+        showToast(`Leaves updated for ${foundTeacher.full_name}`);
+        document.getElementById('leave-new-count').value = '';
+        document.getElementById('leave-admin-password').value = '';
+        // Refresh the displayed data
+        searchTeacherForLeave();
+      }
+    }
+
+    function clearTeacherResult() {
+      foundTeacher = null;
+      document.getElementById('leave-teacher-card').style.display = 'none';
+      document.getElementById('leave-error').style.display = 'none';
+    }
+
+
+    async function resetAllDeviceLocks() {
+      const btn = document.getElementById('btn-reset-all-devices');
+      const orig = btn.innerHTML;
+      btn.textContent = 'Clearing...';
+      btn.disabled = true;
+
+      const data = await api('/admin/devices/reset-all', 'POST');
+      btn.innerHTML = orig;
+      btn.disabled = false;
+
+      if (data) {
+        showToast(data.message || 'All device locks cleared.', 'success');
+      }
+    }
+
+  </script>
+</body>
+</html>
+
+

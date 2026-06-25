@@ -159,15 +159,14 @@ function makeLogs(count) {
 
 const MOCK_LOGS_ALL = makeLogs(80);
 
-// Campus polygon — NIT Jalandhar main campus rough boundary
+// Campus polygon — structured hexagonal perimeter around NIT Jalandhar main campus
 const CAMPUS_POLYGON = [
-  [31.2558, 75.7012],
-  [31.2575, 75.7055],
-  [31.2563, 75.7098],
-  [31.2530, 75.7105],
-  [31.2510, 75.7060],
-  [31.2522, 75.7018],
-  [31.2558, 75.7012],
+  [31.2560, 75.7037],
+  [31.2548, 75.7075],
+  [31.2512, 75.7075],
+  [31.2500, 75.7037],
+  [31.2512, 75.6999],
+  [31.2548, 75.6999],
 ];
 
 const MOCK_ALERTS = [
@@ -338,35 +337,10 @@ async function api(path, method = 'GET', body = null) {
       campus_name: 'NIT Jalandhar — Main Campus',
       polygon: CAMPUS_POLYGON,
       geofence_config: {
-        mode: 2,
+        mode: 1, // Only show main perimeter, no sub-polygons
         main_polygon: CAMPUS_POLYGON,
-        sub_polygons: [
-          {
-            polygon: [
-              [31.2545, 75.7020],
-              [31.2555, 75.7040],
-              [31.2545, 75.7055],
-              [31.2535, 75.7040],
-            ],
-            departments: ['Computer Science', 'Electronics'],
-            color: '#7c3aed',
-          },
-          {
-            polygon: [
-              [31.2530, 75.7060],
-              [31.2545, 75.7075],
-              [31.2535, 75.7090],
-              [31.2520, 75.7075],
-            ],
-            departments: ['Mechanical', 'Civil'],
-            color: '#ef4444',
-          },
-        ],
-        checkpoints: [
-          { lat: 31.2558, lng: 75.7012, radius: 30, label: 'Main Gate' },
-          { lat: 31.2536, lng: 75.7037, radius: 25, label: 'Admin Block' },
-          { lat: 31.2520, lng: 75.7060, radius: 20, label: 'Library' },
-        ],
+        sub_polygons: [],
+        checkpoints: [],
       },
     };
   }
@@ -375,17 +349,30 @@ async function api(path, method = 'GET', body = null) {
   if (path.startsWith('/admin/settings')) {
     if (method === 'PATCH') return { success: true };
     return {
-      capture_interval_mins: 15,
-      offline_sync_hours: 24,
-      allow_fake_location: false,
-      enable_liveness: true,
-      liveness_confidence_threshold: 0.85,
-      face_match_threshold: 0.72,
-      max_login_attempts: 5,
-      session_timeout_mins: 60,
-      timezone: 'Asia/Kolkata',
-      institute_name: 'GeoFace Institute of Technology',
-      academic_year: '2025–2026',
+      demo_mode: false,
+      attendance_rules: {
+        class_start: '09:00',
+        class_end: '17:00',
+        half_day_limit: '13:00',
+        absent_limit: '14:30',
+        half_day_checkout_limit: '14:00',
+        anytime_checkout_full_day: false,
+        min_working_hours: 4,
+      },
+      verification_limits: {
+        max_checkin_attempts: 5,
+        max_checkout_attempts: 10,
+        totp_duration: 300,
+      },
+      monthly_allotted_leaves: 3,
+      monthly_allotted_half_leaves: 4,
+      semester_start_date: '2025-07-01',
+      semester_end_date: '2025-11-30',
+      support_contact: {
+        email: 'admin@geoface.edu.in',
+        phone: '+91 98765 43210',
+      },
+      geofence_config: { mode: 1 },
     };
   }
 
@@ -418,9 +405,22 @@ async function api(path, method = 'GET', body = null) {
     return { teachers: MOCK_TEACHERS };
   }
 
-  // ── /admin/logs (audit) ────────────────────────────────────
+  // ── /admin/logs (audit) ──────────────────────────────────────
   if (path.startsWith('/admin/logs')) {
-    return { logs: MOCK_AUDIT_LOGS };
+    return [
+      { admin_reg_no: 'ADM001', action: 'LOGIN',           details: { ip: '192.168.1.10', device: 'Chrome / Windows' },                              timestamp: new Date(Date.now() - 1000*60*5).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'ADD_TEACHER',     details: { reg_no: 'TCH008', name: 'Dr. Vikram Reddy', dept: 'Computer Science' },         timestamp: new Date(Date.now() - 1000*60*60*2).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'UPDATE_SETTINGS', details: { field: 'class_start', old: '08:30', new: '09:00' },                            timestamp: new Date(Date.now() - 1000*60*60*5).toISOString() },
+      { admin_reg_no: 'ADM002', action: 'LOGIN',           details: { ip: '10.0.0.42', device: 'Safari / macOS' },                                   timestamp: new Date(Date.now() - 1000*60*60*6).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'UPDATE_TEACHER',  details: { reg_no: 'TCH005', field: 'is_active', old: true, new: false },                  timestamp: new Date(Date.now() - 1000*60*60*8).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'UPDATE_LEAVES',   details: { reg_no: 'TCH003', extra_full: 1, extra_half: 2 },                               timestamp: new Date(Date.now() - 1000*60*60*24).toISOString() },
+      { admin_reg_no: 'ADM002', action: 'UPDATE_SETTINGS', details: { field: 'max_checkin_attempts', old: 4, new: 5 },                               timestamp: new Date(Date.now() - 1000*60*60*26).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'DELETE_TEACHER',  details: { reg_no: 'TCH009', name: 'Mr. Test User' },                                      timestamp: new Date(Date.now() - 1000*60*60*48).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'CREATE_ADMIN',    details: { reg_no: 'ADM002', name: 'Rohan Das', is_head_admin: false },                    timestamp: new Date(Date.now() - 1000*60*60*72).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'UPDATE_SETTINGS', details: { field: 'semester_start_date', old: '2025-01-01', new: '2025-07-01' },           timestamp: new Date(Date.now() - 1000*60*60*96).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'ADD_TEACHER',     details: { reg_no: 'TCH007', name: 'Prof. Lakshmi Iyer', dept: 'Chemistry' },              timestamp: new Date(Date.now() - 1000*60*60*120).toISOString() },
+      { admin_reg_no: 'ADM001', action: 'LOGIN',           details: { ip: '192.168.1.10', device: 'Chrome / Windows' },                              timestamp: new Date(Date.now() - 1000*60*60*144).toISOString() },
+    ];
   }
 
   // ── /admin/encode-face ────────────────────────────────────

@@ -114,7 +114,7 @@
         
         <div class="nav-dropdown">
           <a href="admins.html" class="nav-dropdown-item" id="nav-manage-admins" style="display:none;">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0z" /></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/><path d="M17.5 16.5c-1.5-2-3-3-5.5-3s-4 1-5.5 3"/></svg>
             Manage Admins
           </a>
           <div class="nav-dropdown-divider" id="nav-manage-admins-divider" style="display:none;"></div>
@@ -184,61 +184,105 @@
       };
 
       tbody.innerHTML = data.map(log => {
-        let detailsHtml = '';
-        if (!log.details) {
-          detailsHtml = '—';
-        } else if (log.details.startsWith('{')) {
-          try {
-            const parsed = JSON.parse(log.details);
-            const flat = {};
-            function flatten(obj, prefix) {
-              Object.entries(obj).forEach(([k, v]) => {
-                const key = prefix ? `${prefix}.${k}` : k;
-                if (v && typeof v === 'object' && !Array.isArray(v)) flatten(v, key);
-                else flat[key] = v;
-              });
-            }
-            flatten(parsed, '');
-            detailsHtml = Object.entries(flat).map(([k, v]) =>
-              `<span style="display:inline-block; margin-right:8px; margin-bottom:4px; font-size:11px; padding:2px 6px; background:var(--surface-3); border-radius:4px"><strong>${escHtml(k)}:</strong> ${escHtml(String(v ?? '—'))}</span>`
-            ).join('');
-          } catch(e) {
-            detailsHtml = escHtml(log.details);
-          }
-        } else {
-          // Custom string formatting for "key: {...} -> {...}" Python logs
-          let html = escHtml(log.details);
-          
-          // Bold prefix
-          const prefixMatch = html.match(/^([a-zA-Z0-9_]+): /);
-          if (prefixMatch) {
-            html = html.replace(prefixMatch[0], `<strong style="color:var(--text); text-transform:uppercase; font-size:11px; letter-spacing:0.5px;">${prefixMatch[1]}</strong><br/>`);
-          }
-
-          // Format Python dicts
-          html = html.replace(/\{([^}]+)\}/g, (match, inner) => {
-            let styledInner = inner.replace(/&#39;([^&#]+)&#39;/g, '<span style="color:var(--primary)">\'$1\'</span>');
-            return `<div style="background:var(--surface-2); padding:6px 10px; border-radius:6px; font-family:monospace; font-size:11.5px; display:inline-block; margin:4px 0; border:1px solid var(--border); color:var(--text-muted); line-height:1.6;">{ ${styledInner} }</div>`;
-          });
-
-          // Style arrow
-          html = html.replace(/ -&gt; /g, '<div style="display:inline-block; margin:0 8px; color:var(--purple); font-size:14px; font-weight:bold; vertical-align:middle;">➔</div>');
-
-          detailsHtml = html;
-        }
-
-        const actionKey = (log.action || '').toUpperCase().replace(/ /g, '_');
-        const badgeType = actionColors[actionKey] || 'neutral';
+        const detailsHtml = renderDetails(log.details);
+        const actionKey   = (log.action || '').toUpperCase().replace(/ /g, '_');
+        const badgeType   = actionColors[actionKey] || 'neutral';
         const actionLabel = log.action.replace(/_/g, ' ');
-
         return `
         <tr>
           <td><span class="timestamp-code">${formatDt(log.timestamp)}</span></td>
           <td><span class="reg-id-code">${escHtml(log.admin_reg_no)}</span></td>
           <td><span class="badge badge--${badgeType}">${escHtml(actionLabel)}</span></td>
-          <td style="font-size:13px; color:var(--text-muted); line-height:1.5; white-space:normal; word-break:break-word;">${detailsHtml}</td>
-        </tr>
-      `}).join('');
+          <td style="font-size:13px; color:var(--text-muted); line-height:1.6; white-space:normal; word-break:break-word;">${detailsHtml}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    // ── Rendering helpers ──────────────────────────────────────────────────────
+
+    // Try to parse a Python-style dict string like {'k': 'v', 'n': 3}
+    function parsePyDict(s) {
+      if (!s) return null;
+      s = s.trim();
+      if (!s.startsWith('{') || !s.endsWith('}')) return null;
+      try {
+        let json = s
+          .replace(/'/g, '"')
+          .replace(/:\s*True\b/g, ': true')
+          .replace(/:\s*False\b/g, ': false')
+          .replace(/:\s*None\b/g, ': null');
+        return JSON.parse(json);
+      } catch(e) { return null; }
+    }
+
+    // A coloured pill for a value
+    function valPill(v) {
+      const s = v === null ? 'None' : String(v);
+      return `<span style="font-family:monospace; background:rgba(99,102,241,0.15); color:var(--primary); padding:2px 8px; border-radius:4px; font-size:12px;">${escHtml(s)}</span>`;
+    }
+
+    // One row: FIELD_NAME  [old] → [new]
+    function diffRow(field, oldVal, newVal) {
+      const arrow = `<span style="color:var(--purple); font-weight:bold; margin:0 6px; font-size:14px;">→</span>`;
+      const label = `<span style="font-size:11px; font-weight:600; color:var(--text-muted); letter-spacing:0.5px; text-transform:uppercase; min-width:180px; display:inline-block;">${escHtml(field)}</span>`;
+      const from  = (oldVal !== undefined && oldVal !== null && oldVal !== '') ? valPill(oldVal) + arrow : '';
+      return `<div style="display:flex; align-items:center; gap:4px; padding:5px 2px; border-bottom:1px solid rgba(255,255,255,0.04);">${label}${from}${valPill(newVal)}</div>`;
+    }
+
+    // Render one setting change value (may be "old -> new" string or scalar)
+    function renderChange(key, valStr) {
+      if (!valStr && valStr !== 0) return diffRow(key, undefined, valStr);
+
+      const arrowIdx = valStr.indexOf(' -> ');
+      if (arrowIdx === -1) {
+        // No arrow — simple new value or info string
+        return diffRow(key, undefined, valStr);
+      }
+
+      const oldStr = valStr.substring(0, arrowIdx).trim();
+      const newStr = valStr.substring(arrowIdx + 4).trim();
+
+      const oldDict = parsePyDict(oldStr);
+      const newDict = parsePyDict(newStr);
+
+      if (oldDict && newDict) {
+        // Both are dicts — show only keys that changed
+        let rows = '';
+        const allKeys = new Set([...Object.keys(oldDict), ...Object.keys(newDict)]);
+        allKeys.forEach(k => {
+          const ov = oldDict[k];
+          const nv = newDict[k];
+          if (JSON.stringify(ov) !== JSON.stringify(nv)) {
+            rows += diffRow(`${key}  ›  ${k}`, ov, nv);
+          }
+        });
+        return rows || diffRow(key, oldStr, newStr);
+      }
+
+      // Scalar old -> new
+      return diffRow(key, oldStr, newStr);
+    }
+
+    function renderDetails(details) {
+      if (!details) return '<span style="color:var(--text-muted);">—</span>';
+
+      // Try to parse outer JSON envelope
+      if (details.startsWith('{')) {
+        try {
+          const parsed = JSON.parse(details);
+          let html = '';
+          Object.entries(parsed).forEach(([k, v]) => {
+            html += renderChange(k, String(v ?? ''));
+          });
+          return `<div style="padding:2px 0;">${html}</div>`;
+        } catch(e) {
+          // Broken/truncated outer JSON — just show plain
+          return `<span style="font-family:monospace; font-size:11px; color:var(--text-muted);">${escHtml(details)}</span>`;
+        }
+      }
+
+      // Plain text (LOGIN success etc.)
+      return `<span style="font-size:13px; color:var(--text-muted);">${escHtml(details)}</span>`;
     }
 
     initApp('audit', loadAuditLogs);

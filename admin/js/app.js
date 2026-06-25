@@ -261,8 +261,8 @@ function renderTrendChart(successTrend, failureTrend, monthStr, daysCount) {
   succGrad.addColorStop(1, 'rgba(16, 185, 129, 0)');
 
   const failGrad = ctx.createLinearGradient(0, 0, 0, 280);
-  failGrad.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
-  failGrad.addColorStop(1, 'rgba(239, 68, 68, 0)');
+  failGrad.addColorStop(0, 'rgba(139, 92, 246, 0.25)'); // purple gradient
+  failGrad.addColorStop(1, 'rgba(139, 92, 246, 0)');
 
   trendChart = new Chart(ctx, {
     type: 'line',
@@ -270,28 +270,24 @@ function renderTrendChart(successTrend, failureTrend, monthStr, daysCount) {
       labels,
       datasets: [
         {
+          type: 'bar',
           label: 'Successful',
           data: successTrend,
-          borderColor: '#10b981',
-          borderWidth: 2.5,
-          backgroundColor: succGrad,
-          fill: true,
-          tension: 0.4,
-          pointBackgroundColor: '#10b981',
-          pointBorderColor: '#111118',
-          pointBorderWidth: 1.5,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          backgroundColor: '#10b981', // green bars
+          borderRadius: 4,
+          barPercentage: 0.6,
+          categoryPercentage: 0.8
         },
         {
           label: 'Failed',
           data: failureTrend,
-          borderColor: '#ef4444',
+          borderColor: '#8b5cf6', // purple line
           borderWidth: 2.5,
           backgroundColor: failGrad,
           fill: true,
           tension: 0.4,
-          pointBackgroundColor: '#ef4444',
+          cubicInterpolationMode: 'monotone',
+          pointBackgroundColor: '#8b5cf6',
           pointBorderColor: '#111118',
           pointBorderWidth: 1.5,
           pointRadius: 4,

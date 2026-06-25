@@ -266,19 +266,21 @@
     function renderDetails(details) {
       if (!details) return '<span style="color:var(--text-muted);">—</span>';
 
-      // Try to parse outer JSON envelope
-      if (details.startsWith('{')) {
+      let parsed = details;
+      if (typeof details === 'string' && details.startsWith('{')) {
         try {
-          const parsed = JSON.parse(details);
-          let html = '';
-          Object.entries(parsed).forEach(([k, v]) => {
-            html += renderChange(k, String(v ?? ''));
-          });
-          return `<div style="padding:2px 0;">${html}</div>`;
-        } catch(e) {
-          // Broken/truncated outer JSON — just show plain
+          parsed = JSON.parse(details);
+        } catch (e) {
           return `<span style="font-family:monospace; font-size:11px; color:var(--text-muted);">${escHtml(details)}</span>`;
         }
+      }
+
+      if (typeof parsed === 'object' && parsed !== null) {
+        let html = '';
+        Object.entries(parsed).forEach(([k, v]) => {
+          html += renderChange(k, String(v ?? ''));
+        });
+        return `<div style="padding:2px 0;">${html}</div>`;
       }
 
       // Plain text (LOGIN success etc.)

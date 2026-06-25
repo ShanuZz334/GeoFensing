@@ -550,12 +550,12 @@ async function loadRecentLogs() {
   tbody.innerHTML = validLogs.map(log => {
     // 1. Premium Avatar Layout with dynamic fallback initials
     const initials = (log.teacher_name || 'T').charAt(0).toUpperCase();
-    const hasAvatar = !!log.profile_pic;
-    const avatarUrl = hasAvatar ? (log.profile_pic.startsWith('data:') ? log.profile_pic : 'data:image/jpeg;base64,' + log.profile_pic) : '';
+    const avatarSrc = log.profile_pic_url || (log.profile_pic ? (log.profile_pic.startsWith('data:') ? log.profile_pic : 'data:image/jpeg;base64,' + log.profile_pic) : null);
+    const hasAvatar = !!avatarSrc;
     
     const avatarHTML = hasAvatar
       ? `<div style="position:relative; width:32px; height:32px; flex-shrink:0;">
-           <img src="${avatarUrl}" alt="${escHtml(log.teacher_name)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1.5px solid rgba(124, 58, 237, 0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
+           <img src="${avatarSrc}" alt="${escHtml(log.teacher_name)}" style="width:32px; height:32px; border-radius:50%; object-fit:cover; border:1.5px solid rgba(124, 58, 237, 0.3); box-shadow: 0 2px 8px rgba(0,0,0,0.2);" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';" />
            <div style="display:none; width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #c084fc 0%, #6366f1 100%); color:#fff; font-weight:600; font-size:12px; align-items:center; justify-content:center; border:1.5px solid rgba(124, 58, 237, 0.35); box-shadow:0 2px 8px rgba(0,0,0,0.2);">${initials}</div>
          </div>`
       : `<div style="width:32px; height:32px; border-radius:50%; background:linear-gradient(135deg, #c084fc 0%, #6366f1 100%); color:#fff; font-weight:600; font-size:12px; display:flex; align-items:center; justify-content:center; border:1.5px solid rgba(124, 58, 237, 0.35); box-shadow:0 2px 8px rgba(0,0,0,0.2); flex-shrink:0;">${initials}</div>`;

@@ -1,57 +1,35 @@
-css = """
-/* ── Custom Toggle Switch ────────────────────────────────────────── */
-.switch {
-  font-size: 14px;
-  position: relative;
-  display: inline-block;
-  width: 3.5em;
-  height: 2em;
-}
-
-.switch input {
-  opacity: 0;
-  width: 0;
-  height: 0;
-}
-
-.slider {
-  position: absolute;
+with open(r'admin/css/styles.css', 'a', encoding='utf-8') as f:
+    f.write('''
+/* Multi-select item layout for map sub-polygon */
+.multi-select-item {
+  display: flex;
+  align-items: center;
+  padding: 8px 10px;
   cursor: pointer;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(255, 255, 255, 0.1);
-  transition: .4s;
-  border-radius: 10px;
+  border-radius: 5px;
+  transition: 300ms;
 }
 
-.slider:before {
-  position: absolute;
-  content: "";
-  height: 1.4em;
-  width: 1.4em;
-  border-radius: 8px;
-  left: 0.3em;
-  bottom: 0.3em;
-  transform: rotate(270deg);
-  background-color: rgb(255, 255, 255);
-  transition: .4s;
+.multi-select-item:hover {
+  background-color: var(--surface-3);
+  color: white;
 }
 
-.switch input:checked + .slider {
-  background-color: var(--primary);
+.multi-select-item label {
+  cursor: pointer;
+  margin: 0;
+  padding: 0;
+  width: auto;
+  font-size: 14px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  flex: 1;
 }
 
-.switch input:focus + .slider {
-  box-shadow: 0 0 1px var(--primary);
+.multi-select-item:hover label {
+  color: white;
 }
-
-.switch input:checked + .slider:before {
-  transform: translateX(1.5em);
-}
-"""
-
-with open('admin/css/styles.css', 'a', encoding='utf-8') as f:
-    f.write(css)
-print('Appended CSS successfully.')
+''')
+print("Appended CSS successfully!")

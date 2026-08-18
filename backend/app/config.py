@@ -31,7 +31,8 @@ class BaseConfig:
 
     # JWT
     JWT_SECRET_KEY: str = os.environ.get("JWT_SECRET_KEY", "jwt-secret-change-me-production!")
-    JWT_ACCESS_TOKEN_EXPIRES: timedelta = timedelta(hours=24)
+    ADMIN_JWT_SECRET_KEY: str = os.environ.get("ADMIN_JWT_SECRET_KEY", "admin-jwt-secret-change-me!")
+    JWT_ACCESS_TOKEN_EXPIRES: timedelta = timedelta(hours=5)
     JWT_ALGORITHM: str = "HS256"
 
     # Geofencing
@@ -88,6 +89,7 @@ class ProductionConfig(BaseConfig):
     """Production configuration — all values must come from env."""
     SECRET_KEY = os.environ.get("SECRET_KEY")
     JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
+    ADMIN_JWT_SECRET_KEY = os.environ.get("ADMIN_JWT_SECRET_KEY")
     SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
 
 

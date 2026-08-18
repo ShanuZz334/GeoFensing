@@ -44,3 +44,6 @@ APScheduler==3.10.4
 
 # UltimateFace SDK compilation
 Cython==3.0.10
+
+# Email Delivery
+resend==2.36.0

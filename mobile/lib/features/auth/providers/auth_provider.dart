@@ -98,7 +98,7 @@ class AuthProvider extends ChangeNotifier {
     required String role,
     required String phoneNo,
     required String newPassword,
-    required String profilePicBase64,
+    String? profilePicBase64,
   }) async {
     _status = AuthStatus.loading;
     _errorMessage = null;
@@ -210,6 +210,33 @@ class AuthProvider extends ChangeNotifier {
     } else {
       _errorMessage = response.errorMessage ?? 'Password reset failed';
       _status = AuthStatus.unauthenticated;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  /// POST /reregister-face — submits a new face scan when admin has granted permission
+  Future<bool> reregisterFace(String imageBase64) async {
+    _errorMessage = null;
+    notifyListeners();
+
+    final response = await ApiService.instance.reregisterFace(imageBase64);
+
+    if (response.success && response.data != null) {
+      final data = response.data!;
+      _currentUser = UserModel.fromJson(
+        data['teacher'] as Map<String, dynamic>,
+      );
+
+      await _storage.write(
+        key: ApiConstants.teacherKey,
+        value: jsonEncode(_currentUser!.toJson()),
+      );
+
+      notifyListeners();
+      return true;
+    } else {
+      _errorMessage = response.errorMessage ?? 'Face re-registration failed';
       notifyListeners();
       return false;
     }

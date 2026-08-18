@@ -26,16 +26,16 @@ class Teacher(db.Model):
     phone_no = db.Column(db.String(20), nullable=True)
     password_hash = db.Column(db.String(255), nullable=False)
     profile_pic = db.Column(db.Text, nullable=True)
-    # Stored as JSON array of 128 floats (face_recognition encoding)
+    locked_device_id = db.Column(db.String(255), nullable=True)
+    # Stored as JSON array of 512 floats (InsightFace encoding)
     face_encoding = db.Column(db.JSON, nullable=True)
     # Optional: per-teacher geofence override
     college_latitude = db.Column(db.Float, nullable=True)
     college_longitude = db.Column(db.Float, nullable=True)
     is_active = db.Column(db.Boolean, default=True, nullable=False)
-    extra_leaves = db.Column(db.Integer, default=0, nullable=False)
-    extra_half_leaves = db.Column(db.Integer, default=0, nullable=False)
-    extra_monthly_leaves = db.Column(db.Integer, default=0, nullable=False)
-    extra_half_monthly_leaves = db.Column(db.Integer, default=0, nullable=False)
+    setup_complete = db.Column(db.Boolean, default=False, nullable=False)
+    # Face re-registration window — admin grants a 4hr window for teacher to re-scan face
+    face_reregister_until = db.Column(db.DateTime, nullable=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
     updated_at = db.Column(
         db.DateTime,
@@ -54,6 +54,11 @@ class Teacher(db.Model):
 
     def to_dict(self, include_encoding: bool = False) -> dict:
         """Serialize teacher to dictionary."""
+        now = datetime.utcnow()
+        face_reregister_allowed = (
+            self.face_reregister_until is not None
+            and self.face_reregister_until > now
+        )
         data = {
             "teacher_id": self.teacher_id,
             "full_name": self.full_name,
@@ -62,13 +67,13 @@ class Teacher(db.Model):
             "department": self.department,
             "role": self.role,
             "phone_no": self.phone_no,
+            "is_device_locked": self.locked_device_id is not None,
             "is_active": self.is_active,
-            "extra_leaves": self.extra_leaves,
-            "extra_half_leaves": self.extra_half_leaves,
-            "extra_monthly_leaves": self.extra_monthly_leaves,
-            "extra_half_monthly_leaves": self.extra_half_monthly_leaves,
+            "setup_complete": self.setup_complete,
             "profile_pic": self.profile_pic,
             "has_face_encoding": bool(self.face_encoding and any(v != 0 for v in self.face_encoding)),
+            "face_reregister_allowed": face_reregister_allowed,
+            "face_reregister_until": self.face_reregister_until.isoformat() if self.face_reregister_until and face_reregister_allowed else None,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
         }

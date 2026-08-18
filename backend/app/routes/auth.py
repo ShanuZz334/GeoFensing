@@ -32,8 +32,11 @@ def health_check():
 @auth_bp.route("/settings", methods=["GET"])
 def get_public_settings():
     """Public endpoint to fetch settings for the mobile app."""
-    from ..models import Setting
-    return jsonify(Setting.get_all()), 200
+    from ..models import Setting, Holiday
+    settings = Setting.get_all()
+    holidays = Holiday.query.order_by(Holiday.date.asc()).all()
+    settings['holidays'] = [h.to_dict() for h in holidays]
+    return jsonify(settings), 200
 
 
 @auth_bp.route("/login", methods=["POST"])
@@ -72,16 +75,20 @@ def login():
     if not bcrypt.check_password_hash(teacher.password_hash, password):
         return jsonify({"error": "Invalid credentials"}), 401
 
+    # Ensure this physical device isn't already locked to a DIFFERENT teacher
+    existing_owner = Teacher.query.filter_by(locked_device_id=device_id).first()
+    if existing_owner and existing_owner.teacher_id != teacher.teacher_id:
+        return jsonify({"error": f"This device is already locked to another faculty member ({existing_owner.full_name}). A single device cannot be shared between multiple accounts."}), 403
+
     # Check Single-Device Lock
-    from .. import extensions
-    if extensions.redis_client:
-        active_device_key = f"active_device:{teacher.teacher_id}"
-        active_device = extensions.redis_client.get(active_device_key)
-        if active_device and active_device.decode("utf-8") != device_id:
-            return jsonify({"error": "You are currently logged in on another device. Please log out there first."}), 403
-        
-        # Lock device for 5 hours (18000 seconds)
-        extensions.redis_client.setex(active_device_key, 18000, device_id)
+    if teacher.locked_device_id:
+        if teacher.locked_device_id != device_id:
+            return jsonify({"error": "Device restricted. This account is locked to another mobile device. Contact admin."}), 403
+    else:
+        # First login -> lock account to this device
+        teacher.locked_device_id = device_id
+        from ..extensions import db
+        db.session.commit()
 
     # Issue JWT — identity = teacher_id
     access_token = create_access_token(identity=teacher.teacher_id)
@@ -169,49 +176,40 @@ def complete_setup():
     if not teacher or not teacher.is_active:
         return jsonify({"error": "Teacher not found or inactive"}), 404
         
-    if not (teacher.email.endswith('@geoface.local') or teacher.department == 'Pending'):
+    if teacher.setup_complete:
         return jsonify({"error": "Account is already fully registered"}), 400
 
     data = request.get_json(silent=True) or {}
     
-    # We must construct a valid payload for the existing validator
-    payload_to_validate = {
-        "full_name": data.get("full_name"),
-        "email": data.get("email"),
-        "department": data.get("department"),
-        "role": data.get("role"),
-        "phone_no": data.get("phone_no"),
-        "password": data.get("new_password"),
-        "reg_no": teacher.reg_no,
-        "face_encoding": [0.0]*512 # dummy to pass validation, real one calculated below
-    }
-    
-    valid, error = validate_teacher_register_payload(payload_to_validate)
-    if not valid:
-        return jsonify({"error": error}), 400
+    new_password = data.get("new_password", "")
+    if len(new_password) < 8:
+        return jsonify({"error": "Password must be at least 8 characters"}), 400
         
-    email = data["email"].strip().lower()
-    if Teacher.query.filter(Teacher.email == email, Teacher.teacher_id != teacher_id).first():
-        return jsonify({"error": "A teacher with this email already exists"}), 409
-        
+    full_name = data.get("full_name", "").strip()
+    phone_no = data.get("phone_no", "").strip()
+    if not full_name or not phone_no:
+        return jsonify({"error": "Full name and phone number are required"}), 400
+
     profile_pic = data.get("profile_pic")
-    if not profile_pic:
+    if profile_pic:
+        encoding = add_face_to_collection(profile_pic)
+        if not encoding:
+            return jsonify({"error": "Failed to detect face in the provided image. Please take a clearer photo."}), 400
+        teacher.profile_pic = profile_pic
+        teacher.face_encoding = encoding
+    elif not teacher.face_encoding or not any(v != 0 for v in teacher.face_encoding):
         return jsonify({"error": "Profile picture is required for face registration"}), 400
         
-    encoding = add_face_to_collection(profile_pic)
-    if not encoding:
-        return jsonify({"error": "Failed to detect face in the provided image. Please take a clearer photo."}), 400
-        
-    teacher.full_name = data["full_name"].strip()
-    teacher.email = email
-    teacher.department = data["department"].strip()
-    teacher.role = data["role"].strip()
-    teacher.phone_no = data["phone_no"].strip()
-    teacher.password_hash = bcrypt.generate_password_hash(data["new_password"]).decode("utf-8")
-    teacher.profile_pic = profile_pic
-    teacher.face_encoding = encoding
+    teacher.full_name = full_name
+    teacher.phone_no = phone_no
+    teacher.password_hash = bcrypt.generate_password_hash(new_password).decode("utf-8")
+    teacher.setup_complete = True
     
     db.session.commit()
+    
+    from .. import extensions
+    if extensions.redis_client:
+        extensions.redis_client.delete(f"teacher:{teacher.teacher_id}")
     
     return jsonify({"message": "Registration completed successfully", "teacher": teacher.to_dict()}), 200
 
@@ -261,3 +259,50 @@ def update_profile():
     db.session.commit()
     
     return jsonify({"message": "Profile updated successfully", "teacher": teacher.to_dict()}), 200
+
+
+@auth_bp.route("/reregister-face", methods=["POST"])
+@jwt_required()
+def reregister_face():
+    """
+    POST /reregister-face
+    Allows a teacher to re-scan their face when admin has granted permission.
+    Permission must be active (face_reregister_until > now).
+    Body: { "image": "<base64 jpeg>" }
+    """
+    teacher_id = get_jwt_identity()
+    teacher = Teacher.query.get(teacher_id)
+
+    if not teacher or not teacher.is_active:
+        return jsonify({"error": "Teacher not found or inactive"}), 404
+
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Check permission window
+    if not teacher.face_reregister_until or teacher.face_reregister_until <= now:
+        return jsonify({"error": "Face re-registration not permitted. Ask admin to grant access first."}), 403
+
+    data = request.get_json(silent=True) or {}
+    b64_image = data.get("image")
+    if not b64_image:
+        return jsonify({"error": "image field is required"}), 400
+
+    # Run InsightFace on new image
+    encoding = add_face_to_collection(b64_image)
+    if not encoding:
+        return jsonify({"error": "No face detected in the image. Please take a clearer selfie and try again."}), 422
+
+    # Update face encoding, profile pic, and clear permission
+    teacher.face_encoding = encoding
+    teacher.profile_pic = b64_image
+    teacher.face_reregister_until = None
+    db.session.commit()
+
+    from .. import extensions
+    if extensions.redis_client:
+        extensions.redis_client.delete(f"teacher:{teacher.teacher_id}")
+
+    return jsonify({
+        "message": "Face re-registered successfully! Your attendance scans will now use the new face.",
+        "teacher": teacher.to_dict()
+    }), 200

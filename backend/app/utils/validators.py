@@ -92,29 +92,12 @@ def validate_teacher_register_payload(data: Dict[str, Any]) -> Tuple[bool, Optio
     if not data:
         return False, "Request body is required"
 
-    for field in ("full_name", "email", "reg_no", "password", "department", "role", "phone_no"):
+    for field in ("full_name", "email", "reg_no", "department", "role", "phone_no"):
         if not data.get(field):
             return False, f"{field} is required"
 
     if not validate_email(data["email"]):
         return False, "Invalid email format"
-    # Strict password constraints
-    password = data["password"]
-    if len(password) < 8:
-        return False, "Password must be at least 8 characters"
-    
-    # 1. No simple sequences
-    simple_sequences = ["12345678", "abcdefgh", "123456789", "qwertyui", "password"]
-    if any(seq in password.lower() for seq in simple_sequences):
-        return False, "Password cannot be a simple sequence or common word"
-        
-    # 2. Cannot contain name or reg no
-    name_parts = [p.lower() for p in data["full_name"].split() if len(p) > 2]
-    if any(part in password.lower() for part in name_parts):
-        return False, "Password cannot contain parts of your name"
-        
-    if data["reg_no"].strip().lower() in password.lower():
-        return False, "Password cannot contain your Registration Number"
 
     encoding = data.get("face_encoding")
     if encoding is not None:

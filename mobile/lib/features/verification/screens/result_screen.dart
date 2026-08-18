@@ -4,6 +4,7 @@ import 'package:flutter_animate/flutter_animate.dart';
 
 import '../providers/verification_provider.dart';
 import '../../../core/theme/app_theme.dart';
+import 'verification_screen.dart';
 
 class ResultScreen extends StatelessWidget {
   const ResultScreen({super.key});
@@ -16,7 +17,7 @@ class ResultScreen extends StatelessWidget {
     final isError   = provider.status == VerificationStatus.error;
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFF121212),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -31,7 +32,7 @@ class ResultScreen extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF64748B),
+                      color: Colors.white70,
                     ),
                   ),
                   IconButton(
@@ -39,7 +40,7 @@ class ResultScreen extends StatelessWidget {
                       provider.reset();
                       Navigator.pushNamedAndRemoveUntil(context, '/home', (_) => false);
                     },
-                    icon: const Icon(Icons.close_rounded, color: Color(0xFF64748B)),
+                    icon: const Icon(Icons.close_rounded, color: Colors.white70),
                   ),
                 ],
               ),
@@ -92,7 +93,7 @@ class ResultScreen extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
-                    color: isSuccess ? AppTheme.primary : const Color(0xFF991B1B),
+                    color: isSuccess ? AppTheme.primary : const Color(0xFFEF4444),
                     height: 1.4,
                   ),
                   textAlign: TextAlign.center,
@@ -122,7 +123,14 @@ class ResultScreen extends StatelessWidget {
                       ),
                       onPressed: () {
                         provider.reset();
-                        Navigator.pushReplacementNamed(context, '/verify');
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => VerificationScreen(
+                              checkpointId: provider.currentCheckpointId,
+                            ),
+                          ),
+                        );
                       },
                       child: const Text('Retry Verification'),
                     ),
@@ -131,8 +139,8 @@ class ResultScreen extends StatelessWidget {
                   OutlinedButton(
                     style: OutlinedButton.styleFrom(
                       minimumSize: const Size.fromHeight(56),
-                      side: const BorderSide(color: Color(0xFFE2E8F0)),
-                      foregroundColor: const Color(0xFF475569),
+                      side: const BorderSide(color: Colors.white24),
+                      foregroundColor: Colors.white70,
                     ),
                     onPressed: () {
                       provider.reset();
@@ -168,7 +176,7 @@ class _DetailsCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF7F7F7),
+        color: const Color(0xFF1E1E1E),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Column(
@@ -180,10 +188,10 @@ class _DetailsCard extends StatelessWidget {
               children: [
                 Text(r.$1,
                     style: const TextStyle(
-                        color: Color(0xFF9E9E9E), fontSize: 13)),
+                        color: Colors.white70, fontSize: 13)),
                 Text(r.$2,
                     style: const TextStyle(
-                        color: Color(0xFF2D2D2D),
+                        color: Colors.white,
                         fontSize: 13,
                         fontWeight: FontWeight.w600)),
               ],

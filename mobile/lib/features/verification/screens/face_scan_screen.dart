@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/foundation.dart';
@@ -225,12 +228,20 @@ class _FaceScanScreenState extends State<FaceScanScreen>
                   title: Text(contact['phone'] ?? '8089602280',
                       style: const TextStyle(color: Colors.white)),
                   dense: true,
+                  onTap: () {
+                    final phone = contact['phone'] ?? '8089602280';
+                    launchUrl(Uri.parse('tel:$phone'));
+                  },
                 ),
                 ListTile(
                   leading: const Icon(Icons.email, color: Color(0xFF7C3AED)),
                   title: Text(contact['email'] ?? 'shanifshaz546@gmail.com',
                       style: const TextStyle(color: Colors.white)),
                   dense: true,
+                  onTap: () {
+                    final email = contact['email'] ?? 'shanifshaz546@gmail.com';
+                    launchUrl(Uri.parse('mailto:$email'));
+                  },
                 ),
               ]),
             ),

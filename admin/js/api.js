@@ -56,7 +56,7 @@ async function api(path, method = 'GET', body = null) {
     const res = await fetch(`${API_BASE}${path}`, opts);
     const json = await res.json().catch(() => ({}));
 
-    if (res.status === 401) {
+    if (res.status === 401 || res.status === 422) {
       clearToken();
       if (typeof showLoginModal === 'function') {
         showLoginModal();
@@ -138,7 +138,9 @@ function escHtml(str) {
 
 function formatDt(iso) {
   if (!iso) return '—';
-  const d = new Date(iso);
+  const cleanIso = iso.replace('+00:00Z', 'Z');
+  const d = new Date(cleanIso);
+  if (isNaN(d.getTime())) return 'Invalid Date';
   return d.toLocaleString('en-IN', {
     day: '2-digit', month: 'short', year: 'numeric',
     hour: '2-digit', minute: '2-digit', hour12: true,
@@ -204,5 +206,41 @@ window.uiConfirm = function(title, message = '') {
       document.getElementById('custom-confirm-modal').remove();
       resolve(true);
     };
+  });
+};
+
+window.uiPrompt = function(title, message = '', placeholder = '') {
+  return new Promise(resolve => {
+    const modalHtml = `
+      <div id="custom-prompt-modal" class="modal-overlay" style="display:flex; z-index: 99999;">
+        <div class="modal-card" style="max-width: 400px; width: 100%;">
+          <h3 style="margin-bottom: 10px; color: var(--text);">${escHtml(title)}</h3>
+          <p style="margin-bottom: 16px; color: var(--text-muted); line-height: 1.5;">${escHtml(message)}</p>
+          <input type="text" id="prompt-input" class="form-control" placeholder="${escHtml(placeholder)}" style="margin-bottom: 24px; width: 100%;" autocomplete="off" />
+          <div style="display: flex; justify-content: flex-end; gap: 12px;">
+            <button id="prompt-cancel-btn" class="btn-secondary">Cancel</button>
+            <button id="prompt-ok-btn" class="btn-primary">OK</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML('beforeend', modalHtml);
+    
+    const inputEl = document.getElementById('prompt-input');
+    inputEl.focus();
+
+    const cleanupAndResolve = (val) => {
+      const modal = document.getElementById('custom-prompt-modal');
+      if (modal) modal.remove();
+      resolve(val);
+    };
+
+    document.getElementById('prompt-cancel-btn').onclick = () => cleanupAndResolve(null);
+    document.getElementById('prompt-ok-btn').onclick = () => cleanupAndResolve(inputEl.value);
+    
+    inputEl.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') cleanupAndResolve(inputEl.value);
+      if (e.key === 'Escape') cleanupAndResolve(null);
+    });
   });
 };

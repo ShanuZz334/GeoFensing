@@ -1,12 +1,12 @@
 """
 GeoFace Faculty Authentication System - Verification Route
 
-POST /verify  →  Full AI verification pipeline:
+POST /verify  â  Full AI verification pipeline:
   1. Validate JWT
   2. Replay attack check (timestamp freshness)
   3. GPS geofencing (Haversine)
-  4. Face detection (≥60% frames must have a face)
-  5. Face recognition (Euclidean distance ≤ threshold)
+  4. Face detection (â¥60% frames must have a face)
+  5. Face recognition (Euclidean distance â¤ threshold)
   6. Liveness check (EAR blink + head movement)
   7. Write attendance log
 """
@@ -19,7 +19,7 @@ from flask import Blueprint, current_app, jsonify, request
 from flask_jwt_extended import get_jwt_identity, jwt_required
 
 from ..extensions import db, redis_client
-from ..models import Teacher, AttendanceLog, Setting
+from ..models import Teacher, AttendanceLog, Setting, EventAttendance, EventCheckpoint
 from ..services.geo_service import is_within_geofence
 from ..services.face_service import process_frames, compare_encodings
 from ..services.liveness_service import run_liveness_checks
@@ -104,7 +104,7 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
             except Exception as e:
                 logger.warning("Redis error in build_failure_response: %s", e)
     else:
-        today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_start = _get_today_start_utc()
         failure_count = AttendanceLog.query.filter(
             AttendanceLog.teacher_id == teacher_id,
             AttendanceLog.timestamp >= today_start,
@@ -148,6 +148,10 @@ def _build_failure_response(teacher_id, reason, distance, face_frames, total_fra
     }), 200
 
 
+def _get_today_start_utc() -> datetime:
+    """Returns the UTC datetime corresponding to midnight of the current local day."""
+    return datetime.now().astimezone().replace(hour=0, minute=0, second=0, microsecond=0).astimezone(timezone.utc).replace(tzinfo=None)
+
 def _get_next_action_info(teacher_id: str):
     """Determine the next attendance action and current attempt count."""
     from ..models import Setting
@@ -178,14 +182,14 @@ def _get_next_action_info(teacher_id: str):
                 logger.warning("Redis error in get_next_action_info demo mode: %s", e)
         return action, failures_count, limit
 
-    today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    today_start = _get_today_start_utc()
     
     today_logs = AttendanceLog.query.filter(
         AttendanceLog.teacher_id == teacher_id,
         AttendanceLog.timestamp >= today_start
     ).order_by(AttendanceLog.timestamp.asc()).all()
     
-    # Check for completed states
+    # Completed: absent logged or successful checkout recorded
     if any(log.attendance_mark == "absent" for log in today_logs):
         return "completed", 0, 4
         
@@ -203,9 +207,8 @@ def _get_next_action_info(teacher_id: str):
     limits = settings_dict.get("verification_limits", {"max_checkin_attempts": 4, "max_checkout_attempts": 10})
     limit = limits.get("max_checkout_attempts", 10) if action == "check_out" else limits.get("max_checkin_attempts", 4)
 
-    # ── Server-side absent_limit enforcement ─────────────────────────────────
-    # If the teacher has no check-in yet and the absent_limit time has passed,
-    # return 'completed' so the mobile app's scan button stays locked.
+    # Lock check-in after absent_limit if no successful check-in yet
+    # (absent_limit is the LATEST time faculty can still check in)
     if action == "check_in":
         try:
             rules = settings_dict.get("attendance_rules", {})
@@ -245,6 +248,36 @@ def get_teacher_attendance():
         AttendanceLog.timestamp >= now - timedelta(days=14)
     ).order_by(AttendanceLog.timestamp.desc()).all()
     
+    from ..models import LeaveRequest, EventAttendance
+    
+    # Fetch Leaves
+    approved_leaves = LeaveRequest.query.filter(
+        LeaveRequest.teacher_id == teacher_id,
+        LeaveRequest.status == 'approved',
+        LeaveRequest.start_date <= now.date(),
+        LeaveRequest.end_date >= (now - timedelta(days=14)).date()
+    ).all()
+    
+    approved_leave_dates = {}
+    for leave in approved_leaves:
+        curr_d = leave.start_date
+        while curr_d <= leave.end_date:
+            approved_leave_dates[curr_d.strftime("%Y-%m-%d")] = leave
+            curr_d += timedelta(days=1)
+            
+    # Fetch Checkpoints
+    checkpoints = EventAttendance.query.filter(
+        EventAttendance.teacher_id == teacher_id,
+        EventAttendance.timestamp >= now - timedelta(days=14)
+    ).all()
+    
+    checkpoints_by_date = {}
+    for cp in checkpoints:
+        date_str = cp.timestamp.strftime("%Y-%m-%d")
+        if date_str not in checkpoints_by_date:
+            checkpoints_by_date[date_str] = []
+        checkpoints_by_date[date_str].append(cp)
+
     from collections import OrderedDict
     grouped = OrderedDict()
     
@@ -260,65 +293,101 @@ def get_teacher_attendance():
     current_time_str = datetime.now().strftime("%H:%M")
     
     aggregated_logs = []
+    days_added = 0
     
     for date_str in dates_to_check:
         synthetic_ts = datetime.fromisoformat(date_str).replace(hour=12, tzinfo=timezone.utc)
         is_weekend = synthetic_ts.weekday() in [5, 6]
         
+        # Checkpoints for this day
+        if date_str in checkpoints_by_date:
+            for cp in checkpoints_by_date[date_str]:
+                aggregated_logs.append({
+                    "id": f"cp_{cp.id}",
+                    "teacher_id": teacher_id,
+                    "timestamp": cp.timestamp.isoformat() + "Z",
+                    "status": "success",
+                    "status_display": "CHECKPOINT",
+                    "action_type": "event_checkpoint",
+                    "attendance_mark": "checkpoint",
+                    "reason": cp.checkpoint.name if cp.checkpoint else "Event Checkpoint"
+                })
+
+        leave_for_day = approved_leave_dates.get(date_str)
+        if leave_for_day:
+            if not is_weekend:
+                aggregated_logs.append({
+                    "id": f"leave_{date_str}",
+                    "teacher_id": teacher_id,
+                    "timestamp": synthetic_ts.isoformat().replace("+00:00", "Z"),
+                    "status": "success",
+                    "status_display": "HALF LEAVE" if leave_for_day.is_half_day else "FULL LEAVE",
+                    "action_type": "check_in",
+                    "attendance_mark": "leave",
+                    "reason": f"Approved {leave_for_day.leave_type.capitalize()} Leave"
+                })
+                days_added += 1
+            if days_added >= 4:
+                break
+            continue
+        
         if date_str in grouped:
             day_logs = grouped[date_str]
-            has_success = any(l.status == "success" for l in day_logs)
-            status = "success" if has_success else "failure"
-            
-            success_logs = [l for l in day_logs if l.status == "success"]
-            if success_logs:
-                latest_log = success_logs[0]
-            else:
-                latest_log = day_logs[0]
-                
-            if has_success:
-                if latest_log.attendance_mark == 'flagged':
-                    reason = "Flagged / Processing"
-                    status_display = "FLAGGED"
-                elif latest_log.attendance_mark == 'half_day':
-                    reason = "Half Day"
+
+            # Pick the most informative log: last successful, or last failure
+            checkin_log = next((l for l in day_logs if l.status == "success" and l.action_type == "check_in"), None)
+            checkout_log = next((l for l in day_logs if l.status == "success" and l.action_type == "check_out"), None)
+            last_failure = day_logs[-1] if day_logs else None
+
+            if checkout_log:
+                # Day complete — final mark is on the checkout log
+                mark = checkout_log.attendance_mark
+                if mark == 'present':
+                    status_display = "FULL DAY"
+                    reason = "Full Day Present"
+                elif mark == 'half_day':
                     status_display = "HALF DAY"
-                elif latest_log.attendance_mark == 'absent':
-                    reason = "Absent"
-                    status_display = "ABSENT"
+                    reason = "Half Day"
                 else:
-                    reason = "Present"
-                    status_display = "SUCCESS"
-            elif len(day_logs) >= 4:
-                reason = "Absent"
-                status_display = "FAILURE"
-            else:
-                reason = f"Failed ({len(day_logs)}/4 attempts)"
-                status_display = "FAILURE"
-            
-            log_data = latest_log.to_dict()
-            log_data["status"] = status
-            log_data["reason"] = reason
-            log_data["status_display"] = status_display
-            aggregated_logs.append(log_data)
+                    status_display = "ABSENT"
+                    reason = "Absent"
+                log_data = checkout_log.to_dict(include_profile_pic=False)
+                log_data["status_display"] = status_display
+                log_data["reason"] = reason
+                aggregated_logs.append(log_data)
+            elif checkin_log:
+                # Checked in but not yet checked out
+                log_data = checkin_log.to_dict(include_profile_pic=False)
+                log_data["status_display"] = "CHECKED IN"
+                log_data["reason"] = "Checked in — pending checkout"
+                aggregated_logs.append(log_data)
+            elif last_failure:
+                attempts = len([l for l in day_logs if l.status == "failure"])
+                log_data = last_failure.to_dict(include_profile_pic=False)
+                log_data["status_display"] = "ABSENT"
+                log_data["reason"] = f"All {attempts} verification attempt(s) failed"
+                aggregated_logs.append(log_data)
+            days_added += 1
         else:
             if is_weekend:
                 continue
+            # Don't show absent for today until after absent_limit has passed
             if date_str == now.strftime("%Y-%m-%d") and current_time_str <= absent_limit:
                 continue
                 
             aggregated_logs.append({
                 "id": f"syn_{date_str}",
                 "teacher_id": teacher_id,
-                "timestamp": synthetic_ts.isoformat(),
+                "timestamp": synthetic_ts.isoformat().replace("+00:00", "Z"),
                 "status": "failure",
                 "status_display": "ABSENT",
                 "action_type": "check_in",
                 "attendance_mark": "absent",
                 "reason": "No scan record"
             })
+            days_added += 1
             
-        if len(aggregated_logs) >= 4:
+        if days_added >= 4:
             break
         
     action, attempts, limit = _get_next_action_info(teacher_id)
@@ -334,182 +403,172 @@ def get_teacher_attendance():
     }), 200
 
 
+def calculate_teacher_stats(teacher_id, start_date, end_date=None, is_sem=False):
+    from ..models import LeaveRequest, Setting, AttendanceLog
+    from datetime import datetime, timedelta, timezone
+    now = datetime.now(timezone.utc)
+    # Effective range
+    effective_start = start_date
+    effective_end = end_date or now
+    
+    # Generate all dates in range
+    dates = []
+    curr = effective_start.date()
+    end_d = effective_end.date()
+    while curr <= end_d:
+        dates.append(curr.strftime("%Y-%m-%d"))
+        curr += timedelta(days=1)
+    # Get logs for teacher in range
+    logs = AttendanceLog.query.filter(
+        AttendanceLog.teacher_id == teacher_id,
+        AttendanceLog.timestamp >= effective_start,
+        AttendanceLog.timestamp <= effective_end
+    ).order_by(AttendanceLog.timestamp.asc()).all()
+    
+    days_data = {d: [] for d in dates}
+    for log in logs:
+        date_str = log.timestamp.strftime("%Y-%m-%d")
+        if date_str in days_data:
+            days_data[date_str].append(log)
+            
+    # Get approved leaves
+    approved_leaves = LeaveRequest.query.filter(
+        LeaveRequest.teacher_id == teacher_id,
+        LeaveRequest.status == 'approved',
+        LeaveRequest.start_date <= effective_end.date(),
+        LeaveRequest.end_date >= effective_start.date()
+    ).all()
+    
+    approved_leave_dates = {}
+    emergency_leaves_used = 0
+    for leave in approved_leaves:
+        if leave.leave_type == 'emergency' and leave.start_date >= effective_start.date() and leave.start_date <= effective_end.date():
+            emergency_leaves_used += 1
+        curr_d = leave.start_date
+        while curr_d <= leave.end_date:
+            approved_leave_dates[curr_d.strftime("%Y-%m-%d")] = leave
+            curr_d += timedelta(days=1)
+        
+    attended = 0
+    absent = 0
+    approved_full_leaves = 0
+    approved_half_leaves = 0
+    final_logs = []
+    days_processed = 0
+    
+    settings_dict = Setting.get_all()
+    full_day_deduction = float(settings_dict.get("full_day_deduction_pct", 3.0))
+    half_day_deduction = float(settings_dict.get("half_day_deduction_pct", 1.5))
+    emergency_deduction = float(settings_dict.get("emergency_leave_deduction_pct", 0.5))
+    
+    unapproved_absences = 0
+    unapproved_half_days = 0
+    for date_str in sorted(days_data.keys(), reverse=True):
+        days_processed += 1
+        day_logs = days_data[date_str]
+        leave_for_day = approved_leave_dates.get(date_str)
+        
+        success_logs = [l for l in day_logs if l.status == "success"]
+        success_log = success_logs[-1] if success_logs else None
+        
+        absent_logs = [l for l in day_logs if l.attendance_mark == "absent"]
+        absent_log = absent_logs[-1] if absent_logs else None
+        
+        # If the teacher was granted an approved leave for this day
+        if leave_for_day:
+            if leave_for_day.is_half_day:
+                approved_half_leaves += 1
+                attended += 0.5
+            else:
+                approved_full_leaves += 1
+            
+            final_logs.append({
+                "id": f"leave_{date_str}",
+                "teacher_id": teacher_id,
+                "timestamp": datetime.fromisoformat(date_str).replace(hour=12, tzinfo=timezone.utc).isoformat(),
+                "status": "success",
+                "status_display": "HALF LEAVE" if leave_for_day.is_half_day else "FULL LEAVE",
+                "action_type": "check_in",
+                "attendance_mark": "leave",
+                "reason": f"Approved {leave_for_day.leave_type.capitalize()} Leave"
+            })
+            continue
+        if success_log:
+            if success_log.attendance_mark == "half_day":
+                attended += 0.5
+                absent += 0.5
+                unapproved_half_days += 1
+            else:
+                attended += 1
+            final_logs.append(success_log.to_dict())
+        elif absent_log:
+            absent += 1
+            unapproved_absences += 1
+            final_logs.append(absent_log.to_dict())
+        else:
+            # Synthetic Absent (only if date <= today)
+            synthetic_ts = datetime.fromisoformat(date_str).replace(hour=12, tzinfo=timezone.utc)
+            if synthetic_ts.weekday() in [5, 6]:
+                continue  # Skip Saturday (5) and Sunday (6)
+            # DO NOT mark absent for today if we haven't passed the absent_limit yet
+            if date_str == now.strftime("%Y-%m-%d"):
+                rules = settings_dict.get("attendance_rules", {})
+                absent_limit = rules.get("absent_limit", "11:00")
+                current_time_str = datetime.now().strftime("%H:%M")
+                if current_time_str <= absent_limit:
+                    continue
+            absent += 1
+            unapproved_absences += 1
+            final_logs.append({
+                "id": f"syn_{date_str}",
+                "teacher_id": teacher_id,
+                "timestamp": synthetic_ts.isoformat(),
+                "status": "failure",
+                "status_display": "ABSENT",
+                "action_type": "check_in",
+                "attendance_mark": "absent",
+                "reason": "No record found for this day."
+            })
+    
+    # Calculate salary deductions
+    deduction_pct = 0.0
+    if not is_sem:
+        deduction_pct += unapproved_absences * full_day_deduction
+        deduction_pct += unapproved_half_days * half_day_deduction
+        deduction_pct += emergency_leaves_used * emergency_deduction
+    return {
+        "attended": attended,
+        "absent": absent,
+        "approved_full_leaves": approved_full_leaves,
+        "approved_half_leaves": approved_half_leaves,
+        "emergency_leaves_used": emergency_leaves_used,
+        "deduction_pct": round(deduction_pct, 2),
+        "unapproved_absences": unapproved_absences,
+        "unapproved_half_days": unapproved_half_days,
+        "total": days_processed,
+        "logs": final_logs
+    }
+
 @verify_bp.route("/attendance/stats", methods=["GET"])
 @jwt_required()
 def get_attendance_stats():
-    """GET /attendance/stats — returns attendance statistics for month and semester."""
+    """GET /attendance/stats - returns attendance statistics for month and semester."""
     teacher_id = get_jwt_identity()
     now = datetime.now(timezone.utc)
-    
-    def get_stats_for_range(start_date, end_date=None, is_sem=False):
-        teacher_id = get_jwt_identity()
-        
-        # Effective range
-        effective_start = start_date
-        effective_end = end_date or now
-        
-        # Generate all dates in range
-        dates = []
-        curr = effective_start.date()
-        end_d = effective_end.date()
-        while curr <= end_d:
-            dates.append(curr.strftime("%Y-%m-%d"))
-            curr += timedelta(days=1)
-
-        # Get logs for teacher in range
-        logs = AttendanceLog.query.filter(
-            AttendanceLog.teacher_id == teacher_id,
-            AttendanceLog.timestamp >= effective_start,
-            AttendanceLog.timestamp <= effective_end
-        ).order_by(AttendanceLog.timestamp.asc()).all()
-        
-        days_data = {d: [] for d in dates}
-        for log in logs:
-            date_str = log.timestamp.strftime("%Y-%m-%d")
-            if date_str in days_data:
-                days_data[date_str].append(log)
-            
-        attended = 0
-        absent = 0
-        taken_full_leaves = 0
-        taken_half_leaves = 0
-        final_logs = []
-        approved_full_leaves = 0
-        days_processed = 0
-        for date_str in sorted(days_data.keys(), reverse=True):
-            days_processed += 1
-            day_logs = days_data[date_str]
-            
-            success_logs = [l for l in day_logs if l.status == "success"]
-            success_log = success_logs[-1] if success_logs else None
-            
-            leave_logs = [l for l in day_logs if l.attendance_mark == "leave"]
-            leave_log = leave_logs[-1] if leave_logs else None
-            
-            absent_logs = [l for l in day_logs if l.attendance_mark == "absent"]
-            absent_log = absent_logs[-1] if absent_logs else None
-            
-            if success_log:
-                if success_log.attendance_mark == "half_day":
-                    attended += 0.5
-                    absent += 0.5
-                    taken_half_leaves += 1
-                else:
-                    attended += 1
-                final_logs.append(success_log.to_dict())
-            elif leave_log:
-                taken_full_leaves += 1
-                approved_full_leaves += 1
-                log_data = leave_log.to_dict()
-                log_data.update({
-                    "status": "success",
-                    "status_display": "LEAVE",
-                    "attendance_mark": "leave",
-                    "reason": "Approved Leave"
-                })
-                final_logs.append(log_data)
-            elif absent_log:
-                absent += 1
-                taken_full_leaves += 1 # Absences count as full leaves taken
-                final_logs.append(absent_log.to_dict())
-            else:
-                # Synthetic Absent (only if date <= today)
-                synthetic_ts = datetime.fromisoformat(date_str).replace(hour=12, tzinfo=timezone.utc)
-                if synthetic_ts.weekday() in [5, 6]:
-                    continue  # Skip Saturday (5) and Sunday (6)
-
-                # DO NOT mark absent for today if we haven't passed the absent_limit yet
-                if date_str == now.strftime("%Y-%m-%d"):
-                    settings_dict = Setting.get_all()
-                    rules = settings_dict.get("attendance_rules", {})
-                    absent_limit = rules.get("absent_limit", "11:00")
-                    current_time_str = datetime.now().strftime("%H:%M")
-                    if current_time_str <= absent_limit:
-                        continue # Skip marking absent, they still have time
-
-                absent += 1
-                taken_full_leaves += 1 # Absences count as full leaves taken
-                final_logs.append({
-                    "id": f"syn_{date_str}",
-                    "teacher_id": teacher_id,
-                    "timestamp": synthetic_ts.isoformat(),
-                    "status": "failure",
-                    "status_display": "ABSENT",
-                    "action_type": "check_in",
-                    "attendance_mark": "absent",
-                    "reason": "No record found for this day."
-                })
-            
-        # Get leave settings
-        try:
-            val = Setting.get("monthly_allotted_leaves", "2")
-            allotted_monthly = int(val) if val and str(val).strip() else 2
-        except:
-            allotted_monthly = 2
-            
-        try:
-            val_half = Setting.get("monthly_allotted_half_leaves", "2")
-            allotted_half_monthly = int(val_half) if val_half and str(val_half).strip() else 2
-        except:
-            allotted_half_monthly = 2
-            
-        teacher = Teacher.query.get(teacher_id)
-        extra_leaves = teacher.extra_leaves if teacher and teacher.extra_leaves else 0
-        extra_half_leaves = teacher.extra_half_leaves if teacher and hasattr(teacher, 'extra_half_leaves') and teacher.extra_half_leaves else 0
-        extra_monthly_leaves = teacher.extra_monthly_leaves if teacher and hasattr(teacher, 'extra_monthly_leaves') and teacher.extra_monthly_leaves else 0
-        extra_half_monthly_leaves = teacher.extra_half_monthly_leaves if teacher and hasattr(teacher, 'extra_half_monthly_leaves') and teacher.extra_half_monthly_leaves else 0
-        
-        if is_sem:
-            # Full semester quota
-            allotted = (allotted_monthly * 6) + extra_leaves
-            allotted_half = (allotted_half_monthly * 6) + extra_half_leaves
-        else:
-            # Current month quota
-            allotted = allotted_monthly + extra_monthly_leaves
-            allotted_half = allotted_half_monthly + extra_half_monthly_leaves
-            
-        # How many of the absent days are "covered" by the leave quota
-        # These should appear as attended in the pie chart centre.
-        # Only absences (not actual check-ins) count against leave quota.
-        absences_only = taken_full_leaves - approved_full_leaves
-        leaves_covered_absent = min(absences_only, max(0, allotted - approved_full_leaves))
-        
-        # The leave counter should only show consumed quota, capped at the quota
-        leaves_quota_used = min(taken_full_leaves, allotted)
-        
-        return {
-            "attended": attended,
-            "absent": absent,
-            "approved_full_leaves": approved_full_leaves,
-            "taken_full_leaves": taken_full_leaves,
-            "leaves_quota_used": leaves_quota_used,
-            "leaves_covered_absent": leaves_covered_absent,
-            "allotted_full_leaves": allotted,
-            "taken_half_leaves": taken_half_leaves,
-            "allotted_half_leaves": allotted_half,
-            "total": days_processed,
-            "logs": final_logs
-        }
 
     # Monthly: From start of current month
     month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
     
     # Semester: From configured start date
+    from ..models import Setting
     sem_start_str = Setting.get("semester_start_date")
     try:
         sem_start = datetime.fromisoformat(sem_start_str).replace(tzinfo=timezone.utc)
     except:
         sem_start = now - timedelta(days=180)
     
-    # Prove ranges in logs
-    print(f"[STATS] Request for {teacher_id}")
-    print(f"[STATS] Monthly range: {month_start.date()} to {now.date()}")
-    print(f"[STATS] Semester range: {sem_start.date()} to {now.date()}")
-    
-    res_monthly = get_stats_for_range(month_start, is_sem=False)
-    res_semester = get_stats_for_range(sem_start, is_sem=True)
-    
-    print(f"[STATS] Monthly results - Total days: {res_monthly['total']}, Attended: {res_monthly['attended']}")
+    res_monthly = calculate_teacher_stats(teacher_id, month_start, is_sem=False)
+    res_semester = calculate_teacher_stats(teacher_id, sem_start, is_sem=True)
     
     return jsonify({
         "monthly": res_monthly,
@@ -523,7 +582,6 @@ def get_attendance_stats():
             "email": "shanifshaz546@gmail.com"
         })
     }), 200
-
 
 @verify_bp.route("/verify", methods=["POST"])
 @jwt_required()
@@ -553,7 +611,7 @@ def verify():
     teacher_id: str = get_jwt_identity()
     data = request.get_json(silent=True)
 
-    # ── Validate payload ─────────────────────────────────────────────────────
+    # ————————————————————————————————————————————————————————————————————————————————————
     valid, error = validate_verify_payload(data or {})
     if not valid:
         return jsonify({"status": "failure", "reason": error,
@@ -567,12 +625,13 @@ def verify():
     latitude: float = float(data["latitude"])
     longitude: float = float(data["longitude"])
     timestamp: float = float(data["timestamp"])
+    checkpoint_id = data.get("checkpoint_id")
     bypass_limits: bool = data.get("bypass_limits", False) or demo_mode
     # Demo mode is active if bypass_limits is set OR if demo geofence coordinates are provided
     is_demo: bool = bypass_limits or ("demo_lat" in data and "demo_lng" in data)
     server_time = datetime.now(timezone.utc).isoformat()
 
-    # ── Replay attack guard ──────────────────────────────────────────────────
+    # ————————————————————————————————————————————————————————————————————————————————————
     if not verify_timestamp_freshness(timestamp):
         return jsonify({
             "status": "failure",
@@ -580,7 +639,7 @@ def verify():
             "timestamp": server_time,
         }), 400
 
-    # ── Load teacher (with Redis caching) ────────────────────────────────────
+    # ————————————————————————————————————————————————————————————————————————————————————
     cache_key = f"teacher:{teacher_id}"
     teacher = None
     
@@ -588,9 +647,9 @@ def verify():
         try:
             val = redis_client.get(cache_key)
             if val:
+                from types import SimpleNamespace
                 data = json.loads(val)
-                # Create a proxy object to avoid changing attribute access code
-                teacher = type('TeacherProxy', (object,), data)
+                teacher = SimpleNamespace(**data)
                 logger.debug("Cache HIT for teacher:%s", teacher_id)
         except Exception as e:
             logger.warning("Redis cache error: %s", e)
@@ -600,10 +659,13 @@ def verify():
         if teacher and redis_client:
             try:
                 cache_data = {
-                    "teacher_id": teacher.teacher_id,
+                    "teacher_id": str(teacher.teacher_id),
                     "face_encoding": teacher.face_encoding,
                     "college_latitude": teacher.college_latitude,
                     "college_longitude": teacher.college_longitude,
+                    "department": teacher.department,
+                    "reg_no": teacher.reg_no,
+                    "full_name": teacher.full_name,
                 }
                 redis_client.setex(cache_key, 3600, json.dumps(cache_data))
                 logger.debug("Cache MISS for teacher:%s, data cached", teacher_id)
@@ -614,7 +676,21 @@ def verify():
         return jsonify({"status": "failure", "reason": "Invalid token",
                         "timestamp": server_time}), 401
 
-    action_type, failure_count, _ = _get_next_action_info(teacher_id)
+    if checkpoint_id:
+        action_type = "event_checkpoint"
+        failure_count = 0
+        checkpoint = EventCheckpoint.query.get(checkpoint_id)
+        if not checkpoint or not checkpoint.is_active():
+            return jsonify({"status": "failure", "reason": "This event checkpoint has expired or does not exist.", "timestamp": server_time}), 400
+        if not checkpoint.faculty_qualifies(teacher):
+            return jsonify({"status": "failure", "reason": "You are not authorized for this event checkpoint.", "timestamp": server_time}), 403
+        
+        # Check if already attended
+        existing = EventAttendance.query.filter_by(teacher_id=teacher_id, checkpoint_id=checkpoint_id).first()
+        if existing:
+            return jsonify({"status": "failure", "reason": "You have already marked attendance for this event.", "timestamp": server_time}), 400
+    else:
+        action_type, failure_count, _ = _get_next_action_info(teacher_id)
 
 
 
@@ -627,73 +703,78 @@ def verify():
     if is_demo and not demo_mode:
         action_type = 'demo_test'
 
-    # ── Fetch Dynamic Settings ───────────────────────────────────────────────
+    # ————————————————————————————————————————————————————————————————————————————————————
     from ..models import Setting
     settings_dict = Setting.get_all()
     
     rules = settings_dict.get("attendance_rules", {})
     class_start = rules.get("class_start", "09:00")
-    half_day_limit = rules.get("half_day_limit", "10:05")
-    absent_limit = rules.get("absent_limit", "11:00")
-    half_day_checkout_limit = rules.get("half_day_checkout_limit", "")
-    anytime_checkout_full_day = rules.get("anytime_checkout_full_day", False)
-    min_working_hours = float(rules.get("min_working_hours", 3))
+    half_day_limit = rules.get("half_day_limit", "10:30")
+    absent_limit = rules.get("absent_limit", "13:00")
+    class_end = rules.get("class_end", "17:00")
     
     limits_cfg = settings_dict.get("verification_limits", {})
     max_checkin = limits_cfg.get("max_checkin_attempts", 4)
     max_checkout = limits_cfg.get("max_checkout_attempts", 10)
 
-    # ── Time-Based Rules Check ───────────────────────────────────────────────
+    # ── Time-Based Rules (New Check-in/Checkout Matrix) ───────────────────────
+    # Check-in timing: EARLY = before half_day_limit, LATE = after half_day_limit
+    # Checkout timing: ON-TIME = at/after class_end, EARLY = before class_end, VERY EARLY = before absent_limit
+    #
+    # Matrix:
+    #   EARLY check-in  + ON-TIME checkout → present  (full day)
+    #   EARLY check-in  + EARLY checkout   → half_day (before class_end)
+    #   LATE  check-in  + ON-TIME checkout → half_day
+    #   LATE  check-in  + EARLY checkout   → absent
+    #   *ANY* check-in  + VERY EARLY out   → absent   (before absent_limit)
+    #
     attendance_mark = 'present'
     current_time_str = datetime.now().strftime("%H:%M")
     
     if not demo_mode:
         if action_type == 'check_in':
-            if current_time_str > absent_limit:
-                # Arrived after absent_limit — mark absent immediately
-                attendance_mark = 'absent'
-            elif current_time_str > half_day_limit:
-                # Arrived between half_day_limit and absent_limit — half day
+            # At check-in time we only decide if it is LATE (mark tentatively).
+            # The final mark (present / half_day / absent) is decided at checkout.
+            if current_time_str > half_day_limit:
+                # Late check-in — best possible result is half_day (decided at checkout)
                 attendance_mark = 'half_day'
-            elif current_time_str > class_start:
-                # Arrived after class_start but before half_day_limit — flag for admin review
-                attendance_mark = 'flagged'
+            else:
+                # Early check-in — could still earn full day
+                attendance_mark = 'present'
+
         elif action_type == 'check_out':
-            if not anytime_checkout_full_day and half_day_checkout_limit:
-                if current_time_str < half_day_checkout_limit:
-                    attendance_mark = 'half_day'
-                    
-            # Factor in check-in state
-            today_start = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+            # Look up today's check-in record
+            today_start = _get_today_start_utc()
             check_in_log = AttendanceLog.query.filter(
                 AttendanceLog.teacher_id == teacher_id,
                 AttendanceLog.action_type == 'check_in',
                 AttendanceLog.status == 'success',
                 AttendanceLog.timestamp >= today_start
-            ).order_by(AttendanceLog.timestamp.desc()).first()
+            ).order_by(AttendanceLog.timestamp.asc()).first()
+
+            # Determine checkout timing
+            checkout_on_time = current_time_str >= class_end
+            checkout_before_absent_limit = current_time_str < absent_limit
 
             if check_in_log:
-                # 1. Configurable Minimum Gap Rule
-                # Check if the gap between check-in and check-out is less than min_working_hours
-                time_diff = datetime.utcnow() - check_in_log.timestamp
-                if time_diff.total_seconds() < (min_working_hours * 3600):
-                    attendance_mark = 'absent'
+                checkin_was_early = check_in_log.attendance_mark == 'present'
+                if checkout_before_absent_limit:
+                    attendance_mark = 'absent'     # Very early checkout -> absent
+                elif checkin_was_early and checkout_on_time:
+                    attendance_mark = 'present'    # Full day
+                elif checkin_was_early and not checkout_on_time:
+                    attendance_mark = 'half_day'   # Early checkout penalty -> half day
+                elif not checkin_was_early and checkout_on_time:
+                    attendance_mark = 'half_day'   # Late arrival, stayed till end -> half day
                 else:
-                    # 2. Inherit/Combine Check-in State
-                    ci_mark = check_in_log.attendance_mark
-                    if ci_mark == 'absent':
-                        attendance_mark = 'absent'
-                    elif ci_mark == 'flagged':
-                        attendance_mark = 'flagged'
-                    elif ci_mark == 'half_day':
-                        if attendance_mark == 'half_day':
-                            attendance_mark = 'absent'  # Missed both halves
-                        else:
-                            attendance_mark = 'half_day'
+                    attendance_mark = 'absent'     # Late arrival + Early checkout -> absent
+            else:
+                # No successful check-in found → treat as absent
+                attendance_mark = 'absent'
 
     limit = max_checkout if action_type == 'check_out' else max_checkin
     
-    # ── Mark Logic ──────────────────────────────────────────────────────────
+    # ââ Mark Logic ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
     # 'attendance_mark' will now be used as 'mark_on_success'
     # We define a separate 'mark_on_failure' to avoid flagging failed attempts.
     
@@ -733,7 +814,7 @@ def verify():
             } if action_type == 'check_out' else None,
         }), 200
 
-    # ── Step 1: GPS Geofencing ───────────────────────────────────────────────
+    # ââ Step 1: GPS Geofencing âââââââââââââââââââââââââââââââââââââââââââââââ
     # Support for Demo Mode: override geofence if demo params are provided
     demo_lat = data.get("demo_lat")
     demo_lng = data.get("demo_lng")
@@ -748,13 +829,29 @@ def verify():
     if demo_lat is not None and demo_lng is not None:
         logger.info("DEMO MODE: Evaluating spoofed coordinates (%s, %s) against real geofences.", latitude, longitude)
 
-    authorized, distance, status_code = is_within_geofence(
-        latitude, longitude, college_lat, college_lon, radius, 
-        geofence_config=geofence_config, buffer_meters=buffer_m, 
-        action_type=action_type, teacher_dept=teacher.department
-    )
+    if action_type == 'event_checkpoint':
+        from ..services.geo_service import haversine_distance, GeoPoint
+        distance = haversine_distance(GeoPoint(latitude, longitude), GeoPoint(checkpoint.lat, checkpoint.lng))
+        if distance <= checkpoint.radius:
+            authorized = True
+            status_code = "SUCCESS"
+        else:
+            authorized = False
+            status_code = "FAILURE_OUTSIDE_RADIUS"
+            
+        if demo_lat is not None and demo_lng is not None:
+             authorized = True
+             distance = 0.0
+             status_code = "SUCCESS"
+    else:
+        authorized, distance, status_code = is_within_geofence(
+            latitude, longitude, college_lat, college_lon, radius, 
+            geofence_config=geofence_config, buffer_meters=buffer_m, 
+            action_type=action_type, teacher_dept=teacher.department,
+            teacher_reg_no=teacher.reg_no
+        )
 
-    # ── Buffer Zone Check ────────────────────────────────────────────────────
+    # ââ Buffer Zone Check ââââââââââââââââââââââââââââââââââââââââââââââââââââ
     if status_code == "WARNING_NEAR_BOUNDARY":
         reason = f"You are in the buffer zone ({distance:.1f}m). Please move inside the campus and try again."
         return jsonify({
@@ -773,6 +870,8 @@ def verify():
         reason = f"Outside college premises (Geofence: ACCESS DENIED)"
         if status_code == "FAILURE_OUTSIDE_DEPT":
             reason = "You are inside the college but outside your assigned department block. Please move inside your department block to check in."
+        elif status_code == "FAILURE_OUTSIDE_RADIUS":
+            reason = f"You are outside the event location. Move closer to {checkpoint.name} ({distance:.1f}m > {checkpoint.radius}m)."
         if demo_lat is not None:
             reason = f"Demo Mode: Outside range ({distance}m > {radius}m)"
             
@@ -781,7 +880,7 @@ def verify():
 
     success_reason = "Verification successful"
 
-    # ── Step 2: Frame Processing ─────────────────────────────────────────────
+    # ââ Step 2: Frame Processing âââââââââââââââââââââââââââââââââââââââââââââ
     max_frames = cfg.get("MAX_FRAMES", 25)
     images, encodings, landmarks_seq, bboxes_seq, face_frame_count = process_frames(frames, max_frames)
     total_frames = len(images)
@@ -791,7 +890,7 @@ def verify():
         _write_log(teacher_id, latitude, longitude, "failure", reason, 0, "frame_decode", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, 0, 0, 1.0, server_time, action_type=action_type)
 
-    # ── Step 3: Face Detection Check ─────────────────────────────────────────
+    # ââ Step 3: Face Detection Check âââââââââââââââââââââââââââââââââââââââââ
     face_ratio = face_frame_count / total_frames
     min_ratio = cfg.get("MIN_FACE_FRAMES_RATIO", 0.60)
 
@@ -803,10 +902,10 @@ def verify():
         _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_detection", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, 1.0, server_time, action_type=action_type)
 
-    # ── Step 4: Face Recognition ─────────────────────────────────────────────
+    # ââ Step 4: Face Recognition âââââââââââââââââââââââââââââââââââââââââââââ
     # Threshold for Euclidean distance on L2-normalized 512-d InsightFace embeddings.
-    # buffalo_l same-person distances are typically 0.2–0.5; different people 0.8–1.4.
-    # 0.70 is a balanced operating point — real matches comfortably pass, impostors fail.
+    # buffalo_l same-person distances are typically 0.2â0.5; different people 0.8â1.4.
+    # 0.70 is a balanced operating point â real matches comfortably pass, impostors fail.
     threshold = cfg.get("FACE_RECOGNITION_THRESHOLD", 0.70)
     
     matched, best_distance = compare_encodings(encodings, teacher.face_encoding, threshold)
@@ -816,7 +915,7 @@ def verify():
         _write_log(teacher_id, latitude, longitude, "failure", reason, total_frames, "face_recognition", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
-    # ── Step 5: Liveness Detection ────────────────────────────────────────────
+    # ââ Step 5: Liveness Detection ââââââââââââââââââââââââââââââââââââââââââââ
     liveness_passed, liveness_reason = run_liveness_checks(
         images, bboxes_seq
     )
@@ -826,8 +925,17 @@ def verify():
                    total_frames, "liveness", action_type=action_type, attendance_mark=mark_on_failure, bypass_limits=bypass_limits)
         return _build_failure_response(teacher_id, liveness_reason, distance, face_frame_count, total_frames, best_distance, server_time, action_type=action_type)
 
-    # ── All checks passed → Mark attendance ─────────────────────────────────
-    _write_log(teacher_id, latitude, longitude, "success", success_reason, len(frames), action_type=action_type, attendance_mark=mark_on_success, bypass_limits=bypass_limits)
+    # ── All checks passed → Mark attendance ──────────────────────────────
+    if action_type == 'event_checkpoint':
+        attendance = EventAttendance(
+            checkpoint_id=checkpoint_id,
+            teacher_id=teacher_id,
+            status="attended"
+        )
+        db.session.add(attendance)
+        db.session.commit()
+    else:
+        _write_log(teacher_id, latitude, longitude, "success", success_reason, len(frames), action_type=action_type, attendance_mark=mark_on_success, bypass_limits=bypass_limits)
 
     logger.info(
         "Verification SUCCESS: teacher=%s type=%s distance_m=%.2f frames=%d/%d face_dist=%.4f",
@@ -846,3 +954,135 @@ def verify():
             "face_distance": best_distance,
         },
     }), 200
+
+@verify_bp.route("/leaves", methods=["GET"])
+@jwt_required()
+def get_leave_history():
+    teacher_id = get_jwt_identity()
+    from ..models import LeaveRequest
+    leaves = LeaveRequest.query.filter_by(teacher_id=teacher_id).order_by(LeaveRequest.applied_at.desc()).all()
+    
+    return jsonify({
+        "status": "success",
+        "leaves": [l.to_dict() for l in leaves]
+    }), 200
+
+@verify_bp.route("/leaves", methods=["POST"])
+@jwt_required()
+def apply_leave():
+    teacher_id = get_jwt_identity()
+    data = request.get_json(silent=True)
+    if not data:
+        return jsonify({"status": "failure", "reason": "No data provided"}), 400
+        
+    leave_type = data.get("leave_type") # 'normal' or 'emergency'
+    start_date_str = data.get("start_date")
+    end_date_str = data.get("end_date")
+    is_half_day = data.get("is_half_day", False)
+    reason = data.get("reason", "")
+    
+    if not leave_type or not start_date_str or not end_date_str:
+        return jsonify({"status": "failure", "reason": "Missing required fields"}), 400
+        
+    try:
+        start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"status": "failure", "reason": "Invalid date format, use YYYY-MM-DD"}), 400
+        
+    if start_date < datetime.utcnow().date() and leave_type == 'normal':
+        return jsonify({"status": "failure", "reason": "Normal leave cannot be applied for past dates."}), 400
+        
+    if start_date > end_date:
+        return jsonify({"status": "failure", "reason": "Start date cannot be after end date."}), 400
+        
+    from ..models import Setting, LeaveRequest
+    
+    # Check max active leaves limit
+    active_leaves_count = LeaveRequest.query.filter(
+        LeaveRequest.teacher_id == teacher_id,
+        LeaveRequest.status.in_(['approved', 'pending']),
+        LeaveRequest.end_date >= datetime.utcnow().date()
+    ).count()
+    
+    if active_leaves_count >= 2:
+        return jsonify({"status": "failure", "reason": "You can only have a maximum of 2 active (pending or approved) leave applications at a time."}), 400
+    
+    # Validation Rules
+    if leave_type == 'normal':
+        # Must be at least 16 hours before start_date
+        settings_dict = Setting.get_all()
+        rules = settings_dict.get("attendance_rules", {})
+        class_start = rules.get("class_start", "09:00")
+        start_dt = datetime.combine(start_date, datetime.strptime(class_start, "%H:%M").time())
+        if (start_dt - datetime.now()).total_seconds() < 16 * 3600:
+            return jsonify({"status": "failure", "reason": "Normal leaves must be applied at least 16 hours before the college day starts."}), 400
+            
+    elif leave_type == 'emergency':
+        # Check monthly limit
+        settings_dict = Setting.get_all()
+        emergency_limit = int(settings_dict.get("emergency_leave_limit", 2))
+        
+        # Count current month approved and pending emergency leaves
+        now = datetime.now()
+        month_start = now.replace(day=1).date()
+        
+        used = LeaveRequest.query.filter(
+            LeaveRequest.teacher_id == teacher_id,
+            LeaveRequest.leave_type == 'emergency',
+            LeaveRequest.status.in_(['approved', 'pending']),
+            LeaveRequest.start_date >= month_start
+        ).count()
+        
+        if used >= emergency_limit:
+            return jsonify({"status": "failure", "reason": f"You have reached your monthly limit of {emergency_limit} emergency leaves."}), 400
+            
+    else:
+        return jsonify({"status": "failure", "reason": "Invalid leave type. Must be 'normal' or 'emergency'."}), 400
+        
+    new_leave = LeaveRequest(
+        teacher_id=teacher_id,
+        leave_type=leave_type,
+        start_date=start_date,
+        end_date=end_date,
+        is_half_day=is_half_day,
+        reason=reason
+    )
+    from ..extensions import db
+    db.session.add(new_leave)
+    db.session.commit()
+    return jsonify({
+        "status": "success",
+        "message": "Leave application submitted successfully.",
+        "leave": new_leave.to_dict()
+    }), 201
+
+@verify_bp.route("/holidays", methods=["GET"])
+@jwt_required()
+def get_upcoming_holidays():
+    """GET /holidays - List upcoming holidays."""
+    from ..models import Holiday
+    from datetime import date
+    today = date.today()
+    holidays = Holiday.query.filter(Holiday.date >= today).order_by(Holiday.date.asc()).all()
+    return jsonify({"holidays": [h.to_dict() for h in holidays]}), 200
+
+@verify_bp.route("/leaves/<id>", methods=["DELETE"])
+@jwt_required()
+def delete_leave(id):
+    """DELETE /leaves/<id> - Delete a leave request if it hasn't passed."""
+    teacher_id = get_jwt_identity()
+    from ..models import LeaveRequest
+    from datetime import date
+    leave = LeaveRequest.query.filter_by(id=id, teacher_id=teacher_id).first()
+    if not leave:
+        return jsonify({"status": "failure", "reason": "Leave request not found."}), 404
+        
+    if leave.start_date < date.today():
+        return jsonify({"status": "failure", "reason": "Cannot delete leaves that have already started or passed."}), 400
+        
+    from ..extensions import db
+    db.session.delete(leave)
+    db.session.commit()
+    
+    return jsonify({"status": "success", "message": "Leave request deleted successfully."}), 200

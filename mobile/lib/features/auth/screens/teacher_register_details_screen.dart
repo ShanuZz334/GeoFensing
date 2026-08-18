@@ -36,7 +36,19 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
   @override
   void initState() {
     super.initState();
-    // Do not init camera automatically, wait for user to click 'Open Camera'
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final auth = context.read<AuthProvider>();
+      final user = auth.currentUser;
+      if (user != null) {
+        setState(() {
+          _nameController.text = user.fullName;
+          _emailController.text = user.email;
+          _phoneController.text = user.phoneNo ?? '';
+          _selectedDepartment = user.department;
+          _selectedRole = user.role;
+        });
+      }
+    });
   }
 
   Future<void> _startCamera() async {
@@ -107,9 +119,14 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     
-    if (_capturedImageBase64 == null) {
-      setState(() => _errorText = 'Please capture a profile photo (used for face recognition).');
-      return;
+    final auth = context.read<AuthProvider>();
+    final user = auth.currentUser;
+    
+    if (user != null && !user.hasFaceEncoding) {
+      if (_capturedImageBase64 == null) {
+        setState(() => _errorText = 'Please capture a profile photo (used for face recognition).');
+        return;
+      }
     }
 
     setState(() {
@@ -118,8 +135,6 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
     });
 
     try {
-      final auth = context.read<AuthProvider>();
-      
       final success = await auth.completeSetup(
         fullName: _nameController.text.trim(),
         email: _emailController.text.trim(),
@@ -127,7 +142,7 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
         role: _selectedRole ?? '',
         phoneNo: _phoneController.text.trim(),
         newPassword: _passwordController.text,
-        profilePicBase64: _capturedImageBase64!,
+        profilePicBase64: _capturedImageBase64,
       );
 
       if (success && mounted) {
@@ -353,8 +368,10 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                   const SizedBox(height: 24),
                 ],
 
-                Center(child: _buildCameraWidget()),
-                const SizedBox(height: 32),
+                if (auth.currentUser?.hasFaceEncoding != true) ...[
+                  Center(child: _buildCameraWidget()),
+                  const SizedBox(height: 32),
+                ],
 
                 // Reg No (Disabled)
                 const Text('Registration Number', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
@@ -378,53 +395,40 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                 // Department Dropdown (positioned right after Reg No)
                 const Text('Department', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                UiverseDropdown<String>(
-                  value: _selectedDepartment,
-                  hintText: 'Select School / Department',
-                  items: [
-                    'School of Computer Science & Engineering (CSE)',
-                    'School of Engineering',
-                    'Mittal School of Business / Management & Commerce',
-                    'School of Agriculture',
-                    'School of Pharmacy / Pharmaceutical Sciences',
-                    'School of Law',
-                    'School of Architecture & Design',
-                    'School of Hotel Management & Tourism',
-                    'School of Humanities & Social Sciences',
-                    'School of Sciences',
-                    'School of Media, Animation & Multimedia',
-                    'School of Education & Physical Education',
-                    'School of Allied Medical Sciences / Physiotherapy',
-                    'School of Computer Applications & IT',
-                  ].map((dept) => DropdownMenuItem<String>(
-                    value: dept,
-                    child: Text(dept, style: const TextStyle(color: Colors.white, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedDepartment = val),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Please select a department' : null,
+                TextFormField(
+                  key: ValueKey(_selectedDepartment), // Force rebuild if initialValue changes
+                  initialValue: _selectedDepartment ?? 'Unknown',
+                  enabled: false,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.02),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
                 // Role Dropdown
                 const Text('Role', style: TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 8),
-                UiverseDropdown<String>(
-                  value: _selectedRole,
-                  hintText: 'Select Your Role',
-                  items: [
-                    'Teaching Assistant (TA)',
-                    'Assistant Professor',
-                    'Associate Professor',
-                    'Professor',
-                    'Head of Department (HOD)',
-                    'Dean',
-                    'Director / Pro-Chancellor / Chancellor',
-                  ].map((role) => DropdownMenuItem<String>(
-                    value: role,
-                    child: Text(role, style: const TextStyle(color: Colors.white, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
-                  )).toList(),
-                  onChanged: (val) => setState(() => _selectedRole = val),
-                  validator: (v) => (v == null || v.isEmpty) ? 'Please select your role' : null,
+                TextFormField(
+                  key: ValueKey(_selectedRole), // Force rebuild if initialValue changes
+                  initialValue: _selectedRole ?? 'Unknown',
+                  enabled: false,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white.withValues(alpha: 0.02),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                  ),
                 ),
                 const SizedBox(height: 20),
 
@@ -479,24 +483,17 @@ class _TeacherRegisterDetailsScreenState extends State<TeacherRegisterDetailsScr
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: _emailController,
-                  keyboardType: TextInputType.emailAddress,
-                  style: const TextStyle(color: Colors.white),
+                  enabled: false,
+                  style: TextStyle(color: Colors.white.withValues(alpha: 0.5)),
                   decoration: InputDecoration(
-                    hintText: 'teacher@college.edu',
-                    hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.3)),
                     filled: true,
-                    fillColor: Colors.white.withValues(alpha: 0.05),
+                    fillColor: Colors.white.withValues(alpha: 0.02),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
                     ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
                   ),
-                  validator: (v) {
-                    if (v == null || v.trim().isEmpty) return 'Required';
-                    if (!v.contains('@')) return 'Invalid email';
-                    return null;
-                  },
                 ),
                 const SizedBox(height: 20),
 

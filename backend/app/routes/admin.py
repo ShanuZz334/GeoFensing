@@ -52,20 +52,39 @@ def log_admin_action(identity: str, action: str, details: str = None):
 @admin_bp.route("/login", methods=["POST"])
 def admin_login():
     """POST /admin/login — returns admin JWT."""
+    from ..extensions import redis_client
+    
     data = request.get_json(silent=True) or {}
     reg_no = data.get("reg_no", "")
     password = data.get("password", "")
 
+    # Brute-force protection: Max 5 attempts per 15 mins per IP
+    ip_addr = request.headers.get("X-Forwarded-For", request.remote_addr)
+    if ip_addr:
+        ip_addr = ip_addr.split(',')[0].strip()
+    rate_key = f"rate_limit:admin_login:{ip_addr}"
+
+    if redis_client:
+        attempts = redis_client.get(rate_key)
+        if attempts and int(attempts) >= 5:
+            return jsonify({"error": "Too many failed attempts. Try again in 15 minutes."}), 429
+
     admin = Admin.query.filter_by(reg_no=reg_no).first()
     if not admin or not bcrypt.check_password_hash(admin.password_hash, password):
+        if redis_client:
+            redis_client.incr(rate_key)
+            redis_client.expire(rate_key, 900)  # 15 mins
         return jsonify({"error": "Invalid admin credentials"}), 401
     
     if not admin.is_active:
         return jsonify({"error": "Admin account is deactivated"}), 403
 
+    if redis_client:
+        redis_client.delete(rate_key)
+
     token = create_access_token(
         identity=f"{_ADMIN_PREFIX}{reg_no}",
-        expires_delta=timedelta(hours=8),
+        expires_delta=timedelta(hours=5),
     )
     
     # Log successful login
@@ -73,7 +92,7 @@ def admin_login():
     
     return jsonify({
         "token": token, 
-        "expires_in": 28800,
+        "expires_in": 18000,
         "admin": admin.to_dict()
     }), 200
 
@@ -101,8 +120,8 @@ def generate_totp():
     if not _is_admin(identity):
         return jsonify({"error": "Admin access required"}), 403
         
-    import random
-    totp_code = f"{random.randint(0, 999999):06d}"
+    import secrets
+    totp_code = f"{secrets.randbelow(1_000_000):06d}"
     
     from ..models import Setting
     settings_dict = Setting.get_all()
@@ -118,31 +137,75 @@ def generate_totp():
         
     return jsonify({"error": "Redis not available. Cannot generate TOTP."}), 500
 
-@admin_bp.route("/teachers/<teacher_id>/reset-device", methods=["POST"])
+
+@admin_bp.route("/teachers/<teacher_id>/reset-temp-password", methods=["POST"])
 @jwt_required()
-def reset_device_lock(teacher_id):
-    """POST /admin/teachers/<id>/reset-device — forcefully clears device lock for a teacher."""
+def reset_temp_password(teacher_id):
+    """POST /admin/teachers/<id>/reset-temp-password - generates a new temp password if face is not encoded."""
     identity = get_jwt_identity()
     if not _is_admin(identity):
         return jsonify({"error": "Admin access required"}), 403
-        
-    current_reg = identity.replace(_ADMIN_PREFIX, "")
-    current_admin = Admin.query.filter_by(reg_no=current_reg).first()
-    if not current_admin or not current_admin.is_head_admin:
-        return jsonify({"error": "Only Head Admins can reset device locks"}), 403
         
     teacher = Teacher.query.filter_by(teacher_id=teacher_id).first()
     if not teacher:
         return jsonify({"error": "Teacher not found"}), 404
         
-    from .. import extensions
-    if extensions.redis_client:
-        extensions.redis_client.delete(f"active_device:{teacher_id}")
-        log_admin_action(identity, "RESET_DEVICE", f"Cleared device lock for teacher: {teacher.reg_no}")
-        return jsonify({"message": "Device lock cleared successfully."}), 200
+    has_face = bool(teacher.face_encoding and any(v != 0 for v in teacher.face_encoding))
+    if has_face:
+        return jsonify({"error": "Cannot reset password. Teacher has already completed face registration."}), 400
         
-    return jsonify({"error": "Redis not available. Cannot clear device lock."}), 500
+    import secrets
+    from ..services.email_service import send_credentials_email
+    
+    raw_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+    teacher.password_hash = bcrypt.generate_password_hash(raw_password).decode("utf-8")
+    db.session.commit()
+    
+    log_admin_action(identity, "RESET_TEMP_PASSWORD", f"Reset temporary password for faculty: {teacher.reg_no}")
+    
+    email_sent = False
+    if teacher.email:
+        email_sent = send_credentials_email(teacher.email, teacher.full_name, teacher.reg_no, raw_password)
+    
+    return jsonify({
+        "message": "Temporary password reset and emailed successfully." if email_sent else "Password reset successfully, but email not configured or failed.",
+        "password": raw_password # Can keep this for debug/logs if needed
+    }), 200
 
+
+@admin_bp.route("/teachers/<teacher_id>/allow-face-reregister", methods=["POST"])
+@jwt_required()
+def allow_face_reregister(teacher_id):
+    """POST /admin/teachers/<id>/allow-face-reregister — Grant teacher a 4hr window to re-scan face."""
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+
+    teacher = Teacher.query.filter_by(teacher_id=teacher_id).first()
+    if not teacher:
+        return jsonify({"error": "Teacher not found"}), 404
+
+    from datetime import timedelta
+    now = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # Don't re-grant if already active
+    if teacher.face_reregister_until and teacher.face_reregister_until > now:
+        remaining = int((teacher.face_reregister_until - now).total_seconds())
+        return jsonify({
+            "message": "Permission already active",
+            "remaining_seconds": remaining
+        }), 200
+
+    teacher.face_reregister_until = now + timedelta(hours=4)
+    db.session.commit()
+
+    log_admin_action(identity, "ALLOW_FACE_REREGISTER", f"Granted face re-registration to {teacher.reg_no} for 4 hours")
+
+    return jsonify({
+        "message": f"Face re-registration enabled for {teacher.full_name} for 4 hours.",
+        "expires_at": teacher.face_reregister_until.isoformat(),
+        "remaining_seconds": 14400
+    }), 200
 
 @admin_bp.route("/devices/reset-all", methods=["POST"])
 @jwt_required()
@@ -157,18 +220,15 @@ def reset_all_device_locks():
     if not current_admin or not current_admin.is_head_admin:
         return jsonify({"error": "Only Head Admins can reset all device locks"}), 403
 
-    from .. import extensions
-    if not extensions.redis_client:
-        return jsonify({"error": "Redis not available. Cannot clear device locks."}), 500
+    teachers = Teacher.query.filter(Teacher.locked_device_id.isnot(None)).all()
+    count = len(teachers)
+    for teacher in teachers:
+        teacher.locked_device_id = None
+    
+    db.session.commit()
 
-    # Scan and delete all active_device:* keys
-    keys = extensions.redis_client.keys("active_device:*")
-    count = len(keys)
-    if keys:
-        extensions.redis_client.delete(*keys)
-
-    log_admin_action(identity, "RESET_ALL_DEVICES", f"Cleared {count} active device session lock(s)")
-    return jsonify({"message": f"All device locks cleared. {count} session(s) released."}), 200
+    log_admin_action(identity, "RESET_ALL_DEVICES", f"Cleared {count} permanent device lock(s)")
+    return jsonify({"message": f"All device locks cleared. {count} device(s) released."}), 200
 
 # ── Global Settings ──────────────────────────────────────────────────────────
 
@@ -207,7 +267,14 @@ def update_settings():
             if isinstance(setting.value, dict) and isinstance(value, dict):
                 merged = {**setting.value, **value}
                 if merged != setting.value:
-                    changes[key] = f"{setting.value} -> {merged}"
+                    diff_old = {}
+                    diff_new = {}
+                    for k, v in merged.items():
+                        if k not in setting.value or setting.value[k] != v:
+                            if k in setting.value:
+                                diff_old[k] = setting.value[k]
+                            diff_new[k] = v
+                    changes[key] = f"{diff_old} -> {diff_new}"
                 setting.value = merged
             else:
                 if setting.value != value:
@@ -227,23 +294,194 @@ def update_settings():
             changes["geofence_config"] = "Geofence Configuration Updated"
             
         details_str = json.dumps(changes)
-        if len(details_str) > 200:
-            details_str = details_str[:197] + "..."
             
         log_admin_action(identity, "UPDATE_SETTINGS", details_str)
     return jsonify({"message": "Settings updated successfully"}), 200
 
 # ── Teachers CRUD ────────────────────────────────────────────────────────────
 
+@admin_bp.route("/teachers/<teacher_id>/resend_email", methods=["POST"])
+@jwt_required()
+def resend_teacher_email(teacher_id):
+    """
+    POST /admin/teachers/<id>/resend_email
+    Resends the welcome email (new password generated) to the teacher.
+    """
+    verify_admin()
+    teacher = Teacher.query.get(teacher_id)
+    if not teacher:
+        return jsonify({"error": "Teacher not found"}), 404
+        
+    if teacher.setup_complete:
+        return jsonify({"error": "Teacher has already completed setup"}), 400
+
+    # Auto-generate new 8-character password
+    import secrets
+    import string
+    raw_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+    teacher.password_hash = bcrypt.generate_password_hash(raw_password).decode("utf-8")
+    
+    db.session.commit()
+
+    # Send the email
+    from ..services.email_service import send_teacher_registration_email
+    send_teacher_registration_email(
+        to_email=teacher.email,
+        name=teacher.full_name,
+        reg_no=teacher.reg_no,
+        password=raw_password,
+        role=teacher.role,
+        department=teacher.department
+    )
+    
+    return jsonify({"message": "Email resent successfully"}), 200
+
 @admin_bp.route("/teachers", methods=["GET"])
 @jwt_required()
 def list_teachers():
-    """GET /admin/teachers — return all teachers."""
+    """GET /admin/teachers — return paginated teachers."""
     if not _is_admin(get_jwt_identity()):
         return jsonify({"error": "Admin access required"}), 403
 
-    teachers = Teacher.query.order_by(Teacher.created_at.desc()).all()
-    return jsonify({"teachers": [t.to_dict() for t in teachers], "total": len(teachers)}), 200
+    # Query params
+    page = request.args.get("page", 1, type=int)
+    per_page = request.args.get("per_page", 25, type=int)
+    search = request.args.get("search", "").strip()
+    department = request.args.get("department", "").strip()
+    status = request.args.get("status", "").strip()
+    face = request.args.get("face", "").strip()
+
+    query = Teacher.query
+
+    if search:
+        search_filter = f"%{search}%"
+        query = query.filter(
+            db.or_(
+                Teacher.full_name.ilike(search_filter),
+                Teacher.reg_no.ilike(search_filter),
+                Teacher.email.ilike(search_filter)
+            )
+        )
+    
+    if department:
+        query = query.filter(Teacher.department.ilike(f"%{department}%"))
+
+    if status == 'active':
+        query = query.filter(Teacher.is_active == True)
+    elif status == 'inactive':
+        query = query.filter(Teacher.is_active == False)
+
+    if face == 'yes':
+        query = query.filter(Teacher.face_encoding != None)
+    elif face == 'no':
+        query = query.filter(Teacher.face_encoding == None)
+
+    pagination = query.order_by(Teacher.created_at.desc()).paginate(
+        page=page, per_page=per_page, error_out=False
+    )
+
+    return jsonify({
+        "teachers": [t.to_dict() for t in pagination.items],
+        "total": pagination.total,
+        "page": pagination.page,
+        "pages": pagination.pages,
+        "per_page": pagination.per_page
+    }), 200
+
+# ── Bulk Import Teachers (CSV) ──────────────────────────────────────────────
+
+@admin_bp.route("/teachers/import", methods=["POST"])
+@jwt_required()
+def import_teachers_csv():
+    """POST /admin/teachers/import — bulk register teachers from CSV."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    import csv
+    from io import StringIO
+    
+    stream = StringIO(file.stream.read().decode("UTF8"), newline=None)
+    csv_reader = csv.DictReader(stream)
+    
+    # Required columns in CSV: reg_no
+    # Optional columns: full_name, email, department, role, phone_no
+    success_count = 0
+    errors = []
+    credentials = []
+
+    from ..services.email_service import send_credentials_email
+    
+    for row_num, row in enumerate(csv_reader, start=2): # Row 1 is header
+        reg_no = row.get("reg_no", "").strip()
+        if not reg_no:
+            errors.append(f"Row {row_num}: Missing reg_no")
+            continue
+            
+        if Teacher.query.filter_by(reg_no=reg_no).first():
+            errors.append(f"Row {row_num}: reg_no {reg_no} already exists")
+            continue
+            
+        email = row.get("email", "").strip().lower()
+        if not email:
+            errors.append(f"Row {row_num}: Missing email (Required for auto-sending credentials)")
+            continue
+            
+        if Teacher.query.filter_by(email=email).first():
+            errors.append(f"Row {row_num}: email {email} already exists")
+            continue
+            
+        # Set defaults
+        full_name = row.get("full_name", "").strip() or "Pending Registration"
+        department = row.get("department", "").strip() or "Pending"
+        role = row.get("role", "").strip() or "Pending"
+        phone_no = row.get("phone_no", "").strip() or "Pending"
+        
+        import secrets
+        import string
+        
+        # Auto-generate temporary password
+        raw_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+        password_hash = bcrypt.generate_password_hash(raw_password).decode("utf-8")
+        
+        teacher = Teacher(
+            full_name=full_name,
+            email=email,
+            reg_no=reg_no,
+            department=department,
+            role=role,
+            phone_no=phone_no,
+            password_hash=password_hash,
+            face_encoding=[0.0] * 512,
+        )
+        db.session.add(teacher)
+        success_count += 1
+        
+        # Attempt to send email
+        email_sent = send_credentials_email(email, full_name, reg_no, raw_password)
+        if not email_sent:
+             errors.append(f"Row {row_num}: Teacher created, but failed to send email to {email}")
+        
+        credentials.append({
+            "reg_no": reg_no,
+            "full_name": full_name,
+            "password": raw_password,
+            "email_sent": email_sent
+        })
+        
+    db.session.commit()
+    log_admin_action(get_jwt_identity(), "IMPORT_TEACHERS", f"Imported {success_count} faculty members from CSV")
+    
+    return jsonify({
+        "message": f"Successfully imported {success_count} teachers. Credentials have been emailed.",
+        "errors": errors,
+        "credentials": credentials
+    }), 200
 
 
 @admin_bp.route("/teachers", methods=["POST"])
@@ -255,37 +493,40 @@ def register_teacher():
 
     data = request.get_json(silent=True) or {}
     
-    if data.get("is_temporary"):
-        reg = data.get("reg_no", "").strip()
-        data["full_name"] = "Pending Registration"
-        data["email"] = f"temp_{reg}@geoface.local"
-        data["department"] = "Pending"
-        data["role"] = "Pending"
-        data["phone_no"] = "Pending"
-
     valid, error = validate_teacher_register_payload(data)
     if not valid:
         return jsonify({"error": error}), 400
 
-    email = data["email"].strip().lower()
+    email = data.get("email", "").strip().lower()
+    if not email:
+        return jsonify({"error": "Email is required"}), 400
+
     if Teacher.query.filter_by(email=email).first():
         return jsonify({"error": "A teacher with this email already exists"}), 409
 
-    reg_no = data["reg_no"].strip()
+    reg_no = data.get("reg_no", "").strip()
+    if not reg_no:
+        return jsonify({"error": "Registration Number is required"}), 400
+
     if Teacher.query.filter_by(reg_no=reg_no).first():
         return jsonify({"error": "A teacher with this Registration Number already exists"}), 409
 
-    password_hash = bcrypt.generate_password_hash(data["password"]).decode("utf-8")
+    import secrets
+    import string
+    
+    # Auto-generate 8-character password
+    raw_password = ''.join(secrets.choice(string.ascii_letters + string.digits) for _ in range(8))
+    password_hash = bcrypt.generate_password_hash(raw_password).decode("utf-8")
 
-    # Use provided encoding if available, otherwise use dummy
-    encoding = data.get("face_encoding", [0.0] * 128)
+    # Use provided encoding if available, otherwise use dummy (InsightFace uses 512 dims)
+    encoding = data.get("face_encoding", [0.0] * 512)
     profile_pic = data.get("profile_pic")
 
     teacher = Teacher(
-        full_name=data["full_name"].strip(),
+        full_name=data.get("full_name", "").strip(),
         email=email,
-        reg_no=data["reg_no"].strip(),
-        department=data["department"].strip(),
+        reg_no=reg_no,
+        department=data.get("department", "").strip(),
         role=data.get("role", "").strip(),
         phone_no=data.get("phone_no", "").strip(),
         password_hash=password_hash,
@@ -296,10 +537,39 @@ def register_teacher():
     )
     db.session.add(teacher)
     db.session.commit()
-    log_admin_action(get_jwt_identity(), "ADD_TEACHER", f"Registered teacher: {teacher.reg_no}")
+    log_admin_action(get_jwt_identity(), "ADD_TEACHER", f"Registered faculty: {teacher.reg_no}")
 
-    return jsonify({"message": "Teacher registered successfully", "teacher": teacher.to_dict()}), 201
+    # Send Credentials Email
+    email_sent = False
+    if not email.endswith("@geoface.local"):
+        from ..services.email_service import send_credentials_email
+        email_sent = send_credentials_email(email, teacher.full_name, reg_no, raw_password)
 
+    return jsonify({
+        "message": "Teacher registered successfully. Credentials emailed." if email_sent else ("Teacher registered successfully." if email.endswith("@geoface.local") else "Teacher registered successfully. Email not configured or failed."), 
+        "teacher": teacher.to_dict()
+    }), 201
+
+
+# ── Autocomplete / Search ────────────────────────────────────────────────────────
+
+@admin_bp.route("/teachers/autocomplete", methods=["GET"])
+@jwt_required()
+def autocomplete_teachers():
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    q = request.args.get("q", "").strip()
+    if not q:
+        return jsonify([]), 200
+        
+    try:
+        teachers = Teacher.query.filter(Teacher.reg_no.like(f"%{q}%")).limit(10).all()
+        results = [{"reg_no": t.reg_no, "full_name": t.full_name} for t in teachers if t.reg_no]
+        return jsonify(results), 200
+    except Exception as e:
+        import traceback
+        return jsonify({"error": str(e), "trace": traceback.format_exc()}), 500
 
 # ── Leave Management ─────────────────────────────────────────────────────────
 
@@ -411,8 +681,8 @@ def update_teacher(teacher_id: str):
         teacher.is_active = bool(data["is_active"])
     if "face_encoding" in data:
         enc = data["face_encoding"]
-        if not isinstance(enc, list) or len(enc) != 128:
-            return jsonify({"error": "face_encoding must be 128 floats"}), 400
+        if not isinstance(enc, list) or len(enc) != 512:
+            return jsonify({"error": "face_encoding must be 512 floats"}), 400
         teacher.face_encoding = enc
     if "college_latitude" in data:
         teacher.college_latitude = float(data["college_latitude"])
@@ -421,7 +691,12 @@ def update_teacher(teacher_id: str):
 
     teacher.updated_at = datetime.now(timezone.utc)
     db.session.commit()
-    log_admin_action(get_jwt_identity(), "UPDATE_TEACHER", f"Updated teacher: {teacher.reg_no}")
+    
+    from .. import extensions
+    if extensions.redis_client:
+        extensions.redis_client.delete(f"teacher:{teacher.teacher_id}")
+        
+    log_admin_action(get_jwt_identity(), "UPDATE_TEACHER", f"Updated faculty: {teacher.reg_no}")
     return jsonify({"message": "Teacher updated", "teacher": teacher.to_dict()}), 200
 
 
@@ -435,9 +710,24 @@ def delete_teacher(teacher_id: str):
     teacher = Teacher.query.get_or_404(teacher_id)
     db.session.delete(teacher)
     db.session.commit()
-    log_admin_action(get_jwt_identity(), "DELETE_TEACHER", f"Deleted teacher: {teacher.reg_no}")
+    log_admin_action(get_jwt_identity(), "DELETE_TEACHER", f"Deleted faculty: {teacher.reg_no}")
     return jsonify({"message": "Teacher deleted permanently"}), 200
 
+
+@admin_bp.route("/teachers/<teacher_id>/release-device", methods=["POST"])
+@jwt_required()
+def release_device_lock(teacher_id: str):
+    """POST /admin/teachers/<id>/release-device — clear the device lock."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+
+    teacher = Teacher.query.get_or_404(teacher_id)
+    teacher.locked_device_id = None
+    teacher.updated_at = datetime.now(timezone.utc)
+    db.session.commit()
+    
+    log_admin_action(get_jwt_identity(), "RELEASE_DEVICE", f"Released device lock for faculty: {teacher.reg_no}")
+    return jsonify({"message": "Device lock released successfully"}), 200
 
 # ── Attendance Logs ──────────────────────────────────────────────────────────
 
@@ -497,6 +787,15 @@ def get_attendance():
 
     teacher_joined = False
 
+    # Exclude Demo Mode and Auto-marked absent by default so pagination works correctly
+    exclude_system = request.args.get("exclude_system", "true").lower() == "true"
+    if exclude_system:
+        from sqlalchemy import or_
+        query = query.filter(
+            or_(AttendanceLog.reason.is_(None), ~AttendanceLog.reason.contains("Demo Mode")),
+            or_(AttendanceLog.reason.is_(None), ~AttendanceLog.reason.contains("Auto-marked absent"))
+        )
+
     if reg_no_filter:
         from ..models import Teacher
         query = query.join(Teacher, AttendanceLog.teacher_id == Teacher.teacher_id)
@@ -528,6 +827,84 @@ def get_attendance():
         "pages": paginated.pages,
     }), 200
 
+
+# ── Monthly Attendance Report ───────────────────────────────────────────────
+
+@admin_bp.route("/reports/monthly", methods=["GET"])
+@jwt_required()
+def monthly_report():
+    """GET /admin/reports/monthly — aggregated attendance for a given month."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+
+    try:
+        year = int(request.args.get("year", datetime.today().year))
+        month = int(request.args.get("month", datetime.today().month))
+    except ValueError:
+        return jsonify({"error": "Invalid year or month"}), 400
+
+    from calendar import monthrange
+    num_days = monthrange(year, month)[1]
+    
+    start_date = datetime(year, month, 1)
+    if month == 12:
+        end_date = datetime(year + 1, 1, 1)
+    else:
+        end_date = datetime(year, month + 1, 1)
+
+    logs = AttendanceLog.query.filter(
+        AttendanceLog.timestamp >= start_date,
+        AttendanceLog.timestamp < end_date
+    ).all()
+    
+    teachers = Teacher.query.order_by(Teacher.full_name.asc()).all()
+    
+    report = []
+    
+    for teacher in teachers:
+        # Group logs by day for this teacher
+        teacher_logs = [log for log in logs if log.teacher_id == teacher.teacher_id]
+        
+        present_count = 0
+        absent_count = 0
+        half_day_count = 0
+        
+        days_data = {}
+        for d in range(1, num_days + 1):
+            days_data[str(d)] = "—"
+            
+        for log in teacher_logs:
+            day = str(log.timestamp.day)
+            mark = log.attendance_mark
+            
+            # Use the most successful/highest priority mark for the day
+            if mark == "present":
+                days_data[day] = "P"
+                present_count += 1
+            elif mark == "half_day" and days_data[day] != "P":
+                days_data[day] = "HD"
+                half_day_count += 1
+            elif mark == "absent" and days_data[day] not in ("P", "HD"):
+                days_data[day] = "A"
+                absent_count += 1
+                
+        report.append({
+            "teacher_id": teacher.teacher_id,
+            "reg_no": teacher.reg_no or "N/A",
+            "full_name": teacher.full_name,
+            "department": teacher.department,
+            "present": present_count,
+            "absent": absent_count,
+            "half_day": half_day_count,
+            "days": days_data
+        })
+        
+    return jsonify({
+        "year": year,
+        "month": month,
+        "num_days": num_days,
+        "report": report
+    }), 200
 
 
 @admin_bp.route("/attendance/<log_id>", methods=["PATCH"])
@@ -621,6 +998,7 @@ def get_stats():
             func.count(AttendanceLog.id).label('count')
         )
         .filter(AttendanceLog.timestamp >= trend_start)
+        .filter(db.or_(AttendanceLog.reason == None, ~AttendanceLog.reason.ilike("%Auto-Mark%")))
         .group_by(cast(AttendanceLog.timestamp, Date), AttendanceLog.status)
         .all()
     )
@@ -704,7 +1082,7 @@ def encode_face():
     """
     POST /admin/encode-face
     Body: { "image": "<base64-jpeg>" }
-    Returns: { "encoding": [128 floats] }
+    Returns: { "encoding": [512 floats] }
 
     Used by admin panel webcam capture to generate face encodings
     before registering a new teacher.
@@ -1207,3 +1585,221 @@ def trigger_auto_absent():
         }), 200
     except Exception as e:
         return jsonify({"error": f"Auto-absent job failed: {str(e)}"}), 500
+
+
+# ── Holidays ─────────────────────────────────────────────────────────────────
+
+@admin_bp.route("/holidays", methods=["GET"])
+@jwt_required()
+def get_holidays():
+    """GET /admin/holidays — list all holidays."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+    
+    from ..models.holiday import Holiday
+    holidays = Holiday.query.order_by(Holiday.date.asc()).all()
+    return jsonify({"holidays": [h.to_dict() for h in holidays]}), 200
+
+@admin_bp.route("/holidays", methods=["POST"])
+@jwt_required()
+def create_holiday():
+    """POST /admin/holidays — create a holiday."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+    
+    data = request.get_json(silent=True) or {}
+    date_str = data.get("date")
+    name = data.get("name")
+    is_full_day = data.get("is_full_day", True)
+
+    if not date_str or not name:
+        return jsonify({"error": "date and name are required"}), 400
+
+    from ..models.holiday import Holiday
+    try:
+        dt = datetime.strptime(date_str, "%Y-%m-%d").date()
+    except ValueError:
+        return jsonify({"error": "Invalid date format. Use YYYY-MM-DD."}), 400
+
+    if Holiday.query.filter_by(date=dt).first():
+        return jsonify({"error": "A holiday on this date already exists"}), 409
+
+    holiday = Holiday(date=dt, name=name.strip(), is_full_day=bool(is_full_day))
+    db.session.add(holiday)
+    db.session.commit()
+    
+    log_admin_action(get_jwt_identity(), "CREATE_HOLIDAY", f"Added holiday: {name} on {date_str}")
+    return jsonify({"message": "Holiday created", "holiday": holiday.to_dict()}), 201
+
+@admin_bp.route("/holidays/<int:holiday_id>", methods=["DELETE"])
+@jwt_required()
+def delete_holiday(holiday_id: int):
+    """DELETE /admin/holidays/<id> — remove a holiday."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+    
+    from ..models.holiday import Holiday
+    holiday = Holiday.query.get_or_404(holiday_id)
+    db.session.delete(holiday)
+    db.session.commit()
+
+    log_admin_action(get_jwt_identity(), "DELETE_HOLIDAY", f"Removed holiday: {holiday.name}")
+    return jsonify({"message": "Holiday removed"}), 200
+
+
+@admin_bp.route("/leaves", methods=["GET"])
+@jwt_required()
+def get_admin_leaves():
+    """GET /admin/leaves - list leave requests."""
+    if not _is_admin(get_jwt_identity()):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    from ..models import LeaveRequest, Teacher
+    
+    status_filter = request.args.get("status")
+    type_filter = request.args.get("type")
+    reg_no_filter = request.args.get("reg_no")
+    
+    query = LeaveRequest.query
+    
+    if status_filter and status_filter != 'all':
+        query = query.filter_by(status=status_filter)
+        
+    if type_filter and type_filter != 'all':
+        query = query.filter_by(leave_type=type_filter)
+        
+    if reg_no_filter:
+        query = query.join(Teacher).filter(Teacher.reg_no.like(f"%{reg_no_filter}%"))
+        
+    leaves = query.order_by(LeaveRequest.applied_at.desc()).all()
+        
+    from .verify import calculate_teacher_stats
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+        
+    result = []
+    for l in leaves:
+        d = l.to_dict()
+        teacher = Teacher.query.get(l.teacher_id)
+        d['teacher_name'] = teacher.full_name if teacher else "Unknown"
+        d['teacher_reg_no'] = teacher.reg_no if teacher else "N/A"
+        d['teacher_profile_pic'] = teacher.profile_pic if teacher else None
+        
+        if teacher:
+            stats = calculate_teacher_stats(teacher.teacher_id, month_start, is_sem=False)
+            d['leaves_this_month'] = stats.get('approved_full_leaves', 0) + stats.get('approved_half_leaves', 0)
+            d['current_cut_percent'] = stats.get('deduction_pct', 0.0)
+        else:
+            d['leaves_this_month'] = 0
+            d['current_cut_percent'] = 0.0
+            
+        result.append(d)
+        
+    return jsonify({"leaves": result}), 200
+
+@admin_bp.route("/leaves/<id>", methods=["PATCH"])
+@jwt_required()
+def update_leave_status(id: str):
+    """PATCH /admin/leaves/<id> - approve or reject a leave request."""
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    reg_no = identity.replace(_ADMIN_PREFIX, "")
+    from ..models import Admin, LeaveRequest
+    admin = Admin.query.filter_by(reg_no=reg_no).first()
+    if not admin:
+        return jsonify({"error": "Admin not found"}), 404
+        
+    leave = LeaveRequest.query.get_or_404(id)
+    
+    data = request.get_json(silent=True) or {}
+    new_status = data.get("status")
+    
+    if new_status not in ["approved", "rejected"]:
+        return jsonify({"error": "Invalid status. Must be 'approved' or 'rejected'"}), 400
+        
+    leave.status = new_status
+    leave.reviewed_at = datetime.utcnow()
+    leave.reviewed_by = admin.id
+    
+    db.session.commit()
+    
+    # Log the action
+    from ..models import AdminLog, Teacher
+    teacher = Teacher.query.get(leave.teacher_id)
+    reg_no_display = teacher.reg_no if teacher else leave.teacher_id
+    log = AdminLog(
+        admin_reg_no=admin.reg_no, 
+        action=f"leave_{new_status}", 
+        details=f"{new_status.capitalize()} leave request for faculty {reg_no_display}"
+    )
+    db.session.add(log)
+    db.session.commit()
+    
+    return jsonify({"message": f"Leave {new_status} successfully", "leave": leave.to_dict()}), 200
+
+
+@admin_bp.route("/teachers/<teacher_id>/stats", methods=["GET"])
+@jwt_required()
+def get_faculty_stats(teacher_id: str):
+    identity = get_jwt_identity()
+    if not _is_admin(identity):
+        return jsonify({"error": "Admin access required"}), 403
+        
+    from ..models import Teacher
+    teacher = Teacher.query.get(teacher_id)
+    if not teacher:
+        return jsonify({"error": "Faculty not found"}), 404
+        
+    from .verify import calculate_teacher_stats
+    from datetime import datetime, timezone
+    now = datetime.now(timezone.utc)
+    month_start = now.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    
+    stats = calculate_teacher_stats(teacher_id, month_start, is_sem=False)
+    leaves_this_month = stats.get('approved_full_leaves', 0) + stats.get('approved_half_leaves', 0)
+    current_cut_percent = stats.get('deduction_pct', 0.0)
+    
+    # Calculate today's status
+    from ..models import AttendanceLog, LeaveRequest
+    from datetime import timedelta
+    today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+    today_end = today_start + timedelta(days=1)
+    
+    today_status = "Not Checked In"
+    
+    # Check for leave today
+    leave_today = LeaveRequest.query.filter(
+        LeaveRequest.teacher_id == teacher_id,
+        LeaveRequest.status == 'approved',
+        LeaveRequest.start_date <= today_start.date(),
+        LeaveRequest.end_date >= today_start.date()
+    ).first()
+    
+    if leave_today:
+        today_status = "Half Day Leave" if leave_today.is_half_day else "On Leave"
+    else:
+        # Check logs
+        latest_log = AttendanceLog.query.filter(
+            AttendanceLog.teacher_id == teacher_id,
+            AttendanceLog.timestamp >= today_start,
+            AttendanceLog.timestamp < today_end
+        ).order_by(AttendanceLog.timestamp.desc()).first()
+        
+        if latest_log:
+            if latest_log.attendance_mark == "absent":
+                today_status = "Absent"
+            elif latest_log.action_type == "check_in":
+                today_status = "In Campus"
+            elif latest_log.action_type == "check_out" or latest_log.action_type == "completed":
+                today_status = "Checked Out"
+                
+    return jsonify({
+        "teacher": teacher.to_dict(),
+        "today_status": today_status,
+        "leaves_taken": leaves_this_month,
+        "cut_pct": current_cut_percent
+    }), 200
+

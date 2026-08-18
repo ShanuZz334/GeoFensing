@@ -10,7 +10,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_loader.dart';
 
 class VerificationScreen extends StatefulWidget {
-  const VerificationScreen({super.key});
+  final String? checkpointId;
+  const VerificationScreen({super.key, this.checkpointId});
 
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
@@ -38,7 +39,7 @@ class _VerificationScreenState extends State<VerificationScreen> with SingleTick
 
   Future<void> _onStartPressed() async {
     final provider = context.read<VerificationProvider>();
-    await provider.startVerification();
+    await provider.startVerification(checkpointId: widget.checkpointId);
 
     if (!mounted) return;
     if (provider.status == VerificationStatus.success ||

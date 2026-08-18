@@ -6,10 +6,8 @@ class ApiConstants {
   ApiConstants._();
 
   // ── Base URL ──────────────────────────────────────────────────────────────
-  // Dynamically fetched from GitHub at app startup via RemoteConfigService.
-  // To change the server URL: update config/app_config.json on GitHub.
-  // NO APK REBUILD NEEDED.
-  static String get baseUrl => RemoteConfigService.baseUrl;
+  // Permanent Institutional URL. Pointing directly to our Cloudflare Tunnel.
+  static String get baseUrl => 'https://api.praxistrade.website/api';
 
   // ── Endpoints ──────────────────────────────────────────────────────────────
   static const String login = '/login';

@@ -17,6 +17,8 @@ let mainPolygonLayer = null;
 let bufferPolygonLayer = null;
 let subPolygonLayers = [];
 let checkpointLayers = [];
+let attendanceLatestLayer;
+let attendanceAllLayer;
 
 // Editor state
 let editMode = false;
@@ -55,7 +57,26 @@ async function initMap() {
     "Dark Mode": darkMap
   };
 
-  L.control.layers(baseMaps, null, { position: 'topleft' }).addTo(map);
+  attendanceLatestLayer = L.layerGroup().addTo(map);
+  attendanceAllLayer = L.layerGroup(); // Not added to map by default
+
+  const overlayMaps = {
+    "Attendance (Latest Only)": attendanceLatestLayer,
+    "Attendance (All History)": attendanceAllLayer
+  };
+
+  L.control.layers(baseMaps, overlayMaps, { position: 'topleft' }).addTo(map);
+
+  // Make the two attendance layers mutually exclusive (like radio buttons)
+  map.on('overlayadd', function(e) {
+    setTimeout(() => {
+      if (e.name === "Attendance (Latest Only)") {
+        if (map.hasLayer(attendanceAllLayer)) map.removeLayer(attendanceAllLayer);
+      } else if (e.name === "Attendance (All History)") {
+        if (map.hasLayer(attendanceLatestLayer)) map.removeLayer(attendanceLatestLayer);
+      }
+    }, 10);
+  });
 
   map.on('click', onMapClick);
 
@@ -83,8 +104,6 @@ function clearAllLayers() {
   if (bufferPolygonLayer) map.removeLayer(bufferPolygonLayer);
   subPolygonLayers.forEach(l => map.removeLayer(l));
   subPolygonLayers = [];
-  checkpointLayers.forEach(l => map.removeLayer(l));
-  checkpointLayers = [];
 }
 
 function drawAllGeofences() {
@@ -150,47 +169,6 @@ function drawAllGeofences() {
     });
   }
 
-  // 3. Draw Checkpoints
-  if ((mode === 3 || editMode) && currentConfig.checkpoints) {
-    currentConfig.checkpoints.forEach((cp, idx) => {
-      if (!cp.lat || !cp.lng || !cp.radius) return;
-      const layer = L.circle([cp.lat, cp.lng], {
-        color: '#7c3aed',
-        fillColor: '#7c3aed',
-        fillOpacity: 0.15,
-        radius: cp.radius,
-        weight: 2
-      }).addTo(map);
-      checkpointLayers.push(layer);
-
-      const pinIcon = L.divIcon({
-        className: 'custom-pin-icon',
-        html: `<svg viewBox="0 0 384 512" style="width:24px; height:32px; filter:drop-shadow(2px 4px 4px rgba(0,0,0,0.6));">
-          <!-- Main body of pin -->
-          <path fill="#7c3aed" d="M384 192c0 87.4-117 243-168.3 307.2c-12.3 15.3-35.1 15.3-47.4 0C117 435 0 279.4 0 192C0 86 86 0 192 0S384 86 384 192z"></path>
-          <!-- Shading for 3D effect -->
-          <path fill="#5b21b6" d="M192 0C86 0 0 86 0 192c0 87.4 117 243 168.3 307.2c3.1 3.8 7.3 6 11.7 6.8V0c4 0 8 0 12 0z" opacity="0.3"></path>
-          <!-- Center white circle -->
-          <circle cx="192" cy="192" r="75" fill="#ffffff"></circle>
-          <!-- Number -->
-          <text x="192" y="235" font-size="130" font-family="sans-serif" font-weight="bold" fill="#7c3aed" text-anchor="middle">${idx + 1}</text>
-        </svg>`,
-        iconSize: [24, 32],
-        iconAnchor: [12, 32],
-        popupAnchor: [0, -32]
-      });
-
-      const pinLayer = L.marker([cp.lat, cp.lng], { icon: pinIcon }).addTo(map);
-      checkpointLayers.push(pinLayer);
-
-      let popupContent = `<strong>Checkpoint</strong><br>Radius: ${cp.radius}m`;
-      if (editMode) {
-        popupContent += `<br><button class="btn-secondary" style="margin-top:8px; width:100%; color:red; border-color:red" onclick="deleteCheckpoint(${idx})">Delete Checkpoint</button>`;
-      }
-      pinLayer.bindPopup(popupContent);
-      layer.bindPopup(popupContent);
-    });
-  }
 }
 
 window.deleteSubPolygon = async function(idx) {
@@ -200,12 +178,7 @@ window.deleteSubPolygon = async function(idx) {
   }
 };
 
-window.deleteCheckpoint = async function(idx) {
-  if (await uiConfirm("Delete Checkpoint?", "Are you sure you want to delete this checkpoint?")) {
-    currentConfig.checkpoints.splice(idx, 1);
-    drawAllGeofences();
-  }
-};
+
 
 
 // ── EDITOR CONTROLS ──
@@ -276,8 +249,6 @@ window.setEditorTool = function(tool) {
     document.getElementById('btn-save-geofence').innerText = "Save All Changes";
   } else if (activeTool === 'sub') {
     document.getElementById('btn-save-geofence').innerText = "Finish Sub-Polygon";
-  } else if (activeTool === 'cp') {
-    document.getElementById('btn-save-geofence').innerText = "Finish Checkpoint";
   }
   
   updateToolUI();
@@ -290,7 +261,7 @@ window.setEditorTool = function(tool) {
 };
 
 function updateToolUI() {
-  ['main', 'sub', 'cp'].forEach(t => {
+  ['main', 'sub'].forEach(t => {
     const btn = document.getElementById(`tool-${t}`);
     if(btn) {
       if (activeTool === t) {
@@ -318,14 +289,17 @@ function clearGeofence() {
 }
 
 function onMapClick(e) {
+  if (isPlacingEventCp) {
+    eventCpCoords = [e.latlng.lat, e.latlng.lng];
+    if (eventCpMarker) map.removeLayer(eventCpMarker);
+    eventCpMarker = L.circleMarker(eventCpCoords, { radius: 6, color: '#10b981', fillColor: '#fff', fillOpacity: 1 }).addTo(map);
+    document.getElementById('checkpoint-modal').style.display = 'flex';
+    return;
+  }
+
   if (!editMode) return;
   
-  if (activeTool === 'cp') {
-    // Checkpoints only need 1 point
-    draftPoints = [[e.latlng.lat, e.latlng.lng]];
-  } else {
-    draftPoints.push([e.latlng.lat, e.latlng.lng]);
-  }
+  draftPoints.push([e.latlng.lat, e.latlng.lng]);
   redrawDraft();
 }
 
@@ -342,11 +316,7 @@ function addManualPoint() {
     return;
   }
 
-  if (activeTool === 'cp') {
-    draftPoints = [[lat, lng]];
-  } else {
-    draftPoints.push([lat, lng]);
-  }
+  draftPoints.push([lat, lng]);
   
   redrawDraft();
   map.setView([lat, lng], map.getZoom());
@@ -358,38 +328,24 @@ function redrawDraft() {
   clearDraft();
 
   if (draftPoints.length > 0) {
-    if (activeTool === 'cp') {
-      const p = draftPoints[0];
-      draftLayer = L.circle(p, { color: 'white', fillColor: 'white', fillOpacity: 0.5, radius: 20 }).addTo(map);
-      
-      const marker = L.circleMarker(p, { radius: 5, color: 'white', fillColor: '#fff', fillOpacity: 1 }).addTo(map);
+    // Polygon drawing (Main or Sub)
+    let drawColor = activeTool === 'main' ? 'red' : 'magenta';
+    
+    if (draftPoints.length >= 3) {
+      draftLayer = L.polygon(draftPoints, { color: drawColor, weight: 2, fillOpacity: 0.2 }).addTo(map);
+    } else {
+      draftLayer = L.polyline(draftPoints, { color: drawColor, weight: 2 }).addTo(map);
+    }
+
+    draftPoints.forEach((p, idx) => {
+      const marker = L.circleMarker(p, { radius: 5, color: drawColor, fillColor: '#fff', fillOpacity: 1 }).addTo(map);
       marker.on('click', (e) => {
         L.DomEvent.stopPropagation(e);
-        draftPoints = [];
+        draftPoints.splice(idx, 1);
         redrawDraft();
       });
       draftMarkers.push(marker);
-
-    } else {
-      // Polygon drawing (Main or Sub)
-      let drawColor = activeTool === 'main' ? 'red' : 'magenta';
-      
-      if (draftPoints.length >= 3) {
-        draftLayer = L.polygon(draftPoints, { color: drawColor, weight: 2, fillOpacity: 0.2 }).addTo(map);
-      } else {
-        draftLayer = L.polyline(draftPoints, { color: drawColor, weight: 2 }).addTo(map);
-      }
-
-      draftPoints.forEach((p, idx) => {
-        const marker = L.circleMarker(p, { radius: 5, color: drawColor, fillColor: '#fff', fillOpacity: 1 }).addTo(map);
-        marker.on('click', (e) => {
-          L.DomEvent.stopPropagation(e);
-          draftPoints.splice(idx, 1);
-          redrawDraft();
-        });
-        draftMarkers.push(marker);
-      });
-    }
+    });
   }
 }
 
@@ -411,19 +367,6 @@ async function saveGeofence() {
         document.getElementById('sub-polygon-modal').style.display = 'flex';
         return;
     }
-    // If no draft points, fall through to save overall config (e.g., after deletion)
-  }
-  
-  if (activeTool === 'cp') {
-    if (draftPoints.length > 0) {
-      if (draftPoints.length !== 1) {
-        uiAlert("Error", "Click the map to place one checkpoint dot.");
-        return;
-      }
-      document.getElementById('checkpoint-modal').style.display = 'flex';
-      return;
-    }
-    // If no draft points, fall through to save overall config (e.g., after deletion)
   }
   
   // Main Geofence Save All
@@ -433,7 +376,6 @@ async function saveGeofence() {
   
   try {
     const payload = { geofence_config: currentConfig };
-    console.log("PAYLOAD_MAIN:", JSON.stringify(payload));
     const res = await api('/admin/geofence', 'PUT', payload);
     if (res && res.geofence_config) {
       currentConfig = res.geofence_config;
@@ -561,6 +503,7 @@ async function saveFullConfigToBackend() {
     const res = await api('/admin/geofence', 'PUT', payload);
     if (res && res.geofence_config) {
       currentConfig = res.geofence_config;
+
       // uiAlert("Success", "Added successfully!");
       // Switch back to main tool automatically
       setEditorTool('main');
@@ -570,8 +513,7 @@ async function saveFullConfigToBackend() {
   }
 }
 
-
-// ── ATTENDANCE PLOTTING ──
+// -- ATTENDANCE PLOTTING --
 
 async function loadMapData() {
   const data = await api('/admin/attendance?per_page=1000');
@@ -582,7 +524,10 @@ async function loadMapData() {
   let focusedLog = null;
   let focusedMarker = null;
 
-  const users = {};
+  if (attendanceLatestLayer) attendanceLatestLayer.clearLayers();
+  if (attendanceAllLayer) attendanceAllLayer.clearLayers();
+
+  const latestLogs = {};
 
   data.logs.forEach(log => {
     if (!log.latitude || !log.longitude) return;
@@ -593,30 +538,62 @@ async function loadMapData() {
       return; 
     }
 
-    if (!users[log.teacher_id]) {
-      users[log.teacher_id] = {
-        name: log.teacher_name,
-        success: null,
-        failures: []
-      };
+    // Compute consistent jitter once per log so pins don't jump when toggling layers
+    if (!log.jitterLat) {
+      log.jitterLat = parseFloat(log.latitude) + (Math.random() - 0.5) * 0.0001;
+      log.jitterLng = parseFloat(log.longitude) + (Math.random() - 0.5) * 0.0001;
     }
 
-    if (log.status === 'success' || log.status === 'CHECK-IN SUCCESS' || log.status === 'CHECK-OUT SUCCESS') {
-      if (!users[log.teacher_id].success) {
-        users[log.teacher_id].success = log;
-      }
+    // Always track the absolute latest for the "Latest" layer
+    if (!latestLogs[log.teacher_id]) {
+      latestLogs[log.teacher_id] = log;
     } else {
-      users[log.teacher_id].failures.push(log);
+      if (new Date(log.timestamp) > new Date(latestLogs[log.teacher_id].timestamp)) {
+        latestLogs[log.teacher_id] = log;
+      }
     }
-  });
 
-  Object.values(users).forEach(user => {
-    if (user.success) {
-      const log = user.success;
+    // Helper to generate a marker
+    const createMarker = (isLatest) => {
       const isCheckOut = log.action_type === 'check_out';
       const actionText = isCheckOut ? 'Check Out' : 'Check In';
       const bgColor = isCheckOut ? '#8b5cf6' : '#7C3AED';
 
+      const layerToUse = isLatest ? attendanceLatestLayer : attendanceAllLayer;
+
+      if (log.status === 'success' || log.status === 'CHECK-IN SUCCESS' || log.status === 'CHECK-OUT SUCCESS') {
+        const markerClass = isCheckOut ? 'premium-marker-checkout' : 'premium-marker-checkin';
+        const successIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: `<div class="premium-marker ${markerClass}"><div class="marker-icon-inner" style="color:white">✓</div></div>`,
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        L.marker([log.jitterLat, log.jitterLng], { icon: successIcon }).addTo(layerToUse)
+          .bindPopup(`<strong>${log.teacher_name}</strong><br><span class="badge" style="background-color:${bgColor}; color:white; padding:2px 6px;border-radius:4px">${actionText}</span><br>Time: ${formatDt(log.timestamp)}`);
+      } else {
+        const failureIcon = L.divIcon({
+          className: 'custom-div-icon',
+          html: '<div class="premium-marker premium-marker-failure"><div class="marker-icon-inner">✕</div></div>',
+          iconSize: [24, 24],
+          iconAnchor: [12, 12]
+        });
+        L.marker([log.jitterLat, log.jitterLng], { icon: failureIcon }).addTo(layerToUse)
+          .bindPopup(`<strong>${log.teacher_name}</strong><br><span class="badge badge--failure" style="padding:2px 6px;border-radius:4px">Failed</span><br>Reason: ${log.reason}<br>Time: ${formatDt(log.timestamp)}`);
+      }
+    };
+
+    // Add ALL valid logs to the 'All' layer
+    createMarker(false);
+  });
+
+  // Add only the latest logs to the 'Latest' layer
+  Object.values(latestLogs).forEach(log => {
+    const isCheckOut = log.action_type === 'check_out';
+    const actionText = isCheckOut ? 'Check Out' : 'Check In';
+    const bgColor = isCheckOut ? '#8b5cf6' : '#7C3AED';
+
+    if (log.status === 'success' || log.status === 'CHECK-IN SUCCESS' || log.status === 'CHECK-OUT SUCCESS') {
       const markerClass = isCheckOut ? 'premium-marker-checkout' : 'premium-marker-checkin';
       const successIcon = L.divIcon({
         className: 'custom-div-icon',
@@ -624,20 +601,17 @@ async function loadMapData() {
         iconSize: [24, 24],
         iconAnchor: [12, 12]
       });
-      L.marker([log.latitude, log.longitude], { icon: successIcon }).addTo(map)
-        .bindPopup(`<strong>${user.name}</strong><br><span class="badge" style="background-color:${bgColor}; color:white; padding:2px 6px;border-radius:4px">${actionText}</span><br>Time: ${formatDt(log.timestamp)}`);
-    }
-
-    if (user.failures.length > 0) {
-      const log = user.failures[0];
+      L.marker([log.jitterLat, log.jitterLng], { icon: successIcon }).addTo(attendanceLatestLayer)
+        .bindPopup(`<strong>${log.teacher_name}</strong><br><span class="badge" style="background-color:${bgColor}; color:white; padding:2px 6px;border-radius:4px">${actionText}</span><br>Time: ${formatDt(log.timestamp)}`);
+    } else {
       const failureIcon = L.divIcon({
         className: 'custom-div-icon',
         html: '<div class="premium-marker premium-marker-failure"><div class="marker-icon-inner">✕</div></div>',
         iconSize: [24, 24],
         iconAnchor: [12, 12]
       });
-      L.marker([log.latitude, log.longitude], { icon: failureIcon }).addTo(map)
-        .bindPopup(`<strong>${user.name}</strong><br><span class="badge badge--failure" style="padding:2px 6px;border-radius:4px">Failed</span><br>Reason: ${log.reason}<br>Time: ${formatDt(log.timestamp)}`);
+      L.marker([log.jitterLat, log.jitterLng], { icon: failureIcon }).addTo(attendanceLatestLayer)
+        .bindPopup(`<strong>${log.teacher_name}</strong><br><span class="badge badge--failure" style="padding:2px 6px;border-radius:4px">Failed</span><br>Reason: ${log.reason}<br>Time: ${formatDt(log.timestamp)}`);
     }
   });
 
@@ -658,10 +632,275 @@ async function loadMapData() {
 }
 
 initApp('map', initMap);
-
-
 window.selectColor = function(el) {
   document.querySelectorAll('.color-swatch').forEach(s => s.classList.remove('selected'));
   el.classList.add('selected');
   document.getElementById('sub-color').value = el.dataset.color;
+};
+
+// ── EVENT CHECKPOINTS (New Standalone System) ──
+let isPlacingEventCp = false;
+let eventCpCoords = null;
+let eventCpMarker = null;
+let activeEventCheckpoints = [];
+let eventCpMapLayers = [];
+
+window.startPlacingEventCp = function() {
+  if (editMode) cancelEditMode();
+  isPlacingEventCp = true;
+  uiAlert('Click anywhere on the map to place the event checkpoint.', { type: 'info' });
+};
+
+window.cancelEventCheckpoint = function() {
+  isPlacingEventCp = false;
+  eventCpCoords = null;
+  if (eventCpMarker) {
+    map.removeLayer(eventCpMarker);
+    eventCpMarker = null;
+  }
+  document.getElementById('checkpoint-modal').style.display = 'none';
+};
+
+window.submitEventCheckpoint = async function() {
+  const name = document.getElementById('cp-name').value.trim();
+  const radius = parseFloat(document.getElementById('cp-radius').value);
+  const duration = parseFloat(document.getElementById('cp-duration').value);
+  
+  if (!name || isNaN(radius) || isNaN(duration)) {
+    uiAlert('Please fill all required fields correctly.', { type: 'error' });
+    return;
+  }
+  
+  const typeRadio = document.querySelector('input[name="cp-restriction-type"]:checked');
+  const restrictionType = typeRadio ? typeRadio.value : 'none';
+  
+  let departments = [];
+  if (restrictionType === 'department') {
+    const deptCheckboxes = document.querySelectorAll('input[name="cp-dept-value"]:checked');
+    deptCheckboxes.forEach(cb => departments.push(cb.value));
+    if (departments.length === 0) {
+      uiAlert('Please select at least one department.', { type: 'error' });
+      return;
+    }
+  }
+  
+  let facultyRegNos = [];
+  if (restrictionType === 'faculty') {
+    const rawVal = document.getElementById('cp-teacher-value').value;
+    facultyRegNos = rawVal ? rawVal.split(',').map(s => s.trim()) : [];
+  }
+  
+  // Calculate expiry
+  const startsAt = new Date();
+  const expiresAt = new Date(startsAt.getTime() + duration * 60 * 60 * 1000);
+  
+  const payload = {
+    name: name,
+    lat: eventCpCoords[0],
+    lng: eventCpCoords[1],
+    radius: radius,
+    restriction_type: restrictionType === 'none' ? 'all' : restrictionType,
+    departments: departments,
+    faculty_reg_nos: facultyRegNos,
+    is_compulsory: document.getElementById('cp-compulsory').checked,
+    starts_at: startsAt.toISOString(),
+    expires_at: expiresAt.toISOString()
+  };
+  
+  try {
+    const res = await api('/admin/checkpoints', 'POST', payload);
+    if (!res) return; // API function already showed an error toast
+    
+    if (res.status === 'success') {
+      uiAlert('Event Checkpoint Created!', { type: 'success' });
+      cancelEventCheckpoint();
+      loadEventCheckpoints();
+    } else {
+      uiAlert(res.reason || 'Failed to create', { type: 'error' });
+    }
+  } catch (e) {
+    uiAlert('Server error while creating checkpoint', { type: 'error' });
+  }
+};
+
+window.loadEventCheckpoints = async function() {
+  try {
+    const res = await api('/admin/checkpoints');
+    if (res && res.checkpoints) {
+      activeEventCheckpoints = res.checkpoints;
+      renderEventCheckpoints();
+    }
+  } catch (e) {
+    console.error('Failed to load event checkpoints');
+  }
+};
+
+window.deleteEventCheckpoint = async function(id) {
+  if (!(await uiConfirm('Delete Checkpoint', 'Are you sure you want to delete this event checkpoint?'))) return;
+  try {
+    const res = await api('/admin/checkpoints/' + id, 'DELETE');
+    if (res.status === 'success') {
+      loadEventCheckpoints();
+    } else {
+      uiAlert('Failed to delete', { type: 'error' });
+    }
+  } catch (e) {
+    uiAlert('Failed to delete', { type: 'error' });
+  }
+};
+
+function renderEventCheckpoints() {
+  const listEl = document.getElementById('event-cp-list');
+  listEl.innerHTML = '';
+  
+  // Clear map layers
+  eventCpMapLayers.forEach(l => map.removeLayer(l));
+  eventCpMapLayers = [];
+  
+  const panelEl = document.getElementById('event-cp-panel');
+  
+  if (activeEventCheckpoints.length === 0) {
+    panelEl.style.display = 'none';
+    return;
+  }
+  
+  panelEl.style.display = 'flex';
+  activeEventCheckpoints.forEach((cp, idx) => {
+    // 1. Add to sidebar list
+    const div = document.createElement('div');
+    div.style.cssText = 'background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.05); border-radius: 8px; padding: 12px; position: relative;';
+    
+    const titleRow = document.createElement('div');
+    titleRow.style.cssText = 'display: flex; justify-content: space-between; align-items: center;';
+    titleRow.innerHTML = `<strong style="color:var(--text); font-size:13px;"><span style="display:inline-block; background:#7c3aed; color:white; border-radius:50%; width:18px; height:18px; text-align:center; line-height:18px; font-size:10px; margin-right:6px;">${idx + 1}</span>${cp.name}</strong>
+      <button style="background:none; border:none; color:var(--error); cursor:pointer; font-size:16px; padding:0; line-height: 1;" onclick="deleteEventCheckpoint('${cp.id}')">&times;</button>`;
+    
+    const infoRow = document.createElement('div');
+    infoRow.style.cssText = 'font-size: 11px; color: var(--text-muted); display:flex; flex-direction:column; gap:2px; margin-top: 6px;';
+    
+    let restr = 'All Faculty';
+    if (cp.restriction_type === 'department') restr = 'Dept: ' + (cp.departments.join(', ') || 'None');
+    if (cp.restriction_type === 'faculty') restr = 'Faculty: ' + (cp.faculty_reg_nos.join(', ') || 'None');
+    
+    if (cp.is_compulsory) {
+      restr += ' <span style="color:var(--error); font-weight:600;">(Compulsory)</span>';
+    } else {
+      restr += ' <span style="color:var(--text-muted);">(Optional)</span>';
+    }
+    
+    const expiry = new Date(cp.expires_at).toLocaleString('en-US', {month: 'short', day: 'numeric', hour: 'numeric', minute:'2-digit', hour12: true});
+    const coordHtml = `<span style="display:flex; align-items:center; gap:4px; margin-top:2px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg> ${cp.lat.toFixed(5)}, ${cp.lng.toFixed(5)}</span>`;
+    infoRow.innerHTML = `<span style="display:flex; align-items:center; gap:4px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg> Radius: ${cp.radius}m | Expires: ${expiry}</span><span style="display:flex; align-items:center; gap:4px; margin-top:2px;"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg> ${restr}</span>${coordHtml}`;
+    
+    div.appendChild(titleRow);
+    div.appendChild(infoRow);
+    listEl.appendChild(div);
+    
+    // 2. Add to Map
+    const circle = L.circle([cp.lat, cp.lng], { color: '#7c3aed', fillColor: '#7c3aed', fillOpacity: 0.3, radius: cp.radius, dashArray: '10, 10' }).addTo(map);
+    
+    const pinIcon = L.divIcon({
+      className: 'custom-pin-icon',
+      html: `<svg viewBox="0 0 384 512" style="width:28px; height:36px; filter:drop-shadow(2px 4px 4px rgba(0,0,0,0.6));">
+        <path fill="#7c3aed" d="M384 192c0 87.4-117 243-168.3 307.2c-12.3 15.3-35.1 15.3-47.4 0C117 435 0 279.4 0 192C0 86 86 0 192 0S384 86 384 192z"></path>
+        <path fill="#5b21b6" d="M192 0C86 0 0 86 0 192c0 87.4 117 243 168.3 307.2c3.1 3.8 7.3 6 11.7 6.8V0c4 0 8 0 12 0z" opacity="0.3"></path>
+        <circle cx="192" cy="192" r="75" fill="#ffffff"></circle>
+        <text x="192" y="235" font-size="130" font-family="sans-serif" font-weight="bold" fill="#7c3aed" text-anchor="middle">${idx + 1}</text>
+      </svg>`,
+      iconSize: [28, 36],
+      iconAnchor: [14, 36]
+    });
+    
+    const marker = L.marker([cp.lat, cp.lng], { icon: pinIcon }).addTo(map);
+    marker.bindPopup(`<strong>${cp.name}</strong>`);
+    eventCpMapLayers.push(circle, marker);
+  });
+}
+
+// Automatically load them on startup
+document.addEventListener("DOMContentLoaded", () => {
+  setTimeout(loadEventCheckpoints, 1000); // Give auth a second to initialize
+});
+
+
+// ── FACULTY AUTOCOMPLETE FOR EVENT CHECKPOINTS ──
+let selectedFacultyPills = [];
+
+window.handleTeacherInput = async function(val) {
+  const dropdown = document.getElementById('cp-teacher-dropdown');
+  if (val.length < 2) {
+    dropdown.style.display = 'none';
+    return;
+  }
+  
+  try {
+    const res = await api('/admin/teachers?search=' + encodeURIComponent(val) + '&per_page=10');
+    if (!res || !res.teachers || res.teachers.length === 0) {
+      dropdown.innerHTML = '<div style="padding:8px 12px; color:var(--text-muted); font-size:13px;">No faculty found</div>';
+      dropdown.style.display = 'block';
+      return;
+    }
+    
+    dropdown.innerHTML = '';
+    res.teachers.forEach(t => {
+      // Don't show if already selected
+      if (selectedFacultyPills.find(p => p.reg_no === t.reg_no)) return;
+      
+      const item = document.createElement('div');
+      item.className = 'multi-select-item';
+      item.style.cssText = 'padding:8px 12px; cursor:pointer; font-size:13px; color:var(--text); border-bottom:1px solid rgba(255,255,255,0.05);';
+      item.innerHTML = `<strong>${t.reg_no}</strong> - ${t.full_name}`;
+      item.onclick = () => addTeacherPill(t.reg_no, t.full_name);
+      
+      item.onmouseenter = () => item.style.background = 'rgba(255,255,255,0.1)';
+      item.onmouseleave = () => item.style.background = 'transparent';
+      
+      dropdown.appendChild(item);
+    });
+    
+    dropdown.style.display = dropdown.children.length > 0 ? 'block' : 'none';
+  } catch (e) {
+    console.error('Search failed', e);
+  }
+};
+
+window.addTeacherPill = function(regNo, name) {
+  if (!selectedFacultyPills.find(p => p.reg_no === regNo)) {
+    selectedFacultyPills.push({reg_no: regNo, name: name});
+  }
+  document.getElementById('cp-teacher-input').value = '';
+  document.getElementById('cp-teacher-dropdown').style.display = 'none';
+  renderTeacherPills();
+};
+
+window.removeTeacherPill = function(regNo) {
+  selectedFacultyPills = selectedFacultyPills.filter(p => p.reg_no !== regNo);
+  renderTeacherPills();
+};
+
+function renderTeacherPills() {
+  const container = document.getElementById('cp-teacher-pills');
+  container.innerHTML = '';
+  
+  selectedFacultyPills.forEach(p => {
+    const pill = document.createElement('div');
+    pill.style.cssText = 'background:rgba(124, 58, 237, 0.2); color:#c084fc; border:1px solid rgba(124, 58, 237, 0.4); border-radius:16px; padding:2px 8px; font-size:12px; display:flex; align-items:center; gap:6px;';
+    pill.innerHTML = `
+      <span>${p.reg_no}</span>
+      <button style="background:none;border:none;color:#c084fc;cursor:pointer;padding:0;font-size:14px;line-height:1;" onclick="removeTeacherPill('${p.reg_no}')">&times;</button>
+    `;
+    container.appendChild(pill);
+  });
+  
+  document.getElementById('cp-teacher-value').value = selectedFacultyPills.map(p => p.reg_no).join(',');
+}
+
+// Reset pills when opening modal
+const originalStartPlacing = window.startPlacingEventCp;
+window.startPlacingEventCp = function() {
+  selectedFacultyPills = [];
+  renderTeacherPills();
+  document.getElementById('cp-teacher-input').value = '';
+  document.getElementById('cp-teacher-dropdown').style.display = 'none';
+  if(originalStartPlacing) originalStartPlacing();
 };

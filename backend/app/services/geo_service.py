@@ -45,23 +45,26 @@ def haversine_distance(point_a: GeoPoint, point_b: GeoPoint) -> float:
 def is_inside_polygon(lat: float, lon: float, polygon: List[List[float]]) -> bool:
     """
     Check if a point is inside a polygon using the Ray Casting algorithm.
+    Polygon vertices are stored as [latitude, longitude] pairs.
     """
     if not polygon:
         return False
-    
+
     inside = False
     n = len(polygon)
-    p1x, p1y = polygon[0][0], polygon[0][1]
+    # Each vertex: [lat, lon] → p_lat, p_lon
+    p1_lat, p1_lon = polygon[0][0], polygon[0][1]
     for i in range(n + 1):
-        p2x, p2y = polygon[i % n][0], polygon[i % n][1]
-        if lon > min(p1y, p2y):
-            if lon <= max(p1y, p2y):
-                if lat <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xinters = (lon - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or lat <= xinters:
+        p2_lat, p2_lon = polygon[i % n][0], polygon[i % n][1]
+        # Ray cast along longitude axis
+        if lon > min(p1_lon, p2_lon):
+            if lon <= max(p1_lon, p2_lon):
+                if lat <= max(p1_lat, p2_lat):
+                    if p1_lon != p2_lon:
+                        lat_intersect = (lon - p1_lon) * (p2_lat - p1_lat) / (p2_lon - p1_lon) + p1_lat
+                    if p1_lat == p2_lat or lat <= lat_intersect:
                         inside = not inside
-        p1x, p1y = p2x, p2y
+        p1_lat, p1_lon = p2_lat, p2_lon
     return inside
 
 
@@ -123,6 +126,7 @@ def is_within_geofence(
     buffer_meters: float = 15,
     action_type: str = "check_in",
     teacher_dept: str = "",
+    teacher_reg_no: str = "",
 ) -> Tuple[bool, float, str]:
     """
     Determine if a coordinate falls within the geofence based on the active mode.
@@ -130,7 +134,6 @@ def is_within_geofence(
     Modes:
     1: Main polygon only.
     2: Main polygon + Department Sub-polygons (Check-in requires dept block, Check-out anywhere in main).
-    3: Checkpoints (Check-in and Check-out requires being inside ANY checkpoint radius).
     
     Returns:
         Tuple of (is_authorized, distance_m, status_code)
@@ -147,23 +150,7 @@ def is_within_geofence(
         return inside, round(distance, 2), status
 
     mode = geofence_config.get("mode", 1)
-    
-    # ── MODE 3: Checkpoints ──
-    if mode == 3:
-        checkpoints = geofence_config.get("checkpoints", [])
-        if not checkpoints:
-            return False, 999.0, "FAILURE_OUTSIDE"
-            
-        min_dist = float('inf')
-        for cp in checkpoints:
-            cp_point = GeoPoint(latitude=float(cp["lat"]), longitude=float(cp["lng"]))
-            dist = haversine_distance(teacher_point, cp_point)
-            if dist < min_dist:
-                min_dist = dist
-            if dist <= float(cp["radius"]):
-                return True, round(dist, 2), "SUCCESS"
-        
-        return False, round(min_dist, 2), "FAILURE_OUTSIDE"
+
 
     # ── MODE 1 & 2: Main Polygon ──
     main_polygon = geofence_config.get("main_polygon", [])
@@ -201,10 +188,13 @@ def is_within_geofence(
     # ── MODE 2 Check-in specific logic (Department Blocks) ──
     if mode == 2 and action_type == "check_in":
         sub_polygons = geofence_config.get("sub_polygons", [])
-        dept_polygons = [sp for sp in sub_polygons if teacher_dept and teacher_dept in sp.get("departments", [])]
-        
-        # If the department has mapped polygons, strictly enforce them
+        dept_polygons = [
+            sp for sp in sub_polygons
+            if teacher_dept and teacher_dept in sp.get("departments", [])
+        ]
+
         if dept_polygons:
+            # Department has assigned sub-polygons — enforce strictly
             inside_any_dept = False
             for sp in dept_polygons:
                 sp_coords = sp.get("polygon", [])
@@ -212,10 +202,20 @@ def is_within_geofence(
                     if is_inside_polygon(latitude, longitude, sp_coords):
                         inside_any_dept = True
                         break
-            
+
             if not inside_any_dept:
-                # Inside main but outside department block
+                # Inside main campus but outside department block
                 return False, round(min_dist_to_main_wall, 2), "FAILURE_OUTSIDE_DEPT"
-                
-    # Success for Mode 1, Mode 2 check-out, or Mode 2 check-in (inside dept block or no dept block mapped)
+        else:
+            # No sub-polygon is mapped for this teacher's department.
+            # This is a configuration gap — signal it explicitly so the
+            # verify route can surface a meaningful error instead of
+            # silently granting access.
+            if teacher_dept and sub_polygons:
+                # Other departments have polygons but this one doesn't
+                return False, round(min_dist_to_main_wall, 2), "FAILURE_NO_DEPT_POLYGON"
+            # If NO sub-polygons are configured at all, fall through to
+            # global-campus behaviour (admin hasn't set up Mode 2 yet).
+
+    # Success for Mode 1, Mode 2 check-out, or Mode 2 check-in (inside dept block or no dept block configured yet)
     return True, round(min_dist_to_main_wall, 2), main_status

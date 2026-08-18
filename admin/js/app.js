@@ -38,9 +38,7 @@ function initApp(page, onReady) {
     onReady();
   }
 
-  if (page !== 'alerts') {
-    updateGlobalAlertBadge();
-  }
+  updateGlobalAlertBadge();
 
   // Populate navbar profile from sessionStorage cache immediately
   const adminStr = sessionStorage.getItem('geoface_admin_data');
@@ -119,14 +117,69 @@ function initProfileDropdown() {
 }
 
 async function updateGlobalAlertBadge() {
-  const data = await api('/admin/alerts');
-  if (data && data.alerts) {
-    const count = data.alerts.length;
-    const badge = document.getElementById('navbar-alert-badge');
-    if (badge) {
-      badge.textContent = count;
-      badge.style.display = count > 0 ? 'flex' : 'none';
+  try {
+    const [alertsData, leavesData] = await Promise.all([
+      api('/admin/alerts'),
+      api('/admin/leaves?status=pending')
+    ]);
+
+    const securityCount = (alertsData && alertsData.alerts) ? alertsData.alerts.length : 0;
+    
+    let emergencyCount = 0;
+    let normalCount = 0;
+    if (leavesData && leavesData.leaves) {
+      leavesData.leaves.forEach(l => {
+        if (l.leave_type === 'emergency') emergencyCount++;
+        else if (l.leave_type === 'normal') normalCount++;
+      });
     }
+
+    const bellContainer = document.querySelector('.nav-bell');
+    if (!bellContainer) return;
+
+    // Remove existing badge container or badges
+    const existingContainer = bellContainer.querySelector('.badge-row-container');
+    if (existingContainer) existingContainer.remove();
+    const existingBadges = bellContainer.querySelectorAll('.nav-bell-badge');
+    existingBadges.forEach(b => b.remove());
+
+    const badgeContainer = document.createElement('div');
+    badgeContainer.className = 'badge-row-container';
+    badgeContainer.style.position = 'absolute';
+    badgeContainer.style.bottom = '-8px';
+    badgeContainer.style.right = '0';
+    badgeContainer.style.display = 'flex';
+    badgeContainer.style.flexDirection = 'row';
+    badgeContainer.style.gap = '2px';
+    badgeContainer.style.justifyContent = 'flex-end';
+    badgeContainer.style.width = '100%';
+    badgeContainer.style.pointerEvents = 'none'; // let clicks pass through to bell
+    bellContainer.appendChild(badgeContainer);
+    
+    // Helper to create a badge
+    const createBadge = (count, bg) => {
+      if (count === 0) return;
+      const badge = document.createElement('span');
+      badge.className = 'nav-bell-badge';
+      badge.textContent = count > 99 ? '99+' : count;
+      badge.style.position = 'relative';
+      badge.style.top = '0';
+      badge.style.right = '0';
+      badge.style.display = 'flex';
+      badge.style.backgroundColor = bg;
+      badge.style.border = `1px solid var(--surface, #1e1e1e)`;
+      badge.style.padding = '1px 4px';
+      badge.style.fontSize = '9px';
+      badgeContainer.appendChild(badge);
+    };
+
+    // Create badges in order of priority (most critical on top/right)
+    createBadge(normalCount, '#3b82f6'); // Blue for normal
+    createBadge(emergencyCount, '#ef4444'); // Red for emergency
+    createBadge(securityCount, '#f59e0b'); // Orange for security
+
+  } catch (err) {
+    console.error('Failed to update alert badges', err);
   }
 }
 
@@ -191,13 +244,13 @@ async function loadDashboard() {
   if (!data) return;
 
   // Stat cards
-  const valTeachers = document.getElementById('val-teachers');
+  const valFaculty = document.getElementById('val-teachers');
   const valSuccess = document.getElementById('val-success');
   const valFailure = document.getElementById('val-failure');
   const valRate = document.getElementById('val-rate');
   const rateLifetimeSub = document.getElementById('rate-lifetime-sub');
 
-  if (valTeachers) valTeachers.textContent = data.total_teachers ?? '—';
+  if (valFaculty) valFaculty.textContent = data.total_teachers ?? '—';
   if (valSuccess) valSuccess.textContent = data.today_success ?? '—';
   if (valFailure) valFailure.textContent = data.today_failure ?? '—';
   if (valRate) valRate.textContent = data.overall_success_rate != null ? data.overall_success_rate + '%' : '—';
@@ -206,9 +259,9 @@ async function loadDashboard() {
   }
     
   if (data.yesterday_success !== undefined) {
-    const changeTeachers = document.getElementById('change-teachers');
-    if (changeTeachers) {
-      changeTeachers.innerHTML = '<span style="color:var(--text-muted)">All systems operational</span>';
+    const changeFaculty = document.getElementById('change-teachers');
+    if (changeFaculty) {
+      changeFaculty.innerHTML = '<span style="color:var(--text-muted)">All systems operational</span>';
     }
     renderStatChange('change-success', data.today_success, data.yesterday_success);
     renderStatChange('change-failure', data.today_failure, data.yesterday_failure);
@@ -218,7 +271,7 @@ async function loadDashboard() {
     renderSparkline('spark-failure', data.failure_trend, '#ef4444');
     
     // Render small doughnut charts
-    renderTeachersChart(data.total_teachers || 0, data.inactive_teachers || 0);
+    renderFacultyChart(data.total_teachers || 0, data.inactive_teachers || 0);
     renderRateGauge(data.overall_success_rate || 0);
 
     // Render Month Authentication Trend Area-Line Chart
@@ -255,43 +308,26 @@ function renderTrendChart(successTrend, failureTrend, monthStr, daysCount) {
     labels.push(i.toString());
   }
 
-  // Linear Area Gradients
-  const succGrad = ctx.createLinearGradient(0, 0, 0, 280);
-  succGrad.addColorStop(0, 'rgba(16, 185, 129, 0.25)');
-  succGrad.addColorStop(1, 'rgba(16, 185, 129, 0)');
-
-  const failGrad = ctx.createLinearGradient(0, 0, 0, 280);
-  failGrad.addColorStop(0, 'rgba(139, 92, 246, 0.25)'); // purple gradient
-  failGrad.addColorStop(1, 'rgba(139, 92, 246, 0)');
-
   trendChart = new Chart(ctx, {
-    type: 'line',
+    type: 'bar',
     data: {
       labels,
       datasets: [
         {
-          type: 'bar',
           label: 'Successful',
           data: successTrend,
-          backgroundColor: '#10b981', // green bars
+          backgroundColor: '#10b981', // green
           borderRadius: 4,
-          barPercentage: 0.6,
+          barPercentage: 0.7,
           categoryPercentage: 0.8
         },
         {
           label: 'Failed',
           data: failureTrend,
-          borderColor: '#8b5cf6', // purple line
-          borderWidth: 2.5,
-          backgroundColor: failGrad,
-          fill: true,
-          tension: 0.4,
-          cubicInterpolationMode: 'monotone',
-          pointBackgroundColor: '#8b5cf6',
-          pointBorderColor: '#111118',
-          pointBorderWidth: 1.5,
-          pointRadius: 4,
-          pointHoverRadius: 6,
+          backgroundColor: '#ef4444', // red
+          borderRadius: 4,
+          barPercentage: 0.7,
+          categoryPercentage: 0.8
         }
       ]
     },
@@ -303,34 +339,47 @@ function renderTrendChart(successTrend, failureTrend, monthStr, daysCount) {
         intersect: false,
       },
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 8,
+            color: '#cbd5e1',
+            font: { family: 'Inter', size: 12 }
+          }
+        },
         tooltip: {
           backgroundColor: '#111118',
           titleColor: '#e2e8f0',
           bodyColor: '#94a3b8',
           borderColor: 'rgba(255,255,255,0.08)',
           borderWidth: 1,
-          padding: 10,
+          padding: 12,
           cornerRadius: 8,
-          titleFont: { family: 'Inter', size: 12, weight: 'bold' },
-          bodyFont: { family: 'Inter', size: 12 },
+          titleFont: { family: 'Inter', size: 13, weight: 'bold' },
+          bodyFont: { family: 'Inter', size: 13 },
+          usePointStyle: true,
           callbacks: {
             title: function(context) {
               const day = context[0].label;
               const month = monthStr ? monthStr.split(' ')[0] : '';
-              return month ? `${month} - ${day}` : day;
+              return month ? `${month} - Day ${day}` : `Day ${day}`;
             }
           }
         }
       },
       scales: {
         x: {
-          ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 } },
+          stacked: true,
+          ticks: { color: '#64748b', font: { family: 'Inter', size: 11 } },
           grid: { display: false },
         },
         y: {
-          ticks: { color: '#94a3b8', font: { family: 'Inter', size: 11 }, precision: 0 },
-          grid: { color: 'rgba(255,255,255,0.05)' },
+          stacked: true,
+          ticks: { color: '#64748b', font: { family: 'Inter', size: 11 }, precision: 0 },
+          grid: { color: 'rgba(255,255,255,0.05)', borderDash: [4, 4] },
           beginAtZero: true,
         }
       }
@@ -390,7 +439,7 @@ function renderTodayChart(success, failure) {
   });
 }
 
-function renderTeachersChart(active, inactive) {
+function renderFacultyChart(active, inactive) {
   const ctx = document.getElementById('chart-teachers');
   if (!ctx) return;
   if (teachersChart) teachersChart.destroy();

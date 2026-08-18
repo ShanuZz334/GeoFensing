@@ -95,6 +95,7 @@ class ApiService {
     double? demoLng,
     double? demoRadius,
     bool bypassLimits = false,
+    String? checkpointId,
   }) async {
     try {
       final token = await _getToken();
@@ -111,6 +112,7 @@ class ApiService {
       if (demoLng != null) body['demo_lng'] = demoLng;
       if (demoRadius != null) body['demo_radius'] = demoRadius;
       if (bypassLimits) body['bypass_limits'] = true;
+      if (checkpointId != null) body['checkpoint_id'] = checkpointId;
 
       final response = await http
           .post(
@@ -138,7 +140,7 @@ class ApiService {
     required String role,
     required String phoneNo,
     required String newPassword,
-    required String profilePicBase64,
+    String? profilePicBase64,
   }) async {
     try {
       final token = await _getToken();
@@ -151,8 +153,10 @@ class ApiService {
         'role': role,
         'phone_no': phoneNo,
         'new_password': newPassword,
-        'profile_pic': profilePicBase64,
       };
+      if (profilePicBase64 != null) {
+        body['profile_pic'] = profilePicBase64;
+      }
 
       final response = await http
           .patch(
@@ -253,17 +257,87 @@ class ApiService {
     }
   }
 
-  /// GET /settings
+  /// GET /checkpoints/mine
+  Future<ApiResponse> getMyCheckpoints() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
+
+      final response = await http
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/checkpoints/mine'),
+            headers: _baseHeaders(auth: true, token: token),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
+  /// GET /holidays
+  Future<ApiResponse> getUpcomingHolidays() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
+
+      final response = await http
+          .get(
+            Uri.parse('${ApiConstants.baseUrl}/holidays'),
+            headers: _baseHeaders(auth: true, token: token),
+          )
+          .timeout(ApiConstants.connectTimeout);
+
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
   /// GET /me — fetches the current teacher's latest profile from the server
   Future<ApiResponse> fetchMe() async {
     try {
       final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
       final response = await http
           .get(
             Uri.parse('${ApiConstants.baseUrl}/me'),
             headers: _baseHeaders(auth: true, token: token),
           )
           .timeout(ApiConstants.connectTimeout);
+      return _parse(response);
+    } on SocketException {
+      return ApiResponse.error('No internet connection');
+    } on TimeoutException {
+      return ApiResponse.error('Server timeout. Please try again.');
+    } catch (e) {
+      return ApiResponse.error('Unexpected error: $e');
+    }
+  }
+
+  /// POST /reregister-face — submit new face scan when admin has granted permission
+  Future<ApiResponse> reregisterFace(String imageBase64) async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse.error('Not authenticated');
+
+      final response = await http
+          .post(
+            Uri.parse('${ApiConstants.baseUrl}/reregister-face'),
+            headers: _baseHeaders(auth: true, token: token),
+            body: jsonEncode({'image': imageBase64}),
+          )
+          .timeout(const Duration(seconds: 90)); // InsightFace can be slow
+
       return _parse(response);
     } on SocketException {
       return ApiResponse.error('No internet connection');
@@ -303,9 +377,95 @@ class ApiService {
         return ApiResponse.error(error.toString());
       }
     } catch (_) {
-      return ApiResponse.error('Invalid server response');
+      // If parsing fails, it's likely an HTML error page (e.g. 502/404 from Nginx/Cloudflare)
+      final preview = response.body.length > 100 ? response.body.substring(0, 100) : response.body;
+      return ApiResponse.error('Invalid server response (${response.statusCode}): $preview');
     }
   }
+
+Future<ApiResponse> applyLeave({
+    required String startDate,
+    required String endDate,
+    required bool isHalfDay,
+    required String leaveType,
+    String? reason,
+  }) async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse._(success: false, errorMessage: 'No token');
+
+      final response = await http.post(
+        Uri.parse('${ApiConstants.baseUrl}/leaves'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: json.encode({
+          'start_date': startDate,
+          'end_date': endDate,
+          'is_half_day': isHalfDay,
+          'leave_type': leaveType,
+          if (reason != null && reason.isNotEmpty) 'reason': reason,
+        }),
+      );
+
+      final data = json.decode(response.body);
+      if (response.statusCode == 201 || response.statusCode == 200) {
+        return ApiResponse._(success: true, errorMessage: data['message'] ?? 'Leave applied successfully', data: data);
+      } else {
+        return ApiResponse._(success: false, errorMessage: data['error'] ?? 'Failed to apply leave');
+      }
+    } catch (e) {
+      return ApiResponse._(success: false, errorMessage: 'Network error: $e');
+    }
+  }
+
+  Future<ApiResponse> getMyLeaves() async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse._(success: false, errorMessage: 'No token');
+
+      final response = await http.get(
+        Uri.parse('${ApiConstants.baseUrl}/leaves'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return ApiResponse._(success: true, data: data);
+      } else {
+        return ApiResponse._(success: false, errorMessage: 'Failed to load leaves');
+      }
+    } catch (e) {
+      return ApiResponse._(success: false, errorMessage: 'Network error: $e');
+    }
+  }
+
+  Future<ApiResponse> deleteLeaveRequest(String id) async {
+    try {
+      final token = await _getToken();
+      if (token == null) return ApiResponse._(success: false, errorMessage: 'No token');
+
+      final response = await http.delete(
+        Uri.parse('${ApiConstants.baseUrl}/leaves/$id'),
+        headers: {
+          'Authorization': 'Bearer $token',
+        },
+      );
+
+      final data = json.decode(response.body);
+      if (response.statusCode == 200) {
+        return ApiResponse._(success: true, errorMessage: data['message'] ?? 'Deleted', data: data);
+      } else {
+        return ApiResponse._(success: false, errorMessage: data['reason'] ?? data['error'] ?? 'Failed to delete');
+      }
+    } catch (e) {
+      return ApiResponse._(success: false, errorMessage: 'Network error: $e');
+    }
+  }
+
 }
 
 class ApiResponse {

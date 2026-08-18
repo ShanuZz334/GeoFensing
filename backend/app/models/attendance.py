@@ -51,7 +51,7 @@ class AttendanceLog(db.Model):
     # Indicates if an admin has resolved the alert triggered by this log
     is_alert_resolved = db.Column(db.Boolean, nullable=False, default=False)
 
-    def to_dict(self) -> dict:
+    def to_dict(self, include_profile_pic: bool = True) -> dict:
         """Serialize attendance log to dictionary."""
         if self.attendance_mark == "absent":
             status_display = "ABSENT"
@@ -74,13 +74,12 @@ class AttendanceLog(db.Model):
                 else:
                     status_display = self.attendance_mark.upper().replace("_", " ")
 
-        return {
+        res = {
             "id": self.id,
             "teacher_id": self.teacher_id,
             "teacher_name": self.teacher.full_name if self.teacher else None,
             "reg_no": self.teacher.reg_no if self.teacher else None,
-            "profile_pic": self.teacher.profile_pic if self.teacher else None,
-            "timestamp": self.timestamp.isoformat(),
+            "timestamp": self.timestamp.isoformat() + "Z",
             "latitude": self.latitude,
             "longitude": self.longitude,
             "status": self.status,
@@ -91,6 +90,11 @@ class AttendanceLog(db.Model):
             "frames_count": self.frames_count,
             "failure_stage": self.failure_stage,
         }
+        
+        if include_profile_pic:
+            res["profile_pic"] = self.teacher.profile_pic if self.teacher else None
+            
+        return res
 
     def __repr__(self) -> str:
         return f"<AttendanceLog {self.id}: {self.teacher_id} → {self.status}>"

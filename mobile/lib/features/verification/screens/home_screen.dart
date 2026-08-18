@@ -4,6 +4,8 @@ import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'event_checkpoints_screen.dart';
+import 'checkpoint_finder_screen.dart';
 import 'package:intl/intl.dart';
 
 import '../../auth/providers/auth_provider.dart';
@@ -32,11 +34,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
   void initState() {
     super.initState();
     _provider = context.read<VerificationProvider>();
-    _cardPageController = PageController(initialPage: 999);
+    _cardPageController = PageController(initialPage: 1000);
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       _provider.reset();
       await _provider.fetchSettings();
       await _provider.fetchHistory();
+      await _provider.fetchHolidays();
       _provider.fetchStats();
       _provider.startPolling();
     });
@@ -209,10 +212,12 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
       child: PageView.builder(
         controller: _cardPageController,
         itemBuilder: (context, index) {
-          final page = index % 3;
+          final page = index % 5;
           if (page == 0) return _buildStatusCard(provider);
           if (page == 1) return _buildHistoryCard(provider);
-          return _buildScheduleCard(provider);
+          if (page == 2) return _buildScheduleCard(provider);
+          if (page == 3) return _buildHolidaysCard(provider);
+          return _buildEventCheckpointsCard(provider);
         },
       ),
     );
@@ -266,7 +271,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         fontWeight: FontWeight.bold,
                         color: Colors.white)),
               ]),
-              Text('1/3',
+              Text('1/5',
                   style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withValues(alpha: 0.3))),
@@ -308,8 +313,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-                3,
+            children: List.generate(5,
                 (i) => Container(
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: i == 0 ? 18 : 6,
@@ -349,7 +353,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
               ]),
               Row(
                 children: [
-                  Text('2/3',
+                  Text('2/5',
                       style: TextStyle(
                           fontSize: 11,
                           color: Colors.white.withValues(alpha: 0.3))),
@@ -408,8 +412,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-                3,
+            children: List.generate(5,
                 (i) => Container(
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: i == 1 ? 18 : 6,
@@ -499,7 +502,7 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
                         fontWeight: FontWeight.bold,
                         color: Colors.white)),
               ]),
-              Text('3/3',
+              Text('3/5',
                   style: TextStyle(
                       fontSize: 11,
                       color: Colors.white.withValues(alpha: 0.3))),
@@ -531,14 +534,255 @@ class _HomeScreenState extends State<HomeScreen> with TickerProviderStateMixin {
           ),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: List.generate(
-                3,
+            children: List.generate(5,
                 (i) => Container(
                       margin: const EdgeInsets.symmetric(horizontal: 3),
                       width: i == 2 ? 18 : 6,
                       height: 6,
                       decoration: BoxDecoration(
                         color: i == 2
+                            ? const Color(0xFF7C3AED)
+                            : Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHolidaysCard(VerificationProvider provider) {
+    final holidays = provider.holidays;
+    final isLoading = provider.isLoadingHolidays;
+    const maxItems = 4;
+    return _cardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(children: [
+                const Icon(Icons.event_available_rounded,
+                    color: Color(0xFF7C3AED), size: 15),
+                const SizedBox(width: 6),
+                const Text('Upcoming Holidays & Leaves',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ]),
+              Row(children: [
+                if (isLoading)
+                  const SizedBox(
+                    width: 10, height: 10,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: Color(0xFF7C3AED),
+                    ),
+                  ),
+                const SizedBox(width: 6),
+                Text('4/5',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.3))),
+              ]),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: isLoading && holidays.isEmpty
+                ? Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(
+                          width: 24, height: 24,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Color(0xFF7C3AED),
+                          ),
+                        ),
+                        const SizedBox(height: 10),
+                        Text('Loading holidays...',
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.4),
+                                fontSize: 12)),
+                      ],
+                    ))
+                : holidays.isEmpty
+                    ? Center(
+                        child: Text('No upcoming holidays or leaves',
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.4),
+                                fontSize: 13)))
+                    : SingleChildScrollView(
+                        physics: const NeverScrollableScrollPhysics(),
+                        child: Column(
+                          children: List.generate(
+                            holidays.length > maxItems ? maxItems : holidays.length,
+                            (index) {
+                              final holiday = holidays[index];
+                              final dateStr = DateFormat('dd MMM, yyyy').format(
+                                  DateTime.parse(holiday['date'] as String));
+                              return _buildScheduleRow(
+                                (holiday['is_full_day'] as bool? ?? true)
+                                    ? Icons.celebration_rounded
+                                    : Icons.timelapse_rounded,
+                                holiday['name'] as String? ?? 'Holiday',
+                                dateStr,
+                                const Color(0xFF10B981),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5,
+                (i) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: i == 3 ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: i == 3
+                            ? const Color(0xFF7C3AED)
+                            : Colors.white.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(3),
+                      ),
+                    )),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEventCheckpointsCard(VerificationProvider provider) {
+    final checkpoints = provider.checkpoints;
+    final isLoading = provider.isLoadingCheckpoints;
+
+    return _cardShell(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(children: [
+                const Icon(Icons.event_available_rounded,
+                    color: Color(0xFFF59E0B), size: 15),
+                const SizedBox(width: 6),
+                const Text('Event Checkpoints',
+                    style: TextStyle(
+                        fontSize: 15,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
+              ]),
+              Row(children: [
+                if (isLoading)
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 1.5, color: Color(0xFFF59E0B)),
+                  ),
+                const SizedBox(width: 6),
+                Text('5/5',
+                    style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.white.withValues(alpha: 0.3))),
+              ]),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Expanded(
+            child: isLoading && checkpoints.isEmpty
+                ? Center(
+                    child: Text('Loading...',
+                        style: TextStyle(
+                            color: Colors.white.withValues(alpha: 0.4),
+                            fontSize: 12)))
+                : checkpoints.isEmpty
+                    ? Center(
+                        child: Text('No Active Checkpoints\nYou have no special events to attend.',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.4),
+                                fontSize: 13, height: 1.4)))
+                    : SingleChildScrollView(
+                        physics: const BouncingScrollPhysics(),
+                        child: Column(
+                          children: List.generate(
+                            checkpoints.length,
+                            (index) {
+                              final cp = checkpoints[index];
+                              return GestureDetector(
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) =>
+                                            CheckpointFinderScreen(
+                                              checkpointId: cp['id'] ?? '',
+                                              name: cp['name'] ?? 'Event',
+                                              lat: (cp['lat'] ?? 0.0).toDouble(),
+                                              lng: (cp['lng'] ?? 0.0).toDouble(),
+                                              radius: (cp['radius'] ?? 50.0).toDouble(),
+                                            )),
+                                  );
+                                },
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 8),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.03),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                        color: const Color(0xFFF59E0B)
+                                            .withValues(alpha: 0.3)),
+                                  ),
+                                  child: Row(
+                                    children: [
+                                      const Icon(Icons.radar, color: Color(0xFFF59E0B), size: 24),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(cp['name'] ?? 'Event',
+                                                style: const TextStyle(
+                                                    color: Colors.white,
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 14)),
+                                            const SizedBox(height: 4),
+                                            Text('Tap to open scanner',
+                                                style: TextStyle(
+                                                    color: Colors.white.withValues(alpha: 0.5),
+                                                    fontSize: 11)),
+                                          ],
+                                        ),
+                                      ),
+                                      const Icon(Icons.chevron_right, color: Colors.white54, size: 20),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: List.generate(5,
+                (i) => Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 3),
+                      width: i == 4 ? 18 : 6,
+                      height: 6,
+                      decoration: BoxDecoration(
+                        color: i == 4
                             ? const Color(0xFF7C3AED)
                             : Colors.white.withValues(alpha: 0.2),
                         borderRadius: BorderRadius.circular(3),
@@ -1259,7 +1503,22 @@ class _FacultyPassCardState extends State<_FacultyPassCard>
 
   String _formatRole(String? role) {
     if (role == null || role.isEmpty) return 'FACULTY';
+    
+    final r = role.toLowerCase();
+    if (r.contains('head of department') || r.contains('hod')) return 'HOD';
+    if (r.contains('teaching assistant')) return 'TA';
+    if (r.contains('assistant professor')) return 'ASST PROF';
+    if (r.contains('associate professor')) return 'ASSOC PROF';
+    if (r.contains('professor')) return 'PROF';
+    if (r.contains('dean')) return 'DEAN';
+    if (r.contains('director')) return 'DIR';
+    if (r.contains('lab assistant')) return 'LAB ASST';
+
     if (role.contains('(')) return role.split('(')[0].trim().toUpperCase();
+    
+    // Fallback: truncate if still too long (e.g., > 12 chars)
+    if (role.length > 12) return '${role.substring(0, 10).toUpperCase()}...';
+    
     return role.toUpperCase();
   }
 }

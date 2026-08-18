@@ -37,21 +37,19 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
         : (stats != null ? stats['monthly'] as Map<String, dynamic>? : null);
     final double attended = (currentData?['attended'] ?? 0).toDouble();
     final double absent = (currentData?['absent'] ?? 0).toDouble();
-    final double takenFullLeaves = (currentData?['taken_full_leaves'] ?? 0).toDouble();
     final double approvedFullLeaves = (currentData?['approved_full_leaves'] ?? 0).toDouble();
-    final double leavesQuotaUsed = (currentData?['leaves_quota_used'] ?? takenFullLeaves).toDouble();
-    final double leavesCoveredAbsent = (currentData?['leaves_covered_absent'] ?? 0).toDouble();
-    final int allottedFullLeaves = currentData?['allotted_full_leaves'] ?? 0;
-    final double takenHalfLeaves = (currentData?['taken_half_leaves'] ?? 0).toDouble();
-    final int allottedHalfLeaves = currentData?['allotted_half_leaves'] ?? 0;
+    final double approvedHalfLeaves = (currentData?['approved_half_leaves'] ?? 0).toDouble();
+    final double unapprovedAbsences = (currentData?['unapproved_absences'] ?? 0).toDouble();
+    final double unapprovedHalfDays = (currentData?['unapproved_half_days'] ?? 0).toDouble();
+    final double deductionPct = (currentData?['deduction_pct'] ?? 0).toDouble();
+    final double effectiveAttended = attended + approvedFullLeaves + (approvedHalfLeaves * 0.5);
+    final double totalUnapproved = unapprovedAbsences + (unapprovedHalfDays * 0.5);
+    final double total = effectiveAttended + totalUnapproved;
     
-    final double halfLeavesQuotaUsed = takenHalfLeaves > allottedHalfLeaves ? allottedHalfLeaves.toDouble() : takenHalfLeaves;
-    final double extraHalfLeaves = takenHalfLeaves - halfLeavesQuotaUsed;
-    final double displayAbsent = absent + (extraHalfLeaves * 0.5);
-
-    final double total = (currentData?['total'] ?? (attended + absent)).toDouble();
-    // Days effectively covered: actual attendance + leave-covered absences + valid half-day leaves
-    final double effectiveAttended = attended + leavesCoveredAbsent + (halfLeavesQuotaUsed * 0.5);
+    // Effective attended includes approved leaves
+    final double totalApprovedLeaves = approvedFullLeaves + (approvedHalfLeaves * 0.5);
+    
+    final Map<String, dynamic>? eventsData = stats != null ? stats['events'] as Map<String, dynamic>? : null;
     
     final List<dynamic> rawLogs = currentData?['logs'] ?? [];
     
@@ -87,7 +85,13 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   // 1. Stats Card (Header)
-                  _buildStatsHeader(attended, displayAbsent, total, takenFullLeaves, approvedFullLeaves, allottedFullLeaves, halfLeavesQuotaUsed, allottedHalfLeaves, leavesQuotaUsed, leavesCoveredAbsent, effectiveAttended),
+                  _buildStatsHeader(attended, approvedFullLeaves, approvedHalfLeaves, totalUnapproved, deductionPct, effectiveAttended, total),
+                  
+                  if (!_isSemester && eventsData != null) ...[
+                    const SizedBox(height: 16),
+                    _buildEventsStats(eventsData),
+                  ],
+                  
                   const SizedBox(height: 32),
 
                   // 2. Range Toggle
@@ -115,79 +119,148 @@ class _AttendanceStatsScreenState extends State<AttendanceStatsScreen> {
     );
   }
 
-  Widget _buildStatsHeader(double attended, double absent, double total, double takenFullLeaves, double approvedFullLeaves, int allottedFullLeaves, double halfLeavesQuotaUsed, int allottedHalfLeaves, double leavesQuotaUsed, double leavesCoveredAbsent, double effectiveAttended) {
-    return Container(
-      padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: const Color(0xFF121212),
-        borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        children: [
-          SizedBox(
-            height: 200,
-            child: Stack(
-              children: [
-                PieChart(
-                  PieChartData(
-                    sectionsSpace: 4,
-                    centerSpaceRadius: 60,
-                    startDegreeOffset: -90,
-                    sections: [
-                      PieChartSectionData(
-                        color: const Color(0xFF7C3AED),
-                        value: attended,
-                        title: '',
-                        radius: 20,
+    Widget _buildStatsHeader(double attended, double approvedFullLeaves, double approvedHalfLeaves, double totalUnapproved, double deductionPct, double effectiveAttended, double total) {
+    return Stack(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: const Color(0xFF121212),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
+          ),
+          child: Column(
+            children: [
+              SizedBox(
+                height: 200,
+                child: Stack(
+                  children: [
+                    PieChart(
+                      PieChartData(
+                        sectionsSpace: 4,
+                        centerSpaceRadius: 60,
+                        startDegreeOffset: -90,
+                        sections: [
+                          PieChartSectionData(
+                            color: const Color(0xFF7C3AED),
+                            value: attended == 0 ? 0.01 : attended,
+                            title: '',
+                            radius: 20,
+                          ),
+                          PieChartSectionData(
+                            color: const Color(0xFF00D1FF),
+                            value: (approvedFullLeaves + approvedHalfLeaves * 0.5) == 0 ? 0.01 : (approvedFullLeaves + approvedHalfLeaves * 0.5),
+                            title: '',
+                            radius: 20,
+                          ),
+                          PieChartSectionData(
+                            color: const Color(0xFFEF4444),
+                            value: totalUnapproved == 0 ? 0.01 : totalUnapproved,
+                            title: '',
+                            radius: 20,
+                          ),
+                        ],
                       ),
-                      PieChartSectionData(
-                        color: const Color(0xFF00D1FF), // Cyan for Full Leaves
-                        value: approvedFullLeaves + leavesCoveredAbsent,
-                        title: '',
-                        radius: 20,
+                    ),
+                    Center(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            '${effectiveAttended.toStringAsFixed(effectiveAttended == effectiveAttended.toInt() ? 0 : 1)} / ${total.toStringAsFixed(total == total.toInt() ? 0 : 1)}',
+                            style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
+                          ),
+                          const Text(
+                            'ATTENDED',
+                            style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold),
+                          ),
+                        ],
                       ),
-                      PieChartSectionData(
-                        color: const Color(0xFFF59E0B), // Amber for Half Leaves
-                        value: halfLeavesQuotaUsed * 0.5,
-                        title: '',
-                        radius: 20,
-                      ),
-                      PieChartSectionData(
-                        color: const Color(0xFFEF4444),
-                        value: (total == 0 ? 1 : absent),
-                        title: '',
-                        radius: 20,
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
-                Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        '${effectiveAttended.toStringAsFixed(effectiveAttended == effectiveAttended.toInt() ? 0 : 1)}/${total.toInt()}',
-                        style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold),
-                      ),
-                      const Text(
-                        'ATTENDED',
-                        style: TextStyle(color: Colors.white38, fontSize: 10, fontWeight: FontWeight.bold),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildStatInfo('Attended', attended.toStringAsFixed(attended == attended.toInt() ? 0 : 1), const Color(0xFF7C3AED)),
+                  _buildStatInfo('Full Leave', approvedFullLeaves.toStringAsFixed(approvedFullLeaves == approvedFullLeaves.toInt() ? 0 : 1), const Color(0xFF00D1FF)),
+                  _buildStatInfo('Half Leave', approvedHalfLeaves.toStringAsFixed(approvedHalfLeaves == approvedHalfLeaves.toInt() ? 0 : 1), const Color(0xFFF59E0B)),
+                  _buildStatInfo('Absent', totalUnapproved.toStringAsFixed(totalUnapproved == totalUnapproved.toInt() ? 0 : 1), const Color(0xFFEF4444)),
+                ],
+              ),
+            ],
+          ),
+        ),
+        if (deductionPct > 0)
+          Positioned(
+            top: 16,
+            right: 16,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                '-${deductionPct.toStringAsFixed(1)}% SALARY',
+                style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+              ),
             ),
           ),
-          const SizedBox(height: 24),
+      ],
+    );
+  }
+
+  Widget _buildEventsStats(Map<String, dynamic> events) {
+    final int total = events['total_mandatory'] ?? 0;
+    if (total == 0) return const SizedBox();
+
+    final int attended = events['attended'] ?? 0;
+    final int missed = events['missed'] ?? 0;
+    final double deduction = (events['deduction_pct'] ?? 0).toDouble();
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF10B981).withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.event_available_rounded, color: Color(0xFF10B981), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'Mandatory Events',
+                style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (deduction > 0)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    '-${deduction.toStringAsFixed(1)}% PENALTY',
+                    style: const TextStyle(color: Colors.redAccent, fontSize: 10, fontWeight: FontWeight.bold),
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 16),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
-              _buildStatInfo('Attended', attended.toStringAsFixed(attended == attended.toInt() ? 0 : 1), const Color(0xFF7C3AED)),
-              _buildStatInfo('Full Leave', '${leavesQuotaUsed.toInt()}/$allottedFullLeaves', const Color(0xFF00D1FF)),
-              _buildStatInfo('Half Leave', '${halfLeavesQuotaUsed.toInt()}/$allottedHalfLeaves', const Color(0xFFF59E0B)),
-              _buildStatInfo('Absent', absent.toStringAsFixed(absent == absent.toInt() ? 0 : 1), const Color(0xFFEF4444)),
+              _buildStatInfo('Total', total.toString(), Colors.white70),
+              _buildStatInfo('Attended', attended.toString(), const Color(0xFF10B981)),
+              _buildStatInfo('Missed', missed.toString(), Colors.redAccent),
             ],
           ),
         ],

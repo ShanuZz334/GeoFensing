@@ -37,7 +37,7 @@ class AttendanceLogModel {
       id: json['id'] as String? ?? '',
       teacherId: json['teacher_id'] as String? ?? '',
       teacherName: json['teacher_name'] as String?,
-      timestamp: DateTime.parse(json['timestamp'] as String? ?? DateTime.now().toIso8601String()).toLocal(),
+      timestamp: DateTime.parse((json['timestamp'] as String? ?? DateTime.now().toIso8601String()).replaceAll('+00:00Z', 'Z')).toLocal(),
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       status: json['status'] as String? ?? 'failure',

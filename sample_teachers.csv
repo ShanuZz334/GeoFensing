@@ -1,0 +1,4 @@
+reg_no,full_name,email,department,role,phone_no
+FAC101,Dr. Alan Turing,alan.turing@geoface.local,Computer Applications / IT,Professor,+1234567890
+FAC102,Dr. Marie Curie,marie.curie@geoface.local,Sciences,Head of Department (HOD),+1987654321
+FAC103,Dr. Nikola Tesla,nikola.tesla@geoface.local,Engineering,Associate Professor,+1122334455

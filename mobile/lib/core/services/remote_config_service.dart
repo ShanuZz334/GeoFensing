@@ -17,7 +17,7 @@ class RemoteConfigService {
 
   // ── Fallback URL if GitHub is unreachable ───────────────────────────────────
   // This is used offline or if GitHub fetch fails.
-  static const String _fallbackUrl = 'https://known-tubes-sonic-wish.trycloudflare.com/api';
+  static const String _fallbackUrl = 'http://localhost/api';
 
   static const String _cacheKey = 'cached_base_url';
   static const _storage = FlutterSecureStorage();
@@ -27,6 +27,10 @@ class RemoteConfigService {
   /// Call this once in main() before runApp().
   /// Fetches the latest URL from GitHub and caches it on device.
   static Future<void> initialize() async {
+    // FORCE LOCALHOST FOR TESTING (Bypasses GitHub 429 errors and cache)
+    _baseUrl = 'http://localhost/api';
+    return;
+    
     try {
       final response = await http
           .get(Uri.parse(_configUrl))

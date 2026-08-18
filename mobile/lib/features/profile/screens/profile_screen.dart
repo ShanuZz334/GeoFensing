@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:provider/provider.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../shared/widgets/custom_loader.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../verification/providers/verification_provider.dart';
+import '../../verification/screens/apply_leave_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -19,6 +21,9 @@ class ProfileScreen extends StatefulWidget {
 class _ProfileScreenState extends State<ProfileScreen> {
   bool _isUploadingPic = false;
   bool _isChangingPassword = false;
+  bool _isReregisteringFace = false;
+  String? _reregisterError;
+  String? _reregisterSuccess;
   final _oldPasswordCtrl = TextEditingController();
   final _newPasswordCtrl = TextEditingController();
   final _confirmPasswordCtrl = TextEditingController();
@@ -181,6 +186,54 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  Future<void> _reregisterFaceFlow() async {
+    setState(() {
+      _reregisterError = null;
+      _reregisterSuccess = null;
+    });
+
+    try {
+      final picker = ImagePicker();
+      final picked = await picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: CameraDevice.front,
+        maxWidth: 320,
+        maxHeight: 320,
+        imageQuality: 80,
+      );
+      if (picked == null) return;
+
+      setState(() => _isReregisteringFace = true);
+
+      final bytes = await picked.readAsBytes();
+      final b64 = base64Encode(bytes);
+
+      if (!mounted) return;
+      final auth = context.read<AuthProvider>();
+      final success = await auth.reregisterFace(b64);
+
+      if (mounted) {
+        setState(() {
+          _isReregisteringFace = false;
+          if (success) {
+            _reregisterSuccess = 'Face registered successfully! Attendance verification will now use your new face scan.';
+            _reregisterError = null;
+          } else {
+            _reregisterError = auth.errorMessage ?? 'Face re-registration failed. Make sure your face is clearly visible.';
+            _reregisterSuccess = null;
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isReregisteringFace = false;
+          _reregisterError = 'Error: $e';
+        });
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = context.watch<AuthProvider>().currentUser;
@@ -328,6 +381,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
 
+                                    // ── Leave Management ──────────────────────────────────────────
+                  _SectionHeader(title: 'Leave & Attendance', icon: Icons.calendar_month_outlined),
+                  const SizedBox(height: 12),
+                  _InfoCard(
+                    children: [
+                      GestureDetector(
+                        onTap: () {
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const ApplyLeaveScreen()));
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Row(
+                            children: [
+                              Icon(Icons.edit_calendar_outlined, color: AppTheme.primary, size: 22),
+                              const SizedBox(width: 14),
+                              const Text('Apply for Leave', style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w500)),
+                              const Spacer(),
+                              Icon(Icons.arrow_forward_ios, color: Colors.white.withOpacity(0.3), size: 14),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+
                   // ── Change Password ──────────────────────────────────────────
                   _SectionHeader(title: 'Change Password', icon: Icons.lock_outline),
                   const SizedBox(height: 12),
@@ -382,41 +461,117 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
 
-                  // ── Security Notice ───────────────────────────────────────────
-                  _InfoCard(
-                    children: [
-                      Row(
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(
-                              color: Colors.amber.withValues(alpha: 0.1),
-                              borderRadius: BorderRadius.circular(10),
+                  // ── Face Re-registration (dynamic) ───────────────────────────
+                  if (user.faceReregisterAllowed) ...[
+                    _SectionHeader(title: 'Face Re-registration', icon: Icons.face_retouching_natural),
+                    const SizedBox(height: 12),
+                    _InfoCard(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primary.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Icon(Icons.face_unlock_outlined, color: AppTheme.primary, size: 22),
                             ),
-                            child: const Icon(Icons.shield_outlined, color: Colors.amber, size: 22),
-                          ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text(
-                                  'Face Recognition Security',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Your registered face scan for attendance verification cannot be changed here. Contact your admin for face re-registration.',
-                                  style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
-                                ),
-                              ],
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Re-registration Unlocked',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Admin has granted you a temporary window to update your face scan.',
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
+                                  ),
+                                ],
+                              ),
                             ),
-                          ),
+                          ],
+                        ),
+                        if (_reregisterError != null) ...[
+                          const SizedBox(height: 16),
+                          _StatusBanner(message: _reregisterError!, isError: true),
                         ],
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
+                        if (_reregisterSuccess != null) ...[
+                          const SizedBox(height: 16),
+                          _StatusBanner(message: _reregisterSuccess!, isError: false),
+                        ],
+                        const SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: _isReregisteringFace ? null : _reregisterFaceFlow,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primary,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              elevation: 0,
+                            ),
+                            child: _isReregisteringFace
+                                ? const SizedBox(width: 20, height: 20, child: CustomLoader(color: Colors.white))
+                                : const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(Icons.camera_alt_outlined, size: 18),
+                                      SizedBox(width: 8),
+                                      Text('Scan New Face', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ] else ...[
+                    // Static security notice when no permission
+                    _InfoCard(
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(10),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withValues(alpha: 0.1),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: const Icon(Icons.shield_outlined, color: Colors.amber, size: 22),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text(
+                                    'Face Recognition Security',
+                                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Your registered face scan for attendance verification cannot be changed here. Contact your admin for face re-registration.',
+                                    style: TextStyle(color: Colors.white.withValues(alpha: 0.55), fontSize: 12),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                  ],
 
                   // ── Support ───────────────────────────────────────────────────
                   _SectionHeader(title: 'Support', icon: Icons.help_outline),
@@ -427,12 +582,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         icon: Icons.mail_outline,
                         label: 'Contact Email',
                         value: supportContact?['email']?.toString() ?? 'support@geoface.local',
+                        onTap: () {
+                          final email = supportContact?['email']?.toString() ?? 'support@geoface.local';
+                          launchUrl(Uri.parse('mailto:$email'));
+                        },
                       ),
                       _Divider(),
                       _InfoRow(
                         icon: Icons.phone_outlined,
                         label: 'Contact Phone',
                         value: supportContact?['phone']?.toString() ?? '—',
+                        onTap: () {
+                          final phone = supportContact?['phone']?.toString();
+                          if (phone != null && phone != '—') {
+                            launchUrl(Uri.parse('tel:$phone'));
+                          }
+                        },
                       ),
                     ],
                   ),
@@ -496,11 +661,12 @@ class _InfoRow extends StatelessWidget {
   final IconData icon;
   final String label;
   final String value;
-  const _InfoRow({required this.icon, required this.label, required this.value});
+  final VoidCallback? onTap;
+  const _InfoRow({required this.icon, required this.label, required this.value, this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    Widget content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
@@ -519,6 +685,15 @@ class _InfoRow extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap != null) {
+      return InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(8),
+        child: content,
+      );
+    }
+    return content;
   }
 }
 

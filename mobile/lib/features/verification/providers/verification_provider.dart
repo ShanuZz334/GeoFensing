@@ -35,6 +35,7 @@ class VerificationProvider extends ChangeNotifier {
   bool _isLoadingHistory = false;
   bool _isLoadingStats = false;
   String _nextAction = 'check_in';
+  String? _currentCheckpointId;
   int _currentAttempts = 0;
   int _maxAttempts = 4;
 
@@ -53,6 +54,7 @@ class VerificationProvider extends ChangeNotifier {
   bool get isLoadingHistory => _isLoadingHistory;
   bool get isLoadingStats => _isLoadingStats;
   String get nextAction => _nextAction;
+  String? get currentCheckpointId => _currentCheckpointId;
   int get currentAttempts => _currentAttempts;
   int get maxAttempts => _maxAttempts;
   Map<String, dynamic> get settings => _settings;
@@ -60,6 +62,89 @@ class VerificationProvider extends ChangeNotifier {
       _status == VerificationStatus.recording ||
       _status == VerificationStatus.processing ||
       _status == VerificationStatus.uploading;
+
+  // -- Event Checkpoints & Holidays --
+  List<dynamic> _checkpoints = [];
+  bool _isLoadingCheckpoints = false;
+  List<dynamic> get checkpoints => _checkpoints;
+  bool get isLoadingCheckpoints => _isLoadingCheckpoints;
+
+  List<dynamic> _holidays = [];
+  bool _isLoadingHolidays = false;
+  List<dynamic> get holidays => _holidays;
+  bool get isLoadingHolidays => _isLoadingHolidays;
+
+  Future<void> fetchCheckpoints({bool silent = false}) async {
+    if (!silent) {
+      _isLoadingCheckpoints = true;
+      notifyListeners();
+    }
+    try {
+      final response = await ApiService.instance.getMyCheckpoints();
+      if (response.success && response.data != null) {
+        _checkpoints = response.data!['checkpoints'] ?? [];
+      }
+    } catch (e) {
+      debugPrint("Failed to fetch checkpoints: $e");
+    }
+    if (!silent) {
+      _isLoadingCheckpoints = false;
+    }
+    notifyListeners();
+  }
+
+  Future<void> fetchHolidays({bool silent = false}) async {
+    if (!silent) {
+      _isLoadingHolidays = true;
+      notifyListeners();
+    }
+    try {
+      final response = await ApiService.instance.getSettings();
+      if (response.success && response.data != null) {
+        _holidays = response.data!['holidays'] ?? [];
+      }
+      
+      final leaveRes = await ApiService.instance.getMyLeaves();
+      if (leaveRes.success && leaveRes.data != null) {
+        final leaves = (leaveRes.data!['leaves'] as List).where((l) => l['status'] == 'approved').toList();
+        for (var leave in leaves) {
+          DateTime start = DateTime.parse(leave['start_date']);
+          DateTime end = DateTime.parse(leave['end_date']);
+          bool isHalf = leave['is_half_day'] ?? false;
+          String type = leave['leave_type'] ?? 'normal';
+          String name = type == 'emergency' ? 'Emergency Leave' : (isHalf ? 'Half-Day Leave' : 'Personal Leave');
+          
+          DateTime curr = start;
+          while (!curr.isAfter(end)) {
+            _holidays.add({
+              'date': curr.toIso8601String().split('T')[0],
+              'is_full_day': !isHalf,
+              'name': name,
+            });
+            curr = curr.add(const Duration(days: 1));
+          }
+        }
+      }
+      
+      // Sort combined list by date
+      _holidays.sort((a, b) {
+        DateTime dateA = DateTime.parse(a['date']);
+        DateTime dateB = DateTime.parse(b['date']);
+        return dateA.compareTo(dateB);
+      });
+      
+      // Filter out past events
+      final today = DateTime.now();
+      final todayStr = "${today.year.toString().padLeft(4, '0')}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}";
+      _holidays = _holidays.where((h) => (h['date'] as String).compareTo(todayStr) >= 0).toList();
+    } catch (e) {
+      debugPrint("Failed to fetch holidays: $e");
+    }
+    if (!silent) {
+      _isLoadingHolidays = false;
+    }
+    notifyListeners();
+  }
 
   // ── Camera Setup ──────────────────────────────────────────────────────────
 
@@ -81,7 +166,7 @@ class VerificationProvider extends ChangeNotifier {
     _cameraDescription = selected;
     _cameraController = CameraController(
       selected,
-      ResolutionPreset.medium,
+      ResolutionPreset.low,
       enableAudio: false,
       imageFormatGroup: ImageFormatGroup.yuv420,
     );
@@ -134,6 +219,7 @@ class VerificationProvider extends ChangeNotifier {
         fetchSettings(silent: true);
         fetchHistory(silent: true);
         fetchStats(silent: true);
+        fetchCheckpoints(silent: true);
       }
     });
   }
@@ -242,9 +328,10 @@ class VerificationProvider extends ChangeNotifier {
 
   // ── Main Verification Flow ────────────────────────────────────────────────
 
-  Future<void> startVerification() async {
+  Future<void> startVerification({String? checkpointId}) async {
     if (isBusy) return;
 
+    _currentCheckpointId = checkpointId;
     _result = null;
     _progress = 0.0;
     _setStatus(VerificationStatus.requestingPermissions, 'Checking permissions…');
@@ -313,6 +400,7 @@ class VerificationProvider extends ChangeNotifier {
       demoLng: _demoMode ? _demoLng : null,
       demoRadius: _demoMode ? _demoRadius : null,
       bypassLimits: _bypassLimits,
+      checkpointId: checkpointId,
     );
 
     _progress = 1.0;
@@ -362,31 +450,20 @@ class VerificationProvider extends ChangeNotifier {
         if (_cameraController == null) break;
         final xFile = await _cameraController!.takePicture();
         final bytes = await xFile.readAsBytes();
-        final compressed = await compute(_compressFrameTask, bytes);
-        if (compressed != null) base64Frames.add(base64Encode(compressed));
+        
+        // We skip software img.decodeImage as it takes 1-2s per frame.
+        // ResolutionPreset.medium ensures the image is small enough (480p/720p).
+        base64Frames.add(base64Encode(bytes));
+        
         _progress = (i + 1) * 0.08;
         notifyListeners();
-        await Future.delayed(const Duration(milliseconds: 500));
+        await Future.delayed(const Duration(milliseconds: 200));
       }
     } catch (e) {
       debugPrint("Camera capture error: $e");
     }
 
     return base64Frames;
-  }
-
-  static Uint8List? _compressFrameTask(Uint8List rawBytes) {
-    try {
-      final decoded = img.decodeImage(rawBytes);
-      if (decoded == null) return null;
-      // Resize to max 480px wide for performance
-      final resized = img.copyResize(decoded, width: 480);
-      return Uint8List.fromList(
-        img.encodeJpg(resized, quality: ApiConstants.jpegQuality),
-      );
-    } catch (_) {
-      return null;
-    }
   }
 
   Future<Position?> _getGPS() async {

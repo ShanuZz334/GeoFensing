@@ -9,8 +9,11 @@ class UserModel {
   final String? phoneNo;
   final bool isActive;
   final bool hasFaceEncoding;
+  final bool setupComplete;
   final String createdAt;
   final String? profilePic;
+  final bool faceReregisterAllowed;
+  final String? faceReregisterUntil;
 
   const UserModel({
     required this.teacherId,
@@ -22,8 +25,11 @@ class UserModel {
     this.phoneNo,
     required this.isActive,
     required this.hasFaceEncoding,
+    required this.setupComplete,
     required this.createdAt,
     this.profilePic,
+    this.faceReregisterAllowed = false,
+    this.faceReregisterUntil,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -37,8 +43,11 @@ class UserModel {
       phoneNo: json['phone_no'] as String?,
       isActive: json['is_active'] as bool? ?? true,
       hasFaceEncoding: json['has_face_encoding'] as bool? ?? false,
+      setupComplete: json['setup_complete'] as bool? ?? false,
       createdAt: json['created_at'] as String? ?? '',
       profilePic: json['profile_pic'] as String?,
+      faceReregisterAllowed: json['face_reregister_allowed'] as bool? ?? false,
+      faceReregisterUntil: json['face_reregister_until'] as String?,
     );
   }
 
@@ -52,8 +61,11 @@ class UserModel {
         'phone_no': phoneNo,
         'is_active': isActive,
         'has_face_encoding': hasFaceEncoding,
+        'setup_complete': setupComplete,
         'created_at': createdAt,
         'profile_pic': profilePic,
+        'face_reregister_allowed': faceReregisterAllowed,
+        'face_reregister_until': faceReregisterUntil,
       };
 
   String get initials {

@@ -2,7 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_animate/flutter_animate.dart';
-
+import 'package:url_launcher/url_launcher.dart';
 import '../providers/auth_provider.dart';
 import 'teacher_register_details_screen.dart';
 import '../../../core/theme/app_theme.dart';
@@ -86,12 +86,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     );
 
     if (success && mounted) {
-      if (auth.currentUser?.department == 'Pending' || auth.currentUser?.email.endsWith('@geoface.local') == true) {
+      if (auth.currentUser?.setupComplete == false) {
         // They used the normal login card, but they are pending!
         await auth.logout();
         setState(() {
           _isLoading = false;
-          _errorText = 'Account registration is pending. Please use the "Register Here" button below to activate your account.';
+          _errorText = 'Account setup is incomplete. Please use the "Setup Account" button below to finish registration.';
         });
       } else {
         Navigator.pushReplacementNamed(context, '/home');
@@ -121,8 +121,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       );
 
       if (auth.status == AuthStatus.authenticated && auth.currentUser != null) {
-        final email = auth.currentUser!.email;
-        if (email.endsWith('@geoface.local') || auth.currentUser!.department == 'Pending') {
+        if (auth.currentUser!.setupComplete == false) {
           if (!mounted) return;
           Navigator.pushReplacement(
             context,
@@ -144,6 +143,63 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         setState(() => _isLoading = false);
       }
     }
+  }
+
+  void _showSupportDialog() {
+    final Map<String, dynamic> contact = {
+      'phone': '8089602280',
+      'email': 'shanifshaz546@gmail.com',
+    };
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF121212),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.white.withValues(alpha: 0.1)),
+        ),
+        title: const Row(children: [
+          Icon(Icons.contact_support_outlined, color: Color(0xFF7C3AED)),
+          SizedBox(width: 10),
+          Text('Contact Support', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
+        ]),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Need help? Reach out to our team:', style: TextStyle(color: Colors.white.withValues(alpha: 0.7))),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(children: [
+                ListTile(
+                  leading: const Icon(Icons.phone, color: Color(0xFF7C3AED)),
+                  title: Text(contact['phone'], style: const TextStyle(color: Colors.white)),
+                  dense: true,
+                  onTap: () => launchUrl(Uri.parse('tel:${contact['phone']}')),
+                ),
+                ListTile(
+                  leading: const Icon(Icons.email, color: Color(0xFF7C3AED)),
+                  title: Text(contact['email'], style: const TextStyle(color: Colors.white)),
+                  dense: true,
+                  onTap: () => launchUrl(Uri.parse('mailto:${contact['email']}')),
+                ),
+              ]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close', style: TextStyle(color: Color(0xFF7C3AED))),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showPasswordResetTerminal() {
@@ -547,105 +603,121 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
       // The CSS uses a dark background context
       backgroundColor: const Color(0xFF121212),
       body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const SizedBox(height: 40),
-              
-              // ── Logo Section ──────────────────────────────────────────
-              Center(
-                child: Column(
-                  children: [
-                    Image.asset(
-                      'assets/images/logo.png',
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.contain,
-                    ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
-                    const SizedBox(height: 16),
-                    RichText(
-                      text: const TextSpan(
-                        text: 'Geo',
-                        style: TextStyle(
-                          fontFamily: 'Bitcount',
-                          fontSize: 32,
-                          fontWeight: FontWeight.w200,
-                          letterSpacing: 1.2,
-                          color: Colors.white70,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: 'Face',
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const SizedBox(height: 40),
+                  
+                  // ── Logo Section ──────────────────────────────────────────
+                  Center(
+                    child: Column(
+                      children: [
+                        Image.asset(
+                          'assets/images/logo.png',
+                          width: 100,
+                          height: 100,
+                          fit: BoxFit.contain,
+                        ).animate().scale(duration: 600.ms, curve: Curves.easeOutBack),
+                        const SizedBox(height: 16),
+                        RichText(
+                          text: const TextSpan(
+                            text: 'Geo',
                             style: TextStyle(
-                              color: Color(0xFF9F00FF),
+                              fontFamily: 'Bitcount',
+                              fontSize: 32,
+                              fontWeight: FontWeight.w200,
+                              letterSpacing: 1.2,
+                              color: Colors.white70,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Face',
+                                style: TextStyle(
+                                  color: Color(0xFF9F00FF),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ).animate().fadeIn(delay: 200.ms),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // Error Toast
+                  if (_errorText != null) ...[
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: Colors.redAccent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              _errorText!,
+                              style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w500),
                             ),
                           ),
                         ],
                       ),
-                    ).animate().fadeIn(delay: 200.ms),
+                    ).animate().fadeIn(duration: 300.ms),
+                    const SizedBox(height: 16),
                   ],
-                ),
-              ),
 
-              const SizedBox(height: 30),
+                  // ── 3D Flip Card Container ───────────────────────────────
+                  Center(
+                    child: AnimatedBuilder(
+                      animation: _flipAnimation,
+                      builder: (context, child) {
+                        final value = _flipAnimation.value;
+                        final angle = value * pi;
+                        final isFront = value < 0.5;
 
-              // Error Toast
-              if (_errorText != null) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.redAccent.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.redAccent.withValues(alpha: 0.3)),
+                        return Transform(
+                          transform: Matrix4.identity()
+                            ..setEntry(3, 2, 0.001) // perspective
+                            ..rotateY(angle),
+                          alignment: Alignment.center,
+                          child: isFront
+                              ? _buildFrontCard()
+                              : Transform(
+                                  // Reverse the rotation so the back content isn't mirrored
+                                  transform: Matrix4.identity()..rotateY(pi),
+                                  alignment: Alignment.center,
+                                  child: _buildBackCard(),
+                                ),
+                        );
+                      },
+                    ),
                   ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.error_outline, color: Colors.redAccent, size: 20),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          _errorText!,
-                          style: const TextStyle(color: Colors.redAccent, fontSize: 13, fontWeight: FontWeight.w500),
-                        ),
-                      ),
-                    ],
-                  ),
-                ).animate().fadeIn(duration: 300.ms),
-                const SizedBox(height: 16),
-              ],
-
-              // ── 3D Flip Card Container ───────────────────────────────
-              Center(
-                child: AnimatedBuilder(
-                  animation: _flipAnimation,
-                  builder: (context, child) {
-                    final value = _flipAnimation.value;
-                    final angle = value * pi;
-                    final isFront = value < 0.5;
-
-                    return Transform(
-                      transform: Matrix4.identity()
-                        ..setEntry(3, 2, 0.001) // perspective
-                        ..rotateY(angle),
-                      alignment: Alignment.center,
-                      child: isFront
-                          ? _buildFrontCard()
-                          : Transform(
-                              // Reverse the rotation so the back content isn't mirrored
-                              transform: Matrix4.identity()..rotateY(pi),
-                              alignment: Alignment.center,
-                              child: _buildBackCard(),
-                            ),
-                    );
-                  },
-                ),
+                  
+                  const SizedBox(height: 40),
+                ],
               ),
-              
-              const SizedBox(height: 40),
-            ],
-          ),
+            ),
+
+            // ── Support Icon ────────────────────────────────────────────────
+            Positioned(
+              top: 16,
+              right: 16,
+              child: IconButton(
+                onPressed: _showSupportDialog,
+                icon: const Icon(Icons.help_outline_rounded, color: Colors.white54, size: 26),
+                splashRadius: 24,
+                tooltip: 'Customer Support',
+              ),
+            ),
+          ],
         ),
       ),
     );
